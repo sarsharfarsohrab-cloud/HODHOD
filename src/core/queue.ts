@@ -49,10 +49,31 @@ function bucket(cards: readonly Card[], { settings, now }: QueueOptions): Bucket
   let introducedToday = 0
   let reviewedToday = 0
 
+  // The two cards of one word (German → Persian and the optional reverse) must not
+  // prompt each other on the same day.
+  const byWord = new Map<string, Card[]>()
+  for (const card of cards) {
+    const list = byWord.get(card.wordId)
+    if (list) list.push(card)
+    else byWord.set(card.wordId, [card])
+  }
+  const sibling = (card: Card) => byWord.get(card.wordId)?.find((other) => other.id !== card.id)
+  const inSteps = (card: Card) => card.state === 'learning' || card.state === 'relearning'
+  const answeredToday = (card: Card) => card.lastReview !== null && time(card.lastReview) >= start
+  const buried = (card: Card) => {
+    const other = sibling(card)
+    return other !== undefined && (inSteps(other) || answeredToday(other))
+  }
+
   for (const card of cards) {
     if (card.introducedAt && time(card.introducedAt) >= start) introducedToday++
     switch (card.state) {
       case 'new':
+        if (card.cardType === 'production') {
+          // the reverse card starts only once the word itself has been learned
+          const other = sibling(card)
+          if (!other || other.state !== 'review' || answeredToday(other)) break
+        }
         fresh.push(card)
         break
       case 'learning':
@@ -60,7 +81,9 @@ function bucket(cards: readonly Card[], { settings, now }: QueueOptions): Bucket
         if (time(card.due) < end) learning.push(card)
         break
       case 'review':
-        if (time(card.due) < end) reviewsDue.push(card)
+        if (time(card.due) < end) {
+          if (!buried(card)) reviewsDue.push(card)
+        }
         // an already-answered review of today counts against today's limit
         else if (card.lastReview && time(card.lastReview) >= start && !(card.introducedAt && time(card.introducedAt) >= start)) {
           reviewedToday++

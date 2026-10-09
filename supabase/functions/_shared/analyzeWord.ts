@@ -65,7 +65,8 @@ interface Usage {
   outputTokens: number
 }
 
-const DEFAULTS = { perMinute: 6, perDay: 80, globalDay: 400, timeoutMs: 60_000 }
+// Generous enough for importing a vocabulary list in one go, small enough to cap a runaway bill.
+const DEFAULTS = { perMinute: 12, perDay: 200, globalDay: 600, timeoutMs: 60_000 }
 const MAX_BODY_BYTES = 2_000
 const MAX_OUTPUT_TOKENS = 8_000
 

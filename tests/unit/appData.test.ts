@@ -217,7 +217,7 @@ describe('creating words', () => {
     const card = d.data.cards.get(word.id)!
     expect(card.state).toBe('new')
     expect(card.introducedAt).toBe(null)
-    expect(backend.tables.words![0]).toMatchObject({ ai_prompt_version: 'word_analysis_v1', ai_model: 'fake-model', normalized_lemma: 'aufgeben', pos: 'verb' })
+    expect(backend.tables.words![0]).toMatchObject({ ai_prompt_version: 'word_analysis_v2', ai_model: 'fake-model', normalized_lemma: 'aufgeben', pos: 'verb' })
   })
   test('an edited draft is saved as edited', async () => {
     const d = await signedIn()
@@ -256,7 +256,7 @@ describe('creating words', () => {
   })
   test('AI problems reach the app as distinct, user-explainable errors', async () => {
     const d = await signedIn()
-    expect(await kindOf(d.data.analyzeWord('zwei Wörter'))).toBe('validation:multiple_words')
+    expect(await kindOf(d.data.analyzeWord('das sind viel zu viele Wörter hier'))).toBe('validation:multiple_words')
     backend.aiReply = () => new Response('{"error":{"code":"insufficient_quota"}}', { status: 429 })
     expect(await kindOf(d.data.analyzeWord('Tisch'))).toBe('not_configured:ai_quota_exhausted')
     backend.aiReply = () => aiResponse({ status: 'ok', lemma: 'x' })

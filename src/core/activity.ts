@@ -3,7 +3,7 @@ import type { DayActivity } from './types.ts'
 
 export type ActivityMap = ReadonlyMap<string, DayActivity>
 
-export const EMPTY_DAY: DayActivity = { reviews: 0, again: 0, newCards: 0, durationMs: 0 }
+export const EMPTY_DAY: DayActivity = { reviews: 0, again: 0, newCards: 0, durationMs: 0, matureReviews: 0, matureAgain: 0 }
 
 /**
  * A day counts for the streak once at least this many cards were answered:
@@ -45,14 +45,19 @@ export function computeStreak(activity: ActivityMap, now: Date): Streak {
   return { current, activeToday, longest: Math.max(longest, current) }
 }
 
-export function addToDay(activity: Map<string, DayActivity>, key: string, delta: DayActivity): void {
+/** Adds (or, with `sign` −1, takes back) one day's worth of activity. */
+export function addToDay(activity: Map<string, DayActivity>, key: string, delta: DayActivity, sign: 1 | -1 = 1): void {
   const base = activity.get(key) ?? EMPTY_DAY
-  activity.set(key, {
-    reviews: base.reviews + delta.reviews,
-    again: base.again + delta.again,
-    newCards: base.newCards + delta.newCards,
-    durationMs: base.durationMs + delta.durationMs,
-  })
+  const next: DayActivity = {
+    reviews: Math.max(0, base.reviews + sign * delta.reviews),
+    again: Math.max(0, base.again + sign * delta.again),
+    newCards: Math.max(0, base.newCards + sign * delta.newCards),
+    durationMs: Math.max(0, base.durationMs + sign * delta.durationMs),
+    matureReviews: Math.max(0, base.matureReviews + sign * delta.matureReviews),
+    matureAgain: Math.max(0, base.matureAgain + sign * delta.matureAgain),
+  }
+  if (next.reviews === 0) activity.delete(key)
+  else activity.set(key, next)
 }
 
 export function minutesStudied(day: DayActivity | undefined): number {

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { normalizeLemma, stripArticle, validateWordInput } from '../../supabase/functions/_shared/inputRules.ts'
+import { normalizeLemma, splitWordList, stripArticle, validateWordInput } from '../../supabase/functions/_shared/inputRules.ts'
 
 const code = (raw: unknown) => {
   const r = validateWordInput(raw)
@@ -21,10 +21,12 @@ describe('word input', () => {
   test('rejects empty input', () => {
     for (const w of ['', '   ', '‌', '...', null, undefined, 42]) expect(code(w)).toBe('empty')
   })
-  test('does not silently analyse two words', () => {
-    expect(code('aufgeben gehen')).toBe('multiple_words')
-    expect(code('ich gehe nach Hause')).toBe('multiple_words')
-    expect(code('der große Tisch')).toBe('multiple_words')
+  test('accepts short fixed expressions', () => {
+    for (const w of ['Bescheid sagen', 'auf jeden Fall', 'sich Sorgen machen', 'zum Beispiel', 'es geht um']) expect(code(w)).toBe('ok')
+  })
+  test('refuses whole sentences (more than five words)', () => {
+    expect(code('ich gehe heute Abend nach Hause')).toBe('multiple_words')
+    expect(code('eins zwei drei vier fünf')).toBe('ok')
   })
   test('rejects Persian and mixed-script input', () => {
     expect(code('میز')).toBe('wrong_script')
@@ -36,8 +38,8 @@ describe('word input', () => {
     }
   })
   test('rejects very long input', () => {
-    expect(code('a'.repeat(41))).toBe('too_long')
-    expect(code('a'.repeat(40))).toBe('ok')
+    expect(code('a'.repeat(61))).toBe('too_long')
+    expect(code('a'.repeat(60))).toBe('ok')
   })
   test('strips quotes and trailing punctuation', () => {
     expect(validateWordInput('„Tisch“.')).toEqual({ ok: true, value: 'Tisch', cacheKey: 'tisch' })
@@ -55,5 +57,32 @@ describe('word input', () => {
     expect(stripArticle('der Tisch')).toBe('Tisch')
     expect(stripArticle('Tisch')).toBe('Tisch')
     expect(stripArticle('sich freuen')).toBe('sich freuen')
+  })
+})
+
+describe('splitting a pasted or scanned list', () => {
+  test('one entry per line, comma or semicolon', () => {
+    expect(splitWordList('Tisch\nLampe, Stuhl; Fenster')).toEqual(['Tisch', 'Lampe', 'Stuhl', 'Fenster'])
+    expect(splitWordList('Tisch،Lampe؛Stuhl')).toEqual(['Tisch', 'Lampe', 'Stuhl'])
+  })
+  test('drops bullets, numbering and empty lines', () => {
+    expect(splitWordList('1. aufgeben\n2) der Tisch\n\n- schnell\n• Bescheid sagen\n3 - laufen')).toEqual(['aufgeben', 'der Tisch', 'schnell', 'Bescheid sagen', 'laufen'])
+  })
+  test('keeps the German side of a two-column vocabulary list', () => {
+    expect(splitWordList('der Tisch - میز\naufgeben = تسلیم شدن\nschnell: سریع\nLampe چراغ')).toEqual(['der Tisch', 'aufgeben', 'schnell', 'Lampe'])
+  })
+  test('ignores grammar hints in brackets and list leftovers', () => {
+    expect(splitWordList('der Tisch (pl. Tische)\ndas Haus, -er\nLampe, die')).toEqual(['der Tisch', 'das Haus', 'er', 'Lampe'])
+    expect(splitWordList('Lampe, die')).toEqual(['Lampe'])
+    expect(splitWordList('das Haus, -e')).toEqual(['das Haus'])
+  })
+  test('removes repeats regardless of capitalisation and keeps the first spelling', () => {
+    expect(splitWordList('Tisch\ntisch\nTISCH\nLampe')).toEqual(['Tisch', 'Lampe'])
+  })
+  test('a compound with a hyphen stays one entry', () => {
+    expect(splitWordList('E-Mail\nU-Bahn')).toEqual(['E-Mail', 'U-Bahn'])
+  })
+  test('nothing usable gives an empty list', () => {
+    expect(splitWordList('  \n ,, ; \n میز')).toEqual([])
   })
 })

@@ -1,9 +1,12 @@
 /**
- * Rules for the single-word input of the "create word" flow.
+ * Rules for what may be typed into "create word": one German word, or a short fixed
+ * expression such as "Bescheid sagen" or "auf jeden Fall".
  * Shared by the client (instant feedback) and the AI function (never trust the client).
  */
 
-export const MAX_INPUT_LENGTH = 40
+export const MAX_INPUT_LENGTH = 60
+/** A lexical unit, not a sentence: the AI decides whether the words belong together. */
+export const MAX_INPUT_WORDS = 5
 
 export type InputErrorCode =
   | 'empty'
@@ -16,9 +19,8 @@ export type InputResult =
   | { ok: true; value: string; cacheKey: string }
   | { ok: false; code: InputErrorCode }
 
-/** Leading words that are allowed in front of the actual word. */
+/** Articles a learner may type in front of a noun; ignored when looking for duplicates. */
 const ARTICLES = new Set(['der', 'die', 'das', 'ein', 'eine'])
-const REFLEXIVE = 'sich'
 
 const PERSIAN_ARABIC = /[؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]/
 /** Latin letters (incl. umlauts and accents used in loanwords), inner hyphen or apostrophe. */
@@ -46,13 +48,7 @@ export function validateWordInput(raw: unknown): InputResult {
     if (!TOKEN.test(token)) return { ok: false, code: 'invalid_characters' }
   }
 
-  if (tokens.length > 2) return { ok: false, code: 'multiple_words' }
-  if (tokens.length === 2) {
-    const lead = tokens[0]!.toLowerCase()
-    if (!ARTICLES.has(lead) && lead !== REFLEXIVE) {
-      return { ok: false, code: 'multiple_words' }
-    }
-  }
+  if (tokens.length > MAX_INPUT_WORDS) return { ok: false, code: 'multiple_words' }
 
   return { ok: true, value, cacheKey: value.toLocaleLowerCase('de') }
 }
@@ -70,4 +66,30 @@ export function stripArticle(value: string): string {
   const tokens = cleanInput(value).split(' ')
   if (tokens.length === 2 && ARTICLES.has(tokens[0]!.toLowerCase())) return tokens[1]!
   return tokens.join(' ')
+}
+
+/**
+ * Splits pasted or scanned text into candidate entries: one per line, or separated by
+ * commas / semicolons. Bullets, numbering and anything after " - " or " = " (a translation
+ * written next to the word in a vocabulary list) are dropped.
+ */
+export function splitWordList(text: string): string[] {
+  const out: string[] = []
+  const seen = new Set<string>()
+  for (const raw of text.split(/[\n\r,;،؛]+/)) {
+    const entry = cleanInput(
+      raw
+        .replace(/^\s*(?:[-–—•*·▪◦]+|\(?\d+[.)]|\d+\s*[-–])\s*/, '') // "- ", "• ", "1. ", "2) "
+        .replace(/\s+[-–—=:→]\s+.*$/, '') // "Tisch - میز"
+        .replace(/\s*\(.*?\)\s*/g, ' ') // "(pl. Tische)"
+        .replace(/[\u0600-\u06FF].*$/, ''), // a Persian translation after the word
+    )
+    // single letters and stray articles are leftovers of list formatting ("Tisch, -e", "Tisch, der")
+    if (entry.length < 2 || ARTICLES.has(entry.toLowerCase())) continue
+    const key = entry.toLocaleLowerCase('de')
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(entry)
+  }
+  return out
 }

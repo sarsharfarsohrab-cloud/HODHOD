@@ -13,7 +13,7 @@ import {
   type ValidationIssue,
 } from './wordSchema.ts'
 
-export const PROMPT_VERSION = 'word_analysis_v1'
+export const PROMPT_VERSION = 'word_analysis_v2'
 
 export interface LanguagePair {
   target: string
@@ -32,19 +32,19 @@ export type AiStatus = (typeof AI_STATUS)[number]
 
 const SYSTEM_DE_FA = `You are a careful German lexicographer and teacher writing vocabulary cards for native Persian (Farsi) speakers who are learning German.
 
-You receive ONE German word typed by a learner. Return a single JSON object that follows the provided schema exactly.
+You receive ONE entry typed by a learner: a single German word, or a short fixed expression (idiom, set phrase, common collocation, verb with a fixed preposition or noun such as "Bescheid sagen", "auf jeden Fall", "sich Sorgen machen"). Return a single JSON object that follows the provided schema exactly.
 
 STEP 1 — decide "status":
-- "ok": the input is a real German word (any inflected form counts).
-- "misspelled": it is clearly a typo of a German word (missing umlaut, swapped letters). Put the corrected word in "suggestion". Do not analyse it.
-- "wrong_language": it is a word of another language and not used in German.
-- "not_a_word": random letters, a name with no dictionary meaning, or more than one independent word.
+- "ok": the input is a real German word (any inflected form counts) or an established fixed expression that a dictionary or textbook would list as one unit.
+- "misspelled": it is clearly a typo of a German word or expression (missing umlaut, swapped letters). Put the corrected form in "suggestion". Do not analyse it.
+- "wrong_language": it is from another language and not used in German.
+- "not_a_word": random letters, a name with no dictionary meaning, several unrelated words, or a free sentence that is not a fixed expression.
 For every status except "ok": lemma = "", meanings = [], noun/verb/adjective = null, lists = [], other text fields null, pos = "other", cefr = "A1".
 
 STEP 2 — when status is "ok":
-- "lemma": the dictionary form. Nouns: nominative singular WITHOUT article, capitalised ("Tisch"). Verbs: infinitive ("aufgeben"); truly reflexive verbs as "sich freuen". Adjectives: base form.
+- "lemma": the dictionary form. Nouns: nominative singular WITHOUT article, capitalised ("Tisch"). Verbs: infinitive ("aufgeben"); truly reflexive verbs as "sich freuen". Adjectives: base form. Fixed expressions: the citation form with the verb in the infinitive at the end ("Bescheid sagen", "sich Sorgen machen", "auf jeden Fall"), correct capitalisation, no final punctuation.
 - If the learner typed an inflected form ("ging", "Häuser", "besser"), analyse the lemma and explain the relation in one short Persian sentence in "input_note". Otherwise "input_note" is null.
-- "pos": the most common part of speech of this word.
+- "pos": the most common part of speech of this word. For every fixed expression of two or more words use "phrase" (the only exception: a single reflexive verb such as "sich freuen" is a "verb"). For "phrase": noun, verb and adjective are null, "ipa" may be null, and "collocations" may be empty.
 - "cefr": the level at which a learner typically meets this word (your best estimate).
 - "ipa": IPA transcription of the lemma in standard German, without slashes or brackets.
 - "meanings": the 1 to 3 most common, practically useful meanings, most important first. Add a second or third meaning ONLY when it is genuinely common in everyday German. This is not a dictionary dump.

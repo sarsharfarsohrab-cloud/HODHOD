@@ -18,6 +18,8 @@ export interface Word {
   primaryMeaning: string
   content: WordContent
   isFavorite: boolean
+  /** Free-form groups the learner put the word in ("Lektion 3", "سفر"). */
+  tags: string[]
   source: 'ai' | 'manual'
   createdAt: string
   updatedAt: string
@@ -52,6 +54,8 @@ export interface Settings {
   theme: 'system' | 'light' | 'dark'
   speechRate: number
   autoplayAudio: boolean
+  /** Also practise Persian → German (a second card per word). */
+  reverseCards: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -62,6 +66,7 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
   speechRate: 1,
   autoplayAudio: false,
+  reverseCards: false,
 }
 
 export const SETTINGS_LIMITS = {
@@ -83,7 +88,14 @@ export interface DayActivity {
   again: number
   newCards: number
   durationMs: number
+  /** Answers on cards that were already in review (the basis of the retention figure). */
+  matureReviews: number
+  /** …and how many of those were forgotten. */
+  matureAgain: number
 }
+
+export const MAX_TAGS = 20
+export const MAX_TAG_LENGTH = 30
 
 export interface ReviewEvent {
   id: string

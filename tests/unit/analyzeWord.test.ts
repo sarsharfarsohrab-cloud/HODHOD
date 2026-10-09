@@ -160,10 +160,10 @@ describe('analyze-word: input', () => {
   test('rejects bad input before spending anything', async () => {
     const cases: [unknown, string][] = [
       [{ word: '' }, 'empty'],
-      [{ word: 'aufgeben gehen' }, 'multiple_words'],
+      [{ word: 'ich gehe heute Abend nach Hause' }, 'multiple_words'],
       [{ word: 'میز' }, 'wrong_script'],
       [{ word: 'Tisch;--' }, 'invalid_characters'],
-      [{ word: 'x'.repeat(41) }, 'too_long'],
+      [{ word: 'x'.repeat(61) }, 'too_long'],
       [{}, 'empty'],
     ]
     for (const [body, reason] of cases) {
@@ -213,7 +213,7 @@ describe('analyze-word: generation', () => {
     expect(await (await call({ word: 'qwrtz' })).json()).toEqual({ status: 'not_a_word', cached: false })
     w.aiReplies.push(aiJson({ ...asAiOutput(TISCH), ...empty, status: 'misspelled', suggestion: 'Straße' }))
     expect(await (await call({ word: 'Strase' })).json()).toEqual({ status: 'misspelled', suggestion: 'Straße', cached: false })
-    w.aiReplies.push(aiJson({ ...asAiOutput(TISCH), ...empty, status: 'misspelled', suggestion: 'two words here' }))
+    w.aiReplies.push(aiJson({ ...asAiOutput(TISCH), ...empty, status: 'misspelled', suggestion: 'Straße 12 (?)' }))
     expect(await (await call({ word: 'Strasse' })).json()).toEqual({ status: 'not_a_word', cached: false })
   })
 })
@@ -342,7 +342,7 @@ describe('analyze-word: cost control', () => {
     expect(body.cached).toBe(false)
   })
   test('per-minute, per-day and global limits stop new generations', async () => {
-    const scopes: [Partial<World['counts']>, string][] = [[{ minute: 6 }, 'minute'], [{ day: 80 }, 'day'], [{ global: 400 }, 'global']]
+    const scopes: [Partial<World['counts']>, string][] = [[{ minute: 12 }, 'minute'], [{ day: 200 }, 'day'], [{ global: 600 }, 'global']]
     for (const [counts, scope] of scopes) {
       w = world()
       Object.assign(w.counts, counts)
