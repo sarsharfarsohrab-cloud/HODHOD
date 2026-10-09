@@ -1,34 +1,16 @@
 /**
- * Create Word: one German word in → AI draft → preview → (edit) → confirm → Word Bank.
+ * Create Word: one German word or short expression in → AI draft → preview → (edit) → confirm → Word Bank.
  * Nothing is saved before the learner presses "confirm".
  */
-import type { AnalyzeResult } from '../../../supabase/functions/_shared/analyzeWord.ts'
 import { validateWordInput } from '../../../supabase/functions/_shared/inputRules.ts'
-import type { WordContent } from '../../../supabase/functions/_shared/wordSchema.ts'
 import type { Word } from '../../core/types.ts'
-import { AppError, toAppError } from '../../data/errors.ts'
+import { toAppError } from '../../data/errors.ts'
 import type { Ctx, Screen } from '../context.ts'
 import { de, h, icon, replace } from '../dom.ts'
-import { createEditor, type Editor } from '../editor.ts'
+import { draftFromResult, draftPanel, saveDraft, type Draft, type DraftPanel } from '../draftPanel.ts'
 import { mascot } from '../mascot.ts'
 import { describeError, t } from '../strings.ts'
 import { iconButton, openSheet, wordTitle } from '../widgets.ts'
-import { wordBody, wordHeader } from '../wordView.ts'
-
-type OkResult = Extract<AnalyzeResult, { status: 'ok' }>
-
-interface Draft {
-  content: WordContent
-  inputNote: string | null
-  promptVersion: string
-  model: string
-  cached: boolean
-  favorite: boolean
-  /** Set when the draft replaces the content of a word that is already in the bank. */
-  replaceId: string | null
-  editing: boolean
-  changed: boolean
-}
 
 type State =
   | { step: 'input'; value: string; error?: string }
@@ -44,7 +26,7 @@ export function createScreen(ctx: Ctx, params: Record<string, string>): Screen {
   const el = h('main', { class: 'screen' })
   let state: State = parked ? { step: 'draft', draft: parked } : { step: 'input', value: '' }
   let request: AbortController | null = null
-  let editor: Editor | null = null
+  let panel: DraftPanel | null = null
   let saving = false
   let destroyed = false
 
@@ -71,31 +53,24 @@ export function createScreen(ctx: Ctx, params: Record<string, string>): Screen {
       if (result.status !== 'ok') {
         return set({ step: 'input', value: word, error: result.status === 'wrong_language' ? t.create.wrongLanguage(word) : t.create.notAWord(word) })
       }
-      showDraft(result, replaceId)
+      const draft = draftFromResult(result, { replaceId })
+      // The lemma may differ from what was typed ("ging" → "gehen"): check for a duplicate again.
+      const existing = replaceId ? undefined : ctx.data.findDuplicate(result.content.lemma, result.content.pos)
+      set({ step: 'draft', draft })
+      if (existing) {
+        duplicateSheet(existing, {
+          onRegenerate: () => {
+            draft.replaceId = existing.id
+            render()
+          },
+          onCancel: () => set({ step: 'input', value: '' }),
+        })
+      }
     } catch (err) {
       if (mine.signal.aborted || destroyed) return
       const error = toAppError(err)
       if (error.kind === 'validation' && error.code in t.create.inputErrors) return set({ step: 'input', value: word, error: describeError(error) })
       set({ step: 'failed', word, message: describeError(error), force: options.force === true, replaceId })
-    }
-  }
-
-  function showDraft(result: OkResult, replaceId: string | null) {
-    const draft: Draft = {
-      content: result.content, inputNote: result.inputNote, promptVersion: result.promptVersion, model: result.model, cached: result.cached,
-      favorite: false, replaceId, editing: false, changed: false,
-    }
-    // The lemma may differ from what was typed ("ging" → "gehen"): check for a duplicate again.
-    const existing = replaceId ? undefined : ctx.data.findDuplicate(result.content.lemma, result.content.pos)
-    set({ step: 'draft', draft })
-    if (existing) {
-      duplicateSheet(existing, {
-        onRegenerate: () => {
-          draft.replaceId = existing.id
-          render()
-        },
-        onCancel: () => set({ step: 'input', value: '' }),
-      })
     }
   }
 
@@ -133,27 +108,12 @@ export function createScreen(ctx: Ctx, params: Record<string, string>): Screen {
 
   // --- saving ---------------------------------------------------------------------
 
-  /** Pulls the editor's content into the draft; false when the form has problems. */
-  function commitEditor(draft: Draft): boolean {
-    if (!editor) return true
-    const result = editor.read()
-    if (!result.ok) return false
-    if (editor.dirty()) draft.changed = true
-    draft.content = result.value
-    return true
-  }
-
   async function save(draft: Draft, button: HTMLButtonElement) {
-    if (saving || !commitEditor(draft)) return
+    if (saving || !(panel?.commit() ?? true)) return
     saving = true
     button.disabled = true
     try {
-      // A draft the learner changed is no longer "what the AI said".
-      const source = draft.changed ? 'manual' : 'ai'
-      const word = draft.replaceId
-        ? await ctx.data.updateWordContent(draft.replaceId, draft.content)
-        : await ctx.data.saveWord(draft.content, { source, promptVersion: draft.promptVersion, model: draft.model, favorite: draft.favorite })
-      if (draft.replaceId && draft.favorite) await ctx.data.setFavorite(word.id, true)
+      const word = await saveDraft(ctx, draft)
       parked = null
       state = { step: 'input', value: '' }
       ctx.toast(draft.replaceId ? t.draft.updated : t.draft.saved)
@@ -175,7 +135,7 @@ export function createScreen(ctx: Ctx, params: Record<string, string>): Screen {
 
   async function discard() {
     if (await ctx.confirm({ title: t.draft.discardConfirm, confirmLabel: t.draft.discard, danger: true })) {
-      editor = null
+      panel = null
       set({ step: 'input', value: '' })
     }
   }
@@ -183,22 +143,25 @@ export function createScreen(ctx: Ctx, params: Record<string, string>): Screen {
   // --- rendering --------------------------------------------------------------------
 
   function render() {
+    panel = null
     switch (state.step) {
       case 'input':
         return renderInput(state)
-      case 'loading':
+      case 'loading': {
+        const { word } = state
         return replace(
           el,
           h(
             'div',
             { class: 'create-loading', role: 'status', 'aria-live': 'polite' },
             mascot('thinking', { size: 132 }),
-            de(state.word, 'word-title'),
+            de(word, 'word-title'),
             h('p', null, t.create.loading),
             h('p', { class: 'small muted' }, t.create.loadingHint),
-            h('button', { class: 'btn', onclick: () => { request?.abort(); set({ step: 'input', value: (state as { word: string }).word }) } }, t.common.cancel),
+            h('button', { class: 'btn', onclick: () => { request?.abort(); set({ step: 'input', value: word }) } }, t.common.cancel),
           ),
         )
+      }
       case 'suggest': {
         const { word, suggestion } = state
         return replace(
@@ -237,14 +200,19 @@ export function createScreen(ctx: Ctx, params: Record<string, string>): Screen {
           ),
         )
       }
-      case 'draft':
-        return renderDraft(state.draft)
+      case 'draft': {
+        const { draft } = state
+        const confirm = h('button', { class: 'btn primary big grow', type: 'button' }, icon('check'), draft.replaceId ? t.draft.saveChanges : t.draft.confirm)
+        confirm.onclick = () => void save(draft, confirm)
+        panel = draftPanel(ctx, draft, { actions: [confirm], banner: true })
+        return replace(el, h('header', { class: 'topbar' }, h('h1', null, t.create.title), iconButton('close', t.draft.discard, () => void discard())), panel.el)
+      }
     }
   }
 
   function renderInput(current: Extract<State, { step: 'input' }>) {
     const input = h('input', {
-      class: 'input create-input', type: 'text', value: current.value, lang: 'de', dir: 'ltr', placeholder: 'aufgeben', maxLength: 60,
+      class: 'input create-input', type: 'text', value: current.value, lang: 'de', dir: 'ltr', placeholder: 'aufgeben', maxLength: 80,
       autocapitalize: 'off', autocomplete: 'off', autocorrect: 'off', spellcheck: false, enterKeyHint: 'go',
       'aria-label': t.create.label, 'aria-describedby': 'create-help', 'aria-invalid': current.error ? 'true' : undefined,
     })
@@ -256,59 +224,14 @@ export function createScreen(ctx: Ctx, params: Record<string, string>): Screen {
       h('p', { class: 'help', id: 'create-help' }, t.create.help),
       h('button', { class: 'btn primary big block', type: 'submit' }, icon('sparkle'), t.create.submit),
     )
-    replace(el, h('header', { class: 'topbar' }, h('h1', null, t.create.title)), form)
-    // On phones the keyboard would cover half the screen uninvited; focus only where a keyboard is at hand.
-    if (matchMedia('(hover: hover) and (pointer: fine)').matches || current.error) input.focus()
-  }
-
-  function renderDraft(draft: Draft) {
-    const confirm = h('button', { class: 'btn primary big grow', type: 'button' }, icon('check'), draft.replaceId ? t.draft.saveChanges : t.draft.confirm)
-    confirm.onclick = () => void save(draft, confirm)
-    const favorite = iconButton('star', t.draft.fields.favorite, () => {
-      draft.favorite = !draft.favorite
-      favorite.classList.toggle('on', draft.favorite)
-      favorite.setAttribute('aria-pressed', String(draft.favorite))
-      favorite.replaceChildren(icon('star', { filled: draft.favorite }))
-    }, draft.favorite ? 'on' : '')
-    favorite.setAttribute('aria-pressed', String(draft.favorite))
-    if (draft.favorite) favorite.replaceChildren(icon('star', { filled: true }))
-
-    let body: (Node | null)[]
-    if (draft.editing) {
-      editor ??= createEditor(draft.content)
-      body = [editor.el]
-    } else {
-      editor = null
-      body = [wordHeader(ctx, draft.content, [favorite]), ...wordBody(ctx, draft.content)]
-    }
-
     replace(
       el,
-      h('header', { class: 'topbar' }, h('h1', null, t.create.title), iconButton('close', t.draft.discard, () => void discard())),
-      h('div', { class: 'notice warn draft-banner' }, icon('edit'), h('span', null, t.draft.banner)),
-      draft.inputNote ? h('div', { class: 'notice' }, icon('info'), h('span', null, draft.inputNote)) : null,
-      ...body,
-      h(
-        'div',
-        { class: 'sticky-actions' },
-        h(
-          'button',
-          {
-            class: 'btn big',
-            type: 'button',
-            onclick: () => {
-              if (draft.editing && !commitEditor(draft)) return
-              draft.editing = !draft.editing
-              render()
-              window.scrollTo({ top: 0 })
-            },
-          },
-          icon(draft.editing ? 'check' : 'edit'),
-          draft.editing ? 'پیش‌نمایش' : t.common.edit,
-        ),
-        confirm,
-      ),
+      h('header', { class: 'topbar' }, h('h1', null, t.create.title)),
+      form,
+      h('a', { class: 'card tile', href: '#/import' }, h('div', { class: 'row' }, icon('list'), h('h2', null, t.create.importLink)), h('span', { style: { transform: 'scaleX(-1)', display: 'grid' } }, icon('back', { size: 20 }))),
     )
+    // On phones the keyboard would cover half the screen uninvited; focus only where a keyboard is at hand.
+    if (matchMedia('(hover: hover) and (pointer: fine)').matches || current.error) input.focus()
   }
 
   render()
@@ -319,16 +242,10 @@ export function createScreen(ctx: Ctx, params: Record<string, string>): Screen {
   return {
     el,
     destroy() {
+      // keep edits made in the form if the learner only switched tabs
+      panel?.commit()
       destroyed = true
       request?.abort()
-      // keep edits made in the form if the learner only switched tabs
-      if (state.step === 'draft' && editor) {
-        const result = editor.read()
-        if (result.ok) {
-          if (editor.dirty()) state.draft.changed = true
-          state.draft.content = result.value
-        }
-      }
     },
   }
 }

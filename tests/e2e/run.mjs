@@ -74,7 +74,7 @@ async function signUp(page, { email = 'sohrab@example.test', name = 'سهراب'
 
 async function createWord(page, word, { confirm = true } = {}) {
   await page.goto(`${BASE}/#/create`)
-  await page.getByLabel('کلمهٔ آلمانی').fill(word)
+  await page.getByLabel('کلمه یا عبارت آلمانی').fill(word)
   await page.getByRole('button', { name: 'ساخت کارت' }).click()
   await page.getByText('پیش‌نویس است و هنوز ذخیره نشده').waitFor()
   if (confirm) {
@@ -126,16 +126,16 @@ await test('complete flow: account → word → bank → study → home → sett
   await page.getByRole('link', { name: 'کلمهٔ تازه' }).click()
   await page.getByRole('button', { name: 'ساخت کارت' }).click()
   await page.getByText('یک کلمه بنویس.', { exact: true }).waitFor()
-  await page.getByLabel('کلمهٔ آلمانی').fill('aufgeben gehen')
+  await page.getByLabel('کلمه یا عبارت آلمانی').fill('ich gehe heute Abend nach Hause')
   await page.getByRole('button', { name: 'ساخت کارت' }).click()
-  await page.getByText('فعلاً هر بار فقط یک کلمه می‌شود ساخت.').waitFor()
-  await page.getByLabel('کلمهٔ آلمانی').fill('میز')
+  await page.getByText('این یک جمله است.', { exact: false }).waitFor()
+  await page.getByLabel('کلمه یا عبارت آلمانی').fill('میز')
   await page.getByRole('button', { name: 'ساخت کارت' }).click()
   await page.getByText('کلمه را به آلمانی بنویس، نه فارسی.').waitFor()
   assert((await state()).aiCalls === 0, 'invalid input never reaches the AI')
 
   // --- create: draft → edit → confirm
-  await page.getByLabel('کلمهٔ آلمانی').fill('aufgeben')
+  await page.getByLabel('کلمه یا عبارت آلمانی').fill('aufgeben')
   await snap(page, 'create-input')
   await page.getByRole('button', { name: 'ساخت کارت' }).click()
   await page.getByText('پیش‌نویس است و هنوز ذخیره نشده').waitFor()
@@ -179,7 +179,7 @@ await test('complete flow: account → word → bank → study → home → sett
   await page.getByRole('heading', { name: 'der Tisch' }).waitFor()
   await snap(page, 'word-detail-noun')
   await page.goto(`${BASE}/#/create`)
-  await page.getByLabel('کلمهٔ آلمانی').fill('tisch')
+  await page.getByLabel('کلمه یا عبارت آلمانی').fill('tisch')
   await page.getByRole('button', { name: 'ساخت کارت' }).click()
   await page.getByText('این کلمه در بانک واژه‌ات هست').waitFor()
   await snap(page, 'duplicate')
@@ -319,7 +319,7 @@ await test('AI problems: spelling suggestion, unknown word, outage, invalid answ
   const page = await newPage()
   await signUp(page)
   await page.goto(`${BASE}/#/create`)
-  const input = () => page.getByLabel('کلمهٔ آلمانی')
+  const input = () => page.getByLabel('کلمه یا عبارت آلمانی')
   const go = () => page.getByRole('button', { name: 'ساخت کارت' }).click()
 
   await input().fill('Strase')
@@ -333,7 +333,7 @@ await test('AI problems: spelling suggestion, unknown word, outage, invalid answ
 
   await input().fill('qwrtzx')
   await go()
-  await page.getByText('را به‌عنوان یک کلمهٔ آلمانی نشناختم').waitFor()
+  await page.getByText('را به‌عنوان یک کلمه یا عبارت آلمانی نشناختم').waitFor()
 
   await control('ai', { mode: 'error' })
   await input().fill('schnell')
@@ -381,7 +381,7 @@ await test('offline: the app opens, shows the bank, reviews are kept and uploade
   await snap(page, 'offline-home')
 
   await page.evaluate(() => (location.hash = '#/create'))
-  await page.getByLabel('کلمهٔ آلمانی').fill('schnell')
+  await page.getByLabel('کلمه یا عبارت آلمانی').fill('schnell')
   await page.getByRole('button', { name: 'ساخت کارت' }).click()
   await page.getByText('به اینترنت وصل نیستی.').waitFor()
 
@@ -504,6 +504,310 @@ await test('small phone, large text and landscape do not break the layout', asyn
   await page.goto(`${BASE}/#/home`)
   await noHorizontalScroll(page, 'home in landscape')
   await snap(page, 'landscape-home')
+  return page
+})
+
+await test('batch import: list → drafts → confirm, skip, groups', async () => {
+  const page = await newPage()
+  await signUp(page)
+  await createWord(page, 'schnell')
+  await page.goto(`${BASE}/#/create`)
+  await page.getByRole('link', { name: 'وارد کردن گروهی از روی لیست' }).click()
+  await page.getByLabel('لیست لغت‌ها').fill('1. der Tisch - میز\n2. Lampe\nBescheid sagen\nqwrtzx\nschnell\ntisch\nein ganzer Satz mit zu vielen Wörtern')
+  await page.getByRole('button', { name: 'افزودن به دسته' }).click()
+  await page.getByLabel('دستهٔ تازه').fill('درس ۱')
+  await page.getByRole('dialog').getByRole('button', { name: 'افزودن', exact: true }).click()
+  await snap(page, 'import-input')
+  const before = (await state()).aiCalls
+  await page.getByRole('button', { name: 'بررسی لیست' }).click()
+  await page.getByRole('heading', { name: '۴ لغت برای ساختن' }).waitFor()
+  await page.getByText('از قبل در بانک هست').waitFor() // schnell
+  await page.getByText('این یک جمله است.', { exact: false }).waitFor() // the sentence
+  assert((await page.getByRole('listitem').count()) === 6, 'the repeated "tisch" was merged')
+  assert((await state()).aiCalls === before, 'checking the list costs nothing')
+  await noHorizontalScroll(page, 'import list')
+  await snap(page, 'import-list')
+
+  await page.getByRole('button', { name: 'ساخت ۴ کارت' }).click()
+  await page.getByRole('heading', { name: 'der Tisch' }).waitFor()
+  assert((await state()).words.length === 1, 'generated drafts are not saved by themselves')
+  await page.getByText('کارت ۱ از ۴').waitFor()
+  await noHorizontalScroll(page, 'import review')
+  await snap(page, 'import-review')
+  await page.getByRole('button', { name: 'تأیید و ذخیره' }).click()
+
+  await page.getByRole('heading', { name: 'die Lampe' }).waitFor()
+  await page.getByRole('button', { name: 'رد کن' }).click()
+
+  await page.getByRole('heading', { name: 'Bescheid sagen' }).waitFor()
+  await page.getByText('عبارت', { exact: true }).first().waitFor()
+  // edit before confirming
+  await page.getByRole('button', { name: 'ویرایش' }).click()
+  await page.locator('[data-path="meanings.0.translation"]').fill('خبر دادن')
+  await page.getByRole('button', { name: 'تأیید و ذخیره' }).click()
+
+  await page.getByText('لیست تمام شد').waitFor()
+  await page.getByText('۲ لغت ذخیره شد، ۱ رد شد، ۱ ساخته نشد.').waitFor()
+  await page.getByText('«qwrtzx» ساخته نشد', { exact: false }).waitFor()
+  await snap(page, 'import-done')
+  let s = await state()
+  const saved = s.words.filter((w) => w.lemma !== 'schnell')
+  assert(saved.length === 2, `two words saved (got ${saved.length})`)
+  assert(saved.every((w) => JSON.stringify(w.tags) === JSON.stringify(['درس ۱'])), 'imported words carry the group')
+  const phrase = saved.find((w) => w.lemma === 'Bescheid sagen')
+  assert(phrase.pos === 'phrase' && phrase.primary_meaning === 'خبر دادن' && phrase.source === 'manual', 'the edited expression was saved as edited')
+
+  // the group shows up as a filter and on the word's page
+  await page.getByRole('button', { name: 'دیدن بانک واژه' }).click()
+  await page.getByText('۳ کلمه').waitFor()
+  await page.getByRole('button', { name: 'فیلتر و ترتیب' }).click()
+  await page.getByRole('dialog').getByRole('group', { name: 'دسته' }).getByRole('button', { name: /درس ۱/ }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'بستن' }).last().click()
+  await page.getByText('۲ از ۳ کلمه').waitFor()
+  await snap(page, 'bank-group-filter')
+  await page.getByRole('link', { name: /Tisch/ }).click()
+  await page.getByRole('button', { name: 'برداشتن از دستهٔ درس ۱' }).waitFor()
+  await page.getByRole('button', { name: 'افزودن به دسته' }).click()
+  await page.getByLabel('دستهٔ تازه').fill('خانه')
+  await page.getByRole('dialog').getByRole('button', { name: 'افزودن', exact: true }).click()
+  await page.waitForTimeout(250)
+  s = await state()
+  assert(JSON.stringify(s.words.find((w) => w.lemma === 'Tisch').tags) === JSON.stringify(['درس ۱', 'خانه']), 'groups can be changed on the word page')
+  await noHorizontalScroll(page, 'word page with groups')
+  await snap(page, 'word-groups')
+  return page
+})
+
+await test('undo takes back the last answer, also from the summary', async () => {
+  const page = await newPage()
+  await signUp(page)
+  await createWord(page, 'Tisch')
+  await createWord(page, 'Lampe')
+  await page.goto(`${BASE}/#/study`)
+  const undo = page.getByRole('button', { name: 'برگرداندن جواب قبلی' })
+  assert(await undo.isDisabled(), 'nothing to undo at the start')
+  await page.getByRole('button', { name: 'نمایش جواب' }).click()
+  await page.locator('.rating-4').click() // "easy" by mistake
+  await page.getByRole('heading', { name: 'die Lampe' }).or(page.getByText('die Lampe')).first().waitFor()
+  await undo.click()
+  await page.getByText('جواب قبلی برگشت.').waitFor()
+  await page.getByRole('button', { name: 'نمایش جواب' }).waitFor()
+  assert((await page.locator('.flashcard .word-title').innerText()).includes('Tisch'), 'the undone card is shown again')
+  await snap(page, 'study-undo')
+  await page.waitForTimeout(200)
+  let s = await state()
+  assert(s.reviews.length === 1 && s.reviews[0].undone_at, 'the review is kept and marked as undone')
+  assert(s.cards.every((c) => c.state === 'new'), 'the card is new again on the server')
+
+  // answer properly this time, finish, then undo from the summary
+  await page.getByRole('button', { name: 'نمایش جواب' }).click()
+  await page.locator('.rating-4').click()
+  await page.getByRole('button', { name: 'نمایش جواب' }).click()
+  await page.locator('.rating-4').click()
+  await page.getByText('این دور تمام شد').waitFor()
+  await page.getByRole('button', { name: 'برگرداندن جواب قبلی' }).click()
+  await page.getByRole('button', { name: 'نمایش جواب' }).waitFor()
+  await page.waitForTimeout(200)
+  s = await state()
+  assert(s.reviews.filter((r) => !r.undone_at).length === 1, 'one answer counts, two were undone')
+  await page.goto(`${BASE}/#/home`)
+  await page.locator('.plan-number .count-new', { hasText: '۱' }).waitFor()
+  return page
+})
+
+await test('reverse cards: optional, start after the word is learned, ask Persian → German', async () => {
+  const page = await newPage()
+  await signUp(page)
+  await createWord(page, 'Tisch')
+  await page.goto(`${BASE}/#/settings`)
+  await page.getByText('کارت معکوس (فارسی به آلمانی)').click()
+  await page.waitForTimeout(400)
+  let s = await state()
+  assert(s.settings[0].reverse_cards === true, 'the setting reached the server')
+  assert(s.cards.length === 2 && s.cards.some((c) => c.card_type === 'production'), 'the reverse card was created for the existing word')
+  await snap(page, 'settings-reverse')
+
+  await page.goto(`${BASE}/#/home`)
+  await page.locator('.plan-number .count-new', { hasText: '۱' }).waitFor() // not two: the reverse card waits
+
+  await page.goto(`${BASE}/#/study`)
+  await page.getByRole('button', { name: 'نمایش جواب' }).click()
+  await page.locator('.rating-4').click()
+  await page.getByText('این دور تمام شد').waitFor() // the reverse card is not shown the same day
+
+  await control('shift-due', { days: 2 })
+  await page.goto(`${BASE}/#/settings`)
+  await page.getByRole('button', { name: 'همگام‌سازی' }).click()
+  await page.goto(`${BASE}/#/study`)
+  await page.getByText('فارسی به آلمانی').waitFor()
+  const front = await page.locator('.flashcard').innerText()
+  assert(front.includes('میز') && !front.includes('Tisch'), `the reverse card shows the meaning and hides the German word: ${front}`)
+  await snap(page, 'study-reverse-front')
+  await page.getByRole('button', { name: 'نمایش جواب' }).click()
+  await page.locator('.flashcard-back .word-title', { hasText: 'Tisch' }).waitFor()
+  await snap(page, 'study-reverse-back')
+  await page.locator('.rating-3').click()
+  await page.waitForTimeout(250)
+  s = await state()
+  const production = s.cards.find((c) => c.card_type === 'production')
+  assert(production.state === 'learning', 'the reverse card has its own schedule')
+
+  await page.goto(`${BASE}/#/words`)
+  await page.getByRole('link', { name: /Tisch/ }).click()
+  await page.getByText('کارت معکوس (فارسی به آلمانی)').waitFor()
+  return page
+})
+
+await test('quiz: der/die/das, multiple choice and typing; never touches the cards', async () => {
+  const page = await newPage()
+  await signUp(page)
+  for (const word of ['Tisch', 'Lampe', 'Stuhl', 'Haus', 'aufgeben']) await createWord(page, word)
+  const cardsBefore = JSON.stringify((await state()).cards.map((c) => [c.state, c.reps]))
+
+  await page.getByRole('link', { name: 'آزمون' }).click()
+  await page.getByRole('radio', { name: /der \/ die \/ das/ }).click()
+  await page.getByRole('button', { name: '۵ سؤال' }).click()
+  await noHorizontalScroll(page, 'quiz setup')
+  await snap(page, 'quiz-setup')
+  await page.getByRole('button', { name: 'شروع آزمون' }).click()
+
+  const ARTICLE = { Tisch: 'der', Lampe: 'die', Stuhl: 'der', Haus: 'das' }
+  for (let i = 0; i < 4; i++) {
+    await page.getByText(`سؤال ${['۱', '۲', '۳', '۴'][i]} از ۴`).first().waitFor()
+    const noun = (await page.locator('.quiz-card .word-title').innerText()).trim()
+    const right = ARTICLE[noun]
+    assert(right, `an article question about a noun (got "${noun}")`)
+    const pick = i === 0 ? ['der', 'die', 'das'].find((a) => a !== right) : right // first one wrong on purpose
+    if (i === 0) await snap(page, 'quiz-article')
+    await page.locator('.quiz-options').getByRole('button', { name: pick, exact: true }).click()
+    await page.getByText(i === 0 ? 'درست نبود.' : 'درست است!').waitFor()
+    if (i === 0) await snap(page, 'quiz-feedback-wrong')
+    await page.getByRole('button', { name: i === 3 ? 'دیدن نتیجه' : 'بعدی' }).click()
+  }
+  await page.getByText('نتیجهٔ آزمون').waitFor()
+  await page.getByText('۳ از ۴').waitFor()
+  await page.getByText('این‌ها را دوباره ببین').waitFor()
+  await snap(page, 'quiz-result')
+  let s = await state()
+  assert(s.quizSessions.length === 1 && s.quizSessions[0].kind === 'article' && s.quizSessions[0].correct === 3, 'the quiz was stored')
+  assert(s.quizAnswers.length === 4 && s.quizAnswers.filter((a) => !a.is_correct).length === 1, 'every answer was stored')
+
+  // multiple choice by keyboard-free taps
+  await page.getByRole('button', { name: 'یک آزمون دیگر' }).click()
+  await page.getByRole('radio', { name: /چهارگزینه‌ای/ }).click()
+  await page.getByRole('button', { name: 'شروع آزمون' }).click()
+  await page.locator('.quiz-option').first().waitFor()
+  assert((await page.locator('.quiz-option').count()) === 4, 'four options')
+  await snap(page, 'quiz-choice')
+  await page.locator('.quiz-option').first().click()
+  await page.getByRole('button', { name: 'بعدی' }).waitFor()
+  assert((await page.locator('.quiz-option.is-correct').count()) === 1, 'the right answer is marked')
+  // leave half-way: what was answered is kept
+  await page.getByRole('button', { name: 'خروج از آزمون' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'خروج از آزمون' }).click()
+  await page.getByRole('button', { name: 'شروع آزمون' }).waitFor()
+  await page.waitForTimeout(200)
+  assert((await state()).quizSessions.length === 2, 'a quiz left half-way is still stored')
+
+  // typing: a wrong article, a lower-case noun, "don't know"
+  await page.getByRole('radio', { name: /نوشتاری/ }).click()
+  await page.getByRole('button', { name: 'شروع آزمون' }).click()
+  const MEANING = { 'میز': ['Tisch', 'der'], 'چراغ': ['Lampe', 'die'], 'صندلی': ['Stuhl', 'der'], 'خانه': ['Haus', 'das'], 'تسلیم شدن، دست کشیدن': ['aufgeben', null] }
+  const seen = []
+  for (let i = 0; i < 5; i++) {
+    const meaning = (await page.locator('.quiz-card .meaning-title').innerText()).trim()
+    const [lemma, article] = MEANING[meaning]
+    const field = page.getByLabel('به آلمانی بنویس')
+    if (i === 0) {
+      await snap(page, 'quiz-typing')
+      await page.getByRole('button', { name: 'نمی‌دانم' }).click()
+      await page.getByText('درست نبود.').waitFor()
+    } else if (article && !seen.includes('wrong-article')) {
+      seen.push('wrong-article')
+      await field.fill(`${article === 'der' ? 'die' : 'der'} ${lemma}`)
+      await page.getByRole('button', { name: 'بررسی' }).click()
+      await page.getByText('خود کلمه درست بود، ولی حرف تعریفش نه.').waitFor()
+    } else if (article && !seen.includes('case')) {
+      seen.push('case')
+      await field.fill(lemma.toLowerCase())
+      await field.press('Enter')
+      await page.getByText('درست است؛ فقط حواست به حرف بزرگ و کوچک باشد.').waitFor()
+    } else {
+      await field.fill(article ? `${article} ${lemma}` : lemma)
+      await page.getByRole('button', { name: 'بررسی' }).click()
+      await page.getByText('درست است!').waitFor()
+    }
+    await page.getByRole('button', { name: i === 4 ? 'دیدن نتیجه' : 'بعدی' }).click()
+  }
+  await page.getByText('نتیجهٔ آزمون').waitFor()
+  await page.getByText('۳ از ۵').waitFor()
+  s = await state()
+  assert(s.quizSessions.length === 3, 'three quizzes stored')
+  assert(s.reviews.length === 0, 'quiz answers are not reviews')
+  assert(JSON.stringify(s.cards.map((c) => [c.state, c.reps])) === cardsBefore, 'no card was moved by a quiz')
+  return page
+})
+
+await test('statistics show progress on phone and desktop', async () => {
+  const page = await newPage()
+  await signUp(page)
+  for (const word of ['Tisch', 'Lampe', 'aufgeben', 'schnell']) await createWord(page, word)
+  await page.goto(`${BASE}/#/study`)
+  for (let i = 0; i < 3; i++) {
+    await page.getByRole('button', { name: 'نمایش جواب' }).click()
+    await page.locator(i === 0 ? '.rating-1' : '.rating-4').click()
+    await page.waitForTimeout(60)
+  }
+  await page.goto(`${BASE}/#/home`)
+  await page.getByRole('link', { name: /آمار/ }).click()
+  await page.getByRole('heading', { name: 'آمار' }).waitFor()
+  await page.getByText('۴ لغت در بانک').waitFor()
+  await page.getByText('مرور در ۳۰ روز گذشته').waitFor()
+  assert((await page.locator('.stack-bar .seg').count()) >= 2, 'the status bar has a part per learning stage in use')
+  assert((await page.locator('.chart-col').count()) === 30 + 14, 'thirty days of activity and a fourteen-day forecast')
+  // tapping a column tells its value in words
+  await page.locator('.chart-col').nth(29).click()
+  await page.locator('.chart-caption', { hasText: '۳ مرور' }).waitFor()
+  await page.getByRole('button', { name: 'امروز', exact: true }).click()
+  await page.locator('.summary-grid.four .plan-number b', { hasText: '۳' }).first().waitFor()
+  await noHorizontalScroll(page, 'stats')
+  await snap(page, 'stats-top')
+  await page.evaluate(() => window.scrollTo(0, 900))
+  await snap(page, 'stats-charts')
+  await page.setViewportSize({ width: 320, height: 568 })
+  await noHorizontalScroll(page, 'stats at 320px')
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await noHorizontalScroll(page, 'stats on desktop')
+  await snap(page, 'stats-desktop')
+  await page.getByRole('button', { name: 'تیره' }).count() // (settings not on this page)
+  return page
+})
+
+await test('the bird is on every main screen and reacts', async () => {
+  const page = await newPage()
+  await signUp(page)
+  await createWord(page, 'Tisch')
+  await createWord(page, 'Lampe')
+  for (const route of ['home', 'quiz', 'stats', 'study']) {
+    await page.goto(`${BASE}/#/${route}`)
+    await page.locator('main .mascot').first().waitFor()
+  }
+  await page.goto(`${BASE}/#/study`)
+  await page.getByRole('button', { name: 'نمایش جواب' }).click()
+  await page.locator('.rating-1').click()
+  await page.locator('.companion .mascot-supportive').waitFor()
+  await page.getByText('اشکال نداره، دوباره امتحانش می‌کنیم.').waitFor()
+  await snap(page, 'study-companion')
+  await page.goto(`${BASE}/#/home`)
+  await page.getByRole('button', { name: 'هدهد' }).click()
+  await page.locator('.mascot-excited').waitFor()
+  await snap(page, 'home-bird')
+  // five tabs fit on the smallest phone without wrapping
+  await page.setViewportSize({ width: 320, height: 568 })
+  const heights = await page.locator('.nav-item').evaluateAll((items) => items.map((i) => i.getBoundingClientRect().height))
+  assert(heights.length === 5 && Math.max(...heights) - Math.min(...heights) < 2, `nav labels stay on one line: ${heights}`)
+  await noHorizontalScroll(page, 'home with five tabs at 320px')
   return page
 })
 

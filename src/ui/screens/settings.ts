@@ -37,7 +37,7 @@ export function settingsScreen(ctx: Ctx): Screen {
         'p',
         { class: 'small muted', 'aria-live': 'polite' },
         sync.syncing ? s.syncing : sync.lastSyncedAt ? s.synced(faDateTime(sync.lastSyncedAt)) : s.neverSynced,
-        sync.pending > 0 ? ` · ${s.pending(sync.pending)}` : '',
+        sync.pending > 0 ? `، ${s.pending(sync.pending)}` : '',
       ),
       !sync.online ? h('p', { class: 'notice warn' }, icon('offline', { size: 18 }), t.sync.offlineBanner) : null,
       h('button', { class: 'btn block', type: 'button', disabled: sync.syncing || !sync.online, onclick: () => void ctx.data.syncNow() }, icon('refresh', { size: 18 }), s.syncNow),
@@ -107,6 +107,12 @@ export function settingsScreen(ctx: Ctx): Screen {
             ),
           ),
           h('p', { class: 'help' }, s.dailyGoalHelp),
+        ),
+        h(
+          'div',
+          { class: 'setting' },
+          h('label', { class: 'switch' }, h('span', { style: { fontWeight: '700' } }, s.reverseCards), h('input', { type: 'checkbox', checked: settings.reverseCards, onchange: (e: Event) => void data.setReverseCards((e.target as HTMLInputElement).checked) })),
+          h('p', { class: 'help' }, s.reverseCardsHelp),
         ),
         h(
           'details',

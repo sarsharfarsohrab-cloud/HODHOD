@@ -17,6 +17,7 @@ interface Filters {
   quick: Quick
   pos: PartOfSpeech | null
   cefr: Cefr | null
+  tag: string | null
   sort: Sort
 }
 
@@ -25,7 +26,7 @@ const SEARCH_DELAY_MS = 180
 const FILTER_POS: PartOfSpeech[] = ['noun', 'verb', 'adjective', 'adverb']
 
 /** Filters live outside the screen so coming back from a word keeps the list as it was. */
-let saved: Filters = { query: '', quick: 'all', pos: null, cefr: null, sort: 'newest' }
+let saved: Filters = { query: '', quick: 'all', pos: null, cefr: null, tag: null, sort: 'newest' }
 
 interface Entry {
   word: Word
@@ -42,6 +43,7 @@ export function filterWords(entries: readonly Entry[], filters: Filters, now: Da
   const out = entries.filter((e) => {
     if (filters.pos && e.word.pos !== filters.pos) return false
     if (filters.cefr && e.word.cefr !== filters.cefr) return false
+    if (filters.tag && !e.word.tags.includes(filters.tag)) return false
     switch (filters.quick) {
       case 'all':
         break
@@ -168,6 +170,9 @@ export function wordsScreen(ctx: Ctx): Screen {
           ], filters.sort, (v) => (filters.sort = v ?? 'newest')),
           group<PartOfSpeech>(t.words.posGroup, [{ value: null, label: t.words.all }, ...FILTER_POS.map((p) => ({ value: p, label: t.pos[p] }))], filters.pos, (v) => (filters.pos = v)),
           group<Cefr>(t.words.cefrGroup, [{ value: null, label: t.words.all }, ...CEFR_VALUES.map((c) => ({ value: c, label: c, german: true }))], filters.cefr, (v) => (filters.cefr = v)),
+          ctx.data.tags().length
+            ? group<string>(t.words.tagGroup, [{ value: null, label: t.words.all }, ...ctx.data.tags().map((tag) => ({ value: tag.name, label: `${tag.name} (${tag.count.toLocaleString('fa-IR')})` }))], filters.tag, (v) => (filters.tag = v))
+            : null,
           h('button', { class: 'btn primary block', 'data-autofocus': '', onclick: close }, t.common.close),
         ]
       },
@@ -191,7 +196,9 @@ export function wordsScreen(ctx: Ctx): Screen {
       )
     }
     const matches = filterWords(buildEntries(ctx.data.words.values(), ctx.data.cards), filters, ctx.now())
-    const active = (filters.pos ? 1 : 0) + (filters.cefr ? 1 : 0) + (filters.sort !== 'newest' ? 1 : 0)
+    // a group that no longer exists (its last word was moved or removed) must not hide everything
+    if (filters.tag && !ctx.data.tags().some((tag) => tag.name === filters.tag)) filters.tag = null
+    const active = (filters.pos ? 1 : 0) + (filters.cefr ? 1 : 0) + (filters.tag ? 1 : 0) + (filters.sort !== 'newest' ? 1 : 0)
     replace(
       summary,
       h('span', { 'aria-live': 'polite' }, t.words.count(matches.length, total)),
@@ -203,7 +210,7 @@ export function wordsScreen(ctx: Ctx): Screen {
         list,
         emptyState({
           title: t.words.noMatch,
-          action: h('button', { class: 'btn', type: 'button', onclick: () => { Object.assign(filters, { query: '', quick: 'all', pos: null, cefr: null }); search.value = ''; renderChrome(); renderList() } }, t.words.clearFilters),
+          action: h('button', { class: 'btn', type: 'button', onclick: () => { Object.assign(filters, { query: '', quick: 'all', pos: null, cefr: null, tag: null }); search.value = ''; renderChrome(); renderList() } }, t.words.clearFilters),
         }),
       )
     }

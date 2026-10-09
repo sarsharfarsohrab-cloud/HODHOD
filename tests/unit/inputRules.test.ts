@@ -72,12 +72,14 @@ describe('splitting a pasted or scanned list', () => {
     expect(splitWordList('der Tisch - میز\naufgeben = تسلیم شدن\nschnell: سریع\nLampe چراغ')).toEqual(['der Tisch', 'aufgeben', 'schnell', 'Lampe'])
   })
   test('ignores grammar hints in brackets and list leftovers', () => {
-    expect(splitWordList('der Tisch (pl. Tische)\ndas Haus, -er\nLampe, die')).toEqual(['der Tisch', 'das Haus', 'er', 'Lampe'])
+    expect(splitWordList('der Tisch (pl. Tische)\ndas Haus, -er\nLampe, die')).toEqual(['der Tisch', 'das Haus', 'Lampe'])
+    expect(splitWordList('das Haus, ¨-er\nder Tisch, -e, die Lampe, -n\nder Lehrer, -')).toEqual(['das Haus', 'der Tisch', 'die Lampe', 'der Lehrer'])
     expect(splitWordList('Lampe, die')).toEqual(['Lampe'])
     expect(splitWordList('das Haus, -e')).toEqual(['das Haus'])
   })
   test('removes repeats regardless of capitalisation and keeps the first spelling', () => {
     expect(splitWordList('Tisch\ntisch\nTISCH\nLampe')).toEqual(['Tisch', 'Lampe'])
+    expect(splitWordList('der Tisch\ntisch\ndie Lampe\nLampe')).toEqual(['der Tisch', 'die Lampe'])
   })
   test('a compound with a hyphen stays one entry', () => {
     expect(splitWordList('E-Mail\nU-Bahn')).toEqual(['E-Mail', 'U-Bahn'])

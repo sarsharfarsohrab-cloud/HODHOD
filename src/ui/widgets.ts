@@ -14,6 +14,10 @@ export function toast(message: string, kind: 'info' | 'error' = 'info'): void {
     toastHost = h('div', { class: 'toast-host', role: 'status', 'aria-live': 'polite' })
     document.body.appendChild(toastHost)
   }
+  // the same message again replaces the one on screen instead of piling up
+  for (const shown of [...toastHost.children]) {
+    if (shown.textContent === message || toastHost.children.length >= 2) shown.remove()
+  }
   const el = h('div', { class: `toast ${kind === 'error' ? 'error' : ''}` }, message)
   toastHost.appendChild(el)
   setTimeout(() => el.remove(), kind === 'error' ? 5200 : 2600)
@@ -164,4 +168,65 @@ export function segmented<T extends string>(options: { value: T; label: string }
 
 export function emptyState(parts: { art?: Node; title: string; body?: string; action?: Node }): HTMLElement {
   return h('div', { class: 'empty' }, parts.art ?? null, h('h2', null, parts.title), parts.body ? h('p', null, parts.body) : null, parts.action ?? null)
+}
+
+// --- word groups --------------------------------------------------------------------
+
+/**
+ * Shows the groups of a word (or of a list being imported) as chips and lets the learner
+ * add or remove them. Existing group names are offered, so a group is typed only once.
+ */
+export function tagEditor(ctx: Ctx, initial: readonly string[], onChange: (tags: string[]) => void, options: { emptyText?: string } = {}): HTMLElement {
+  let tags = [...initial]
+  const el = h('div', { class: 'stack', style: { gap: 'var(--s2)' } })
+
+  const set = (next: string[]) => {
+    tags = next
+    onChange([...tags])
+    render()
+  }
+  const add = (raw: string) => {
+    const name = raw.normalize('NFC').replace(/\s+/g, ' ').trim().slice(0, 30)
+    if (!name || tags.some((tag) => tag.toLocaleLowerCase() === name.toLocaleLowerCase()) || tags.length >= 20) return
+    set([...tags, name])
+  }
+
+  const open = () => {
+    openSheet(
+      (close) => {
+        const input = h('input', { class: 'input', type: 'text', maxLength: 30, placeholder: t.tags.placeholder, 'aria-label': t.tags.newTag, 'data-autofocus': '', enterKeyHint: 'done' })
+        const form = h('form', { class: 'row', onsubmit: (e: Event) => { e.preventDefault(); add(input.value); close() } }, h('div', { class: 'grow' }, input), h('button', { class: 'btn primary', type: 'submit' }, t.common.add))
+        const others = ctx.data.tags().filter((tag) => !tags.includes(tag.name))
+        return [
+          h('div', { class: 'row spread' }, h('h2', { style: { fontSize: 'var(--text-lg)' } }, t.tags.add), iconButton('close', t.common.close, close)),
+          h('label', { class: 'field' }, h('span', null, t.tags.newTag), form),
+          others.length
+            ? h(
+                'div',
+                { class: 'stack' },
+                h('span', { class: 'label' }, t.tags.existing),
+                h('div', { class: 'chips' }, others.map((tag) => h('button', { class: 'chip', type: 'button', onclick: () => { add(tag.name); close() } }, tag.name))),
+              )
+            : h('p', { class: 'help' }, t.tags.help),
+        ]
+      },
+      { label: t.tags.add },
+    )
+  }
+
+  const render = () => {
+    el.replaceChildren(
+      h(
+        'div',
+        { class: 'chips' },
+        tags.map((tag) =>
+          h('span', { class: 'chip tag' }, tag, h('button', { class: 'chip-x', type: 'button', 'aria-label': t.tags.remove(tag), onclick: () => set(tags.filter((x) => x !== tag)) }, icon('close', { size: 14 }))),
+        ),
+        h('button', { class: 'chip', type: 'button', onclick: open }, icon('plus', { size: 16 }), t.tags.add),
+      ),
+      ...(tags.length === 0 && options.emptyText ? [h('p', { class: 'help' }, options.emptyText)] : []),
+    )
+  }
+  render()
+  return el
 }

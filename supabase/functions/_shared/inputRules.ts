@@ -76,7 +76,9 @@ export function stripArticle(value: string): string {
 export function splitWordList(text: string): string[] {
   const out: string[] = []
   const seen = new Set<string>()
-  for (const raw of text.split(/[\n\r,;،؛]+/)) {
+  // a plural ending after the noun, as textbooks print it: "das Haus, ¨-er", "der Tisch, -e"
+  const withoutEndings = text.replace(/[,،]\s*[¨"]?[-–]\p{L}{0,3}(?=\s*(?:$|[\n\r,;،؛(]))/gmu, '')
+  for (const raw of withoutEndings.split(/[\n\r,;،؛]+/)) {
     const entry = cleanInput(
       raw
         .replace(/^\s*(?:[-–—•*·▪◦]+|\(?\d+[.)]|\d+\s*[-–])\s*/, '') // "- ", "• ", "1. ", "2) "
@@ -86,7 +88,8 @@ export function splitWordList(text: string): string[] {
     )
     // single letters and stray articles are leftovers of list formatting ("Tisch, -e", "Tisch, der")
     if (entry.length < 2 || ARTICLES.has(entry.toLowerCase())) continue
-    const key = entry.toLocaleLowerCase('de')
+    // "der Tisch" and "tisch" are the same entry; the first spelling wins
+    const key = stripArticle(entry).toLocaleLowerCase('de')
     if (seen.has(key)) continue
     seen.add(key)
     out.push(entry)

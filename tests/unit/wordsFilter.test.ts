@@ -20,7 +20,7 @@ const card = (wordId: string, extra: Partial<Card> = {}): Card => ({
 const STRASSE: WordContent = { ...TISCH, lemma: 'Straße', cefr: 'A2', noun: { article: 'die', plural: 'Straßen', genitive: 'Straße', pluralOnly: false }, meanings: [{ ...TISCH.meanings[0]!, translation: 'خیابان' }] }
 const APFEL: WordContent = { ...TISCH, lemma: 'Apfel', noun: { article: 'der', plural: 'Äpfel', genitive: 'Apfels', pluralOnly: false }, meanings: [{ ...TISCH.meanings[0]!, translation: 'سیب' }] }
 
-const words = [word('1', AUFGEBEN), word('2', TISCH, { isFavorite: true }), word('3', SCHNELL), word('4', STRASSE), word('5', APFEL)]
+const words = [word('1', AUFGEBEN, { tags: ['فعل‌ها'] }), word('2', TISCH, { isFavorite: true, tags: ['خانه', 'درس ۱'] }), word('3', SCHNELL), word('4', STRASSE, { tags: ['درس ۱'] }), word('5', APFEL)]
 const cards = new Map<string, Card>([
   ['1', card('1', { state: 'review', stability: 40, due: iso(12), lastReview: iso(-3), reps: 9 })], // mastered
   ['2', card('2', { state: 'review', stability: 4, due: iso(-1), lastReview: iso(-5), reps: 4, lapses: 3 })], // review, due, difficult
@@ -29,7 +29,7 @@ const cards = new Map<string, Card>([
   // word 5 has no card yet (just saved on another device): treated as new
 ])
 const entries = buildEntries(words, cards)
-const base = { query: '', quick: 'all' as const, pos: null, cefr: null, sort: 'newest' as const }
+const base = { query: '', quick: 'all' as const, pos: null, cefr: null, tag: null, sort: 'newest' as const }
 const lemmas = (filters: Partial<Parameters<typeof filterWords>[1]>) => filterWords(entries, { ...base, ...filters }, NOW).map((e) => e.word.lemma)
 
 describe('word bank search', () => {
@@ -82,6 +82,11 @@ describe('word bank filters and order', () => {
     expect(lemmas({ cefr: 'A2' })).toEqual(['Straße'])
     expect(lemmas({ pos: 'noun', cefr: 'A1' }).sort()).toEqual(['Apfel', 'Tisch'])
     expect(lemmas({ pos: 'noun', query: 'sch' })).toEqual(['Tisch'])
+  })
+  test('by group, alone and combined', () => {
+    expect(lemmas({ tag: 'درس ۱' }).sort()).toEqual(['Straße', 'Tisch'])
+    expect(lemmas({ tag: 'درس ۱', quick: 'favorites' })).toEqual(['Tisch'])
+    expect(lemmas({ tag: 'ناموجود' })).toEqual([])
   })
   test('sorting', () => {
     expect(lemmas({ sort: 'newest' })).toEqual(['aufgeben', 'Tisch', 'schnell', 'Straße', 'Apfel'])

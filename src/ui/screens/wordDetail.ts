@@ -6,7 +6,7 @@ import { h, icon, replace } from '../dom.ts'
 import { createEditor } from '../editor.ts'
 import { fa, faDate, faDuration, faPercent, faRelative } from '../format.ts'
 import { describeError, t } from '../strings.ts'
-import { emptyState, iconButton, statusChip } from '../widgets.ts'
+import { emptyState, iconButton, statusChip, tagEditor } from '../widgets.ts'
 import { conjugationCard, grammarCard, meaningsCard, relatedCards, wordHeader } from '../wordView.ts'
 
 /** Position of a card in the single-column (phone) reading order. */
@@ -67,6 +67,15 @@ export function wordDetailScreen(ctx: Ctx, params: Record<string, string>): Scre
       )
     }
 
+    // The reverse card has its own schedule; show it while reverse cards are in use.
+    const reverse = ctx.data.settings.reverseCards ? ctx.data.reverseCards.get(id) : undefined
+    if (reverse) {
+      learning.append(
+        h('div', { class: 'row spread', style: { borderTop: '1px solid var(--line)', paddingTop: 'var(--s3)' } }, h('span', { class: 'label' }, d.reverseCard), statusChip(wordStatus(reverse))),
+        h('p', { class: 'small muted' }, reverse.state === 'new' ? d.reverseWaiting : `${d.nextReview}: ${new Date(reverse.due) <= now ? d.overdue(faRelative(reverse.due, now)) : faRelative(reverse.due, now)}`),
+      )
+    }
+
     replace(
       el,
       h('header', { class: 'topbar' }, backButton(ctx, '/words'), h('div', { class: 'grow' }), iconButton('edit', t.common.edit, () => ctx.go(`/words/${id}/edit`))),
@@ -82,6 +91,7 @@ export function wordDetailScreen(ctx: Ctx, params: Record<string, string>): Scre
           order(2, grammarCard(ctx, word.content)),
           order(3, conjugationCard(ctx, word.content)),
           order(5, learning),
+          order(5, h('section', { class: 'card stack' }, h('h2', null, t.tags.title), tagEditor(ctx, word.tags, (tags) => void ctx.data.setTags(id, tags), { emptyText: t.tags.none }))),
           order(
             6,
       h(

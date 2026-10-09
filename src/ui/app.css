@@ -32,11 +32,24 @@
   --shadow: 0 1px 2px rgb(37 34 63 / 6%), 0 8px 24px -12px rgb(37 34 63 / 18%);
   --shadow-up: 0 -1px 0 var(--line), 0 -10px 30px -18px rgb(37 34 63 / 25%);
 
-  /* mascot */
-  --m-body: #f5a04a;
-  --m-belly: #fddcae;
-  --m-ink: #2c2945;
-  --m-blush: #f0766a;
+  /* charts: a categorical set for the four learning stages (checked with the palette validator
+     against this theme's card surface) and one hue for single-series bars */
+  --chart-new: #5546d6;
+  --chart-learning: #b87400;
+  --chart-review: #2468dc;
+  --chart-mastered: #14936a;
+  --chart-bar: #5546d6;
+
+  /* mascot: light falls from the upper left */
+  --m-body: #f59a3e;
+  --m-body-hi: #ffc98a;
+  --m-body-lo: #d9741f;
+  --m-belly: #fff1da;
+  --m-belly-lo: #f6cf99;
+  --m-ink: #262341;
+  --m-ink-hi: #4d497a;
+  --m-eye: #211e3a;
+  --m-blush: #ee6f66;
   --m-spark: #5546d6;
 
   /* type */
@@ -101,7 +114,13 @@
   --ok-soft: #173a30;
   --shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 10px 28px -14px rgb(0 0 0 / 60%);
   --shadow-up: 0 -1px 0 var(--line);
-  --m-ink: #4b467c; /* lighter than the background so wing, beak and feet stay visible */
+  --chart-new: #7d6ff0;
+  --chart-learning: #c28414;
+  --chart-review: #4f86e8;
+  --chart-mastered: #2aa87c;
+  --chart-bar: #7d6ff0;
+  --m-ink: #46417a; /* lighter than the background so wing, beak and feet stay visible */
+  --m-ink-hi: #7068b4;
   --m-spark: #c9c2ff;
 }
 
@@ -325,6 +344,17 @@ a {
 
 .nav-item[aria-current='page'] {
   color: var(--accent);
+}
+
+/* five tabs share a phone's width: keep every label on one line */
+@media (max-width: 380px) {
+  .nav-item {
+    font-size: 0.6875rem;
+  }
+
+  .nav-icon {
+    width: 44px;
+  }
 }
 
 .nav-item[aria-current='page'] .nav-icon {
@@ -1020,6 +1050,129 @@ button.chip[aria-pressed='true'] {
   transition: transform var(--slow) var(--ease);
 }
 
+/* always alive: slow breathing and an occasional blink */
+.mascot .m-bob {
+  transform-origin: 62px 108px;
+  animation: m-breathe 3.8s ease-in-out infinite;
+}
+
+.mascot .m-eye-open {
+  transform-origin: 39px 45px;
+  animation: m-blink 5.2s infinite;
+}
+
+.mascot .m-tail {
+  transform-origin: 90px 90px;
+  animation: m-tail 3.8s ease-in-out infinite;
+}
+
+.mascot .m-wing {
+  transform-origin: 64px 66px;
+}
+
+@keyframes m-breathe {
+  50% {
+    transform: scale(1.012, 0.985);
+  }
+}
+
+@keyframes m-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+
+@keyframes m-tail {
+  50% {
+    transform: rotate(3deg);
+  }
+}
+
+/* pleased: a few wing beats */
+.mascot-happy .m-wing,
+.mascot-proud .m-wing,
+.mascot-excited .m-wing,
+.mascot-celebrating .m-wing {
+  animation: m-flap 420ms ease-in-out 3;
+}
+
+.mascot-encouraging .m-wing {
+  animation: m-flap 600ms ease-in-out 1;
+}
+
+@keyframes m-flap {
+  50% {
+    transform: rotate(-22deg) scaleY(0.9);
+  }
+}
+
+/* celebrating: hops, wings going */
+.mascot-celebrating,
+.mascot-excited {
+  animation: m-hop 800ms var(--ease) 2;
+}
+
+.mascot-celebrating .m-wing {
+  animation: m-flap 400ms ease-in-out 4;
+}
+
+@keyframes m-hop {
+  30% {
+    transform: translateY(-11px);
+  }
+  55% {
+    transform: translateY(0);
+  }
+  72% {
+    transform: translateY(-4px);
+  }
+}
+
+/* comforting: a slow nod */
+.mascot-supportive .mascot-head,
+.mascot-disappointed .mascot-head {
+  animation: m-nod 1.6s ease-in-out 1;
+}
+
+@keyframes m-nod {
+  30% {
+    rotate: 5deg;
+  }
+  60% {
+    rotate: -2deg;
+  }
+}
+
+.mascot-surprised {
+  animation: m-startle 420ms var(--ease) 1;
+}
+
+@keyframes m-startle {
+  40% {
+    transform: translateY(-5px) scale(1.04);
+  }
+}
+
+.mascot-sleepy .m-bob {
+  animation-duration: 6.5s;
+}
+
+.mascot-sleepy .mascot-extras {
+  animation: m-float 3.2s ease-in-out infinite;
+}
+
+@keyframes m-float {
+  50% {
+    transform: translate(3px, -4px);
+    opacity: 0.4;
+  }
+}
+
 .mascot-extras {
   animation: pop var(--slow) var(--ease);
 }
@@ -1031,20 +1184,16 @@ button.chip[aria-pressed='true'] {
   }
 }
 
-.mascot-celebrating,
-.mascot-excited {
-  animation: hop 900ms var(--ease);
+.mascot-celebrating .mascot-extras,
+.mascot-excited .mascot-extras {
+  transform-origin: 60px 40px;
+  animation: m-twinkle 900ms ease-in-out 3;
 }
 
-@keyframes hop {
-  30% {
-    transform: translateY(-10px);
-  }
-  55% {
-    transform: translateY(0);
-  }
-  70% {
-    transform: translateY(-4px);
+@keyframes m-twinkle {
+  50% {
+    transform: scale(1.18);
+    opacity: 0.6;
   }
 }
 
@@ -1064,6 +1213,12 @@ button.chip[aria-pressed='true'] {
   50% {
     opacity: 0.25;
   }
+}
+
+/* the bird can be tapped */
+button.mascot-button {
+  display: grid;
+  border-radius: var(--r-lg);
 }
 
 .bubble {
@@ -1582,7 +1737,7 @@ details.fold[open] > summary .icon {
   display: flex;
   flex-direction: column;
   gap: var(--s4);
-  min-height: 46dvh;
+  min-height: 40dvh;
   padding: var(--s6) var(--s5);
   border-radius: 28px;
   background: var(--surface);
@@ -1714,6 +1869,389 @@ input[type='range'] {
   width: 100%;
   accent-color: var(--accent);
   min-height: 32px;
+}
+
+/* groups */
+.chip.tag {
+  padding-inline-end: 4px;
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: var(--ink);
+  min-height: 40px;
+  font-size: var(--text-sm);
+}
+
+.chip-x {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: var(--ink-2);
+}
+
+.chip-x:hover {
+  background: var(--surface);
+}
+
+.btn.square {
+  padding: 0;
+  width: 56px;
+  flex: none;
+}
+
+/* batch import */
+.import-area {
+  min-height: 190px;
+  font-family: var(--font-de);
+  font-size: var(--text-md);
+  line-height: 1.7;
+}
+
+.word-row.dim .de {
+  color: var(--ink-3);
+  text-decoration: line-through;
+}
+
+.word-list.flat {
+  box-shadow: none;
+  border: 1px solid var(--line);
+}
+
+/* the bird beside the work: small, at the edge, never over the card */
+.companion {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  min-height: 52px;
+}
+
+.companion .bubble {
+  padding: var(--s2) var(--s3);
+  animation: rise var(--base) var(--ease);
+}
+
+.bubble.ok {
+  background: var(--ok-soft);
+}
+
+.bubble.no {
+  background: var(--danger-soft);
+}
+
+.flashcard.reverse .flashcard-front .meaning-title {
+  font-size: var(--text-xl);
+}
+
+/* quiz */
+.option-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s2);
+}
+
+.option-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 84px;
+  padding: var(--s3);
+  border-radius: var(--r-md);
+  border: 2px solid var(--line);
+  background: var(--surface);
+  text-align: start;
+  transition: border-color var(--fast), background var(--fast);
+}
+
+.option-card b {
+  font-size: var(--text-md);
+  line-height: 1.5;
+}
+
+.option-card b.de {
+  text-align: right;
+}
+
+.option-card span {
+  font-size: var(--text-xs);
+  color: var(--ink-2);
+  line-height: 1.6;
+}
+
+.option-card[aria-checked='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.option-card:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.quiz-card {
+  flex: none;
+  min-height: 0;
+}
+
+.quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
+.quiz-options.articles {
+  flex-direction: row;
+  direction: ltr;
+}
+
+.quiz-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  flex: 1;
+  min-height: 56px;
+  padding: var(--s2) var(--s4);
+  border-radius: var(--r-md);
+  border: 2px solid var(--line);
+  background: var(--surface);
+  font-size: var(--text-md);
+  font-weight: 700;
+  text-align: center;
+  transition: transform var(--fast) var(--ease), border-color var(--fast);
+}
+
+button.quiz-option:active {
+  transform: scale(0.98);
+}
+
+button.quiz-option:hover {
+  border-color: var(--accent);
+}
+
+.quiz-options.articles .quiz-option {
+  font-family: var(--font-de);
+  font-size: var(--text-lg);
+}
+
+.quiz-option.article-der {
+  color: var(--der);
+}
+
+.quiz-option.article-die {
+  color: var(--die);
+}
+
+.quiz-option.article-das {
+  color: var(--das);
+}
+
+/* feedback is carried by an icon and a border, not by colour alone */
+.quiz-option.is-correct {
+  border-color: var(--good);
+  background: var(--ok-soft);
+  color: var(--ink);
+}
+
+.quiz-option.is-wrong {
+  border-color: var(--again);
+  background: var(--danger-soft);
+  color: var(--ink);
+}
+
+.quiz-option.is-other {
+  opacity: 0.55;
+}
+
+.quiz-option.is-correct .icon {
+  color: var(--good);
+}
+
+.quiz-option.is-wrong .icon {
+  color: var(--again);
+}
+
+/* statistics */
+.summary-grid.four {
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--s2);
+}
+
+.summary-grid .plan-number,
+.card .summary-grid .plan-number {
+  min-width: 0;
+}
+
+.card .summary-grid .plan-number {
+  background: var(--surface-2);
+  box-shadow: none;
+  padding: var(--s3) var(--s1);
+}
+
+.card .summary-grid .plan-number b {
+  font-size: var(--text-lg);
+}
+
+.stack-bar {
+  display: flex;
+  gap: 2px; /* the surface shows through: parts are separated by space, not outlines */
+  height: 18px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.seg {
+  min-width: 4px;
+}
+
+.seg-new {
+  background: var(--chart-new);
+}
+
+.seg-learning {
+  background: var(--chart-learning);
+}
+
+.seg-review {
+  background: var(--chart-review);
+}
+
+.seg-mastered {
+  background: var(--chart-mastered);
+}
+
+.legend {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s2) var(--s5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+
+.swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex: none;
+}
+
+.chart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
+.chart-caption {
+  min-height: 3.2em;
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
+.chart-columns {
+  display: flex;
+  align-items: stretch;
+  height: 132px;
+  padding-top: 20px; /* room for the label above the tallest bar */
+  border-bottom: 1px solid var(--line);
+  direction: ltr; /* time runs left to right, oldest first */
+}
+
+.chart-col {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 1px;
+  border-radius: 4px 4px 0 0;
+}
+
+.chart-col:hover,
+.chart-col:focus-visible {
+  background: var(--surface-2);
+}
+
+.chart-bar {
+  position: relative;
+  width: 100%;
+  max-width: 24px;
+  border-radius: 4px 4px 0 0;
+  background: var(--chart-bar);
+}
+
+.chart-peak {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--ink-2);
+  line-height: 1.6;
+}
+
+.chart-ticks {
+  display: flex;
+  direction: ltr;
+  font-size: 0.6875rem;
+  color: var(--ink-3);
+}
+
+.chart-ticks span {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  white-space: nowrap;
+  overflow: visible;
+}
+
+.hbars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hbars li {
+  display: grid;
+  grid-template-columns: 4.5em 1fr 2.5em;
+  align-items: center;
+  gap: var(--s2);
+  font-size: var(--text-sm);
+}
+
+.hbar-label {
+  color: var(--ink-2);
+  font-weight: 700;
+}
+
+.hbar-track {
+  display: block;
+  height: 14px;
+}
+
+.hbar-fill {
+  display: block;
+  height: 100%;
+  min-width: 4px;
+  border-radius: 4px 0 0 4px; /* in a right-to-left row the bar grows towards the left */
+  background: var(--chart-bar);
+}
+
+.hbars b {
+  text-align: end;
 }
 
 /* ---------------------------------------------------------------- preferences */

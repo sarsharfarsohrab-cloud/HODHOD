@@ -16,7 +16,10 @@ import { mascot } from './ui/mascot.ts'
 import { authScreen } from './ui/screens/auth.ts'
 import { createScreen } from './ui/screens/create.ts'
 import { homeScreen } from './ui/screens/home.ts'
+import { importScreen } from './ui/screens/import.ts'
+import { quizScreen } from './ui/screens/quiz.ts'
 import { settingsScreen } from './ui/screens/settings.ts'
+import { statsScreen } from './ui/screens/stats.ts'
 import { studyScreen } from './ui/screens/study.ts'
 import { wordDetailScreen, wordEditScreen } from './ui/screens/wordDetail.ts'
 import { wordsScreen } from './ui/screens/words.ts'
@@ -80,10 +83,13 @@ function readConfig(): SupabaseConfig | null {
 const ROUTES: { pattern: RegExp; keys: string[]; screen: ScreenFactory; tab: string | null }[] = [
   { pattern: /^\/home$/, keys: [], screen: homeScreen, tab: 'home' },
   { pattern: /^\/create$/, keys: [], screen: createScreen, tab: 'create' },
+  { pattern: /^\/import$/, keys: [], screen: importScreen, tab: 'create' },
   { pattern: /^\/words$/, keys: [], screen: wordsScreen, tab: 'words' },
   { pattern: /^\/words\/([^/]+)\/edit$/, keys: ['id'], screen: wordEditScreen, tab: 'words' },
   { pattern: /^\/words\/([^/]+)$/, keys: ['id'], screen: wordDetailScreen, tab: 'words' },
   { pattern: /^\/study$/, keys: [], screen: studyScreen, tab: 'study' },
+  { pattern: /^\/quiz$/, keys: [], screen: quizScreen, tab: 'quiz' },
+  { pattern: /^\/stats$/, keys: [], screen: statsScreen, tab: 'home' },
   { pattern: /^\/settings$/, keys: [], screen: settingsScreen, tab: null },
 ]
 
@@ -92,6 +98,7 @@ const TABS: { id: string; path: string; label: string; icon: IconName }[] = [
   { id: 'create', path: '/create', label: t.nav.create, icon: 'plus' },
   { id: 'words', path: '/words', label: t.nav.words, icon: 'book' },
   { id: 'study', path: '/study', label: t.nav.study, icon: 'cards' },
+  { id: 'quiz', path: '/quiz', label: t.nav.quiz, icon: 'quiz' },
 ]
 
 function parseHash(): { path: string; params: Record<string, string> } {

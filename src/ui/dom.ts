@@ -73,6 +73,11 @@ const ICONS = {
   download: '<path d="M12 4v11M7.500 11l4.500 4.500 4.500-4.500M5 20h14"/>',
   clock: '<circle cx="12" cy="12" r="8.500"/><path d="M12 7.500V12l3 2"/>',
   info: '<circle cx="12" cy="12" r="8.500"/><path d="M12 11v5.500M12 7.700v.100"/>',
+  list: '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.500" cy="6" r=".800"/><circle cx="4.500" cy="12" r=".800"/><circle cx="4.500" cy="18" r=".800"/>',
+  undo: '<path d="M9 7 4.500 11.500 9 16"/><path d="M4.500 11.500H14a5.500 5.500 0 0 1 0 11h-3"/>',
+  quiz: '<path d="M9.200 9a3 3 0 1 1 4.300 2.700c-.900.500-1.500 1.200-1.500 2.300"/><circle cx="12" cy="17.300" r=".600"/><rect x="3.500" y="3.500" width="17" height="17" rx="4"/>',
+  chart: '<path d="M5 20V11M12 20V5M19 20v-6"/>',
+  swap: '<path d="M7 8h12l-3-3M17 16H5l3 3"/>',
 } as const
 
 export type IconName = keyof typeof ICONS

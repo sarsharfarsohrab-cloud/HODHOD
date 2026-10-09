@@ -2,19 +2,26 @@
 //   NODE_PATH=$(npm root -g) bun run scripts/make-icons.mjs
 import { createRequire } from 'node:module'
 import { mkdir, writeFile } from 'node:fs/promises'
-import { mascotMarkup } from '../src/ui/mascot.ts'
+import { mascotDocument } from '../src/ui/mascot.ts'
 
 const require = createRequire(import.meta.url)
 const sharp = require('sharp')
 
-const COLORS = { '--m-body': '#f5a04a', '--m-belly': '#fddcae', '--m-ink': '#2c2945', '--m-blush': '#f0766a', '--m-spark': '#5546d6' }
+const COLORS = {
+  '--m-body': '#f59a3e', '--m-body-hi': '#ffc98a', '--m-body-lo': '#d9741f', '--m-belly': '#fff1da', '--m-belly-lo': '#f6cf99',
+  '--m-ink': '#262341', '--m-ink-hi': '#4d497a', '--m-eye': '#211e3a', '--m-blush': '#ee6f66', '--m-spark': '#5546d6',
+}
 const BACKGROUND = '#fff0dc'
 
-const bird = mascotMarkup('happy').replace(/var\((--m-[a-z]+)\)/g, (_, name) => COLORS[name])
-// CSS transforms in the markup → SVG attributes, which every rasteriser understands
-const portable = bird
+// the bird as a stand-alone drawing; CSS transforms → SVG attributes, which every rasteriser understands
+const document = mascotDocument('happy', COLORS)
+const portable = document
+  .replace(/^<svg[^>]*>/, '')
+  .replace(/<\/svg>$/, '')
   .replace(/style="transform:translate\(([\d.]+)px,([\d.]+)px\) rotate\((-?[\d.]+)deg\);transition-delay:\d+ms"/g, 'transform="translate($1 $2) rotate($3)"')
   .replace(/style="transform:rotate\((-?[\d.]+)deg\);transform-origin:([\d.]+)px ([\d.]+)px"/g, 'transform="rotate($1 $2 $3)"')
+  .replace(/style="stop-color:(#[0-9a-f]+);stop-opacity:([\d.]+)"/g, 'stop-color="$1" stop-opacity="$2"')
+  .replace(/style="stop-color:(#[0-9a-f]+)"/g, 'stop-color="$1"')
 
 /** `inset` is the share of the canvas kept free around the bird (maskable icons need a safe zone). */
 const svg = (inset, rounded) => {

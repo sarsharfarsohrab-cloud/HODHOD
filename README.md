@@ -4,8 +4,9 @@
 
 A vocabulary app for Persian speakers learning German. Installable web app (PWA) for iPhone, Android and desktop browsers.
 
-- **Stage 1 (this version):** accounts, AI word creation with a mandatory draft/confirm step, Word Bank (search, filters, favourites, archive), word detail with full conjugation and audio, FSRS flashcards with a daily queue, streak and daily goal, settings, offline reviews, data export, account deletion.
-- **Not built yet:** quiz, statistics pages, XP/achievements, reverse (Persian → German) cards, server-generated audio, push notifications, Google/Apple sign-in, guest mode. The data model has room for them (see [Roadmap](#roadmap)).
+- **Stage 1:** accounts, AI word creation with a mandatory draft/confirm step, Word Bank (search, filters, favourites, archive), word detail with full conjugation and audio, FSRS flashcards with a daily queue, streak and daily goal, settings, offline reviews, data export, account deletion.
+- **Stage 2 (this version):** batch import of a pasted / typed / scanned word list (one draft per entry, each confirmed by the learner), fixed expressions of up to five words (`Bescheid sagen`), word groups (tags) with a filter, undo of the last answer, optional reverse cards (Persian → German), quiz (multiple choice, typing, der/die/das) that never moves a card, statistics, and a mascot that reacts to what happens.
+- **Not built:** XP/achievements, server-generated audio, push notifications, Google/Apple sign-in, guest mode (see [Roadmap](#roadmap)).
 
 ---
 
@@ -33,7 +34,9 @@ Browser (static files, no framework)            Supabase project
 Key decisions:
 
 - **No runtime dependencies.** The only third-party code is the FSRS reference implementation [ts-fsrs](https://github.com/open-spaced-repetition/ts-fsrs) 5.4.2 (MIT), vendored unmodified in `vendor/ts-fsrs`, and the Vazirmatn font (OFL). The Supabase client in `src/data/supabase.ts` is a thin wrapper over the documented HTTP APIs.
-- **Word ≠ card.** `words` holds the lexical content; `cards` is a way of practising a word (`card_type`). Today only `recognition` cards are created.
+- **Word ≠ card.** `words` holds the lexical content; `cards` is a way of practising a word (`card_type`). Every word has a `recognition` card (German → Persian). With *reverse cards* switched on it also has a `production` card (Persian → German) with its own schedule; that card is first offered once the recognition card has reached the review stage, and the two cards of a word are never shown on the same day.
+- **A quiz is practice, not review.** Quiz answers go to `quiz_sessions` / `quiz_answers` and never change a card's schedule; they only make weak words more likely in the next quiz (`src/core/quiz.ts`).
+- **Undo keeps history.** Taking back an answer marks the review event (`undone_at`) and restores the card state the device had before; nothing is deleted. Only the latest review of a card can be undone (`undo_review`).
 - **Word content is one validated JSON document** (`words.content`) instead of separate meaning/example/conjugation tables: it is always read and written with the word, and one validator (`wordSchema.ts`) guards every write. Columns the database needs for filtering (`lemma`, `pos`, `cefr`, `primary_meaning`) are kept in step with it.
 - **Compound tenses are derived, not generated.** The AI returns Präsens, Präteritum, Konjunktiv I/II, Imperativ and Partizip II; Perfekt, Plusquamperfekt, Futur I/II are built by rule in `src/core/conjugation.ts`.
 - **Scheduler:** FSRS-6 with default parameters, learning steps 1 min / 10 min, relearning 10 min, target retention 90 % (adjustable). Every review event stores the scheduler version.
@@ -42,7 +45,7 @@ Key decisions:
 ### Sync and conflicts
 
 - The app keeps a copy of the account's words and cards in IndexedDB (one database per account) and downloads only rows changed since the last sync (keyset cursor on `updated_at, id`).
-- Reviews, favourites, archiving and settings are applied locally and queued in an outbox. Review uploads are idempotent (client-generated event id, `apply_review` RPC); an older review arriving late is kept in history but never rewinds a newer card state.
+- Reviews, undo, quiz results, favourites, archiving, groups and settings are applied locally and queued in an outbox. Review uploads are idempotent (client-generated event id, `apply_review` RPC); an older review arriving late is kept in history but never rewinds a newer card state.
 - Editing a word uses optimistic concurrency (`updated_at` must match). On a conflict the newer version is loaded and the user is told; nothing is overwritten silently.
 - Creating and editing words needs a connection. Reading the bank and reviewing work offline.
 
@@ -53,7 +56,7 @@ Key decisions:
 ### 1. Supabase
 
 1. Create a project. Copy **Project URL** and the **publishable (anon) key** into `public/config.js` (see `public/config.example.js`). These two values are public by design.
-2. Run the migrations in order. Dashboard: *SQL Editor* → paste `supabase/migrations/0001_init.sql` → *Run*. CLI: `supabase link --project-ref <ref> && supabase db push`.
+2. Run the migrations in order (`0001_init.sql`, then `0002_practice.sql`). Dashboard: *SQL Editor* → paste the file → *Run*, one file at a time. CLI: `supabase link --project-ref <ref> && supabase db push`. Each migration is additive: the previously deployed app keeps working after it, so run the migration first, deploy the functions second and publish the app last.
 3. Deploy the two Edge Functions.
    - CLI: `supabase functions deploy analyze-word delete-account`
    - Dashboard: *Edge Functions → Deploy a new function → Via Editor*, name it exactly `analyze-word`, paste `deploy/analyze-word.ts` (generate with `bun run bundle:functions`); repeat for `delete-account`.
@@ -78,7 +81,7 @@ Requires [Bun](https://bun.sh) ≥ 1.2. Nothing to install.
 
 ```sh
 bun run typecheck        # tsc (needs `typescript` on PATH or `bun install`)
-bun test tests/unit      # 150+ unit tests
+bun test tests/unit      # 200+ unit tests
 ./scripts/test-db.sh     # migrations + RLS tests on a throw-away local PostgreSQL
 bun run build            # → dist/
 bun run dev              # build and serve dist/ on http://localhost:4173
@@ -102,10 +105,10 @@ iPhone: open the address in **Safari** → Share → **Add to Home Screen**. And
 
 | What | Where | Runs against |
 |---|---|---|
-| Input rules, content validation, conjugation, FSRS (incl. reference vectors from ts-fsrs/fsrs-rs), queue, streak, search/filter | `tests/unit/*.test.ts` | pure functions |
+| Input rules, list splitting, content validation, conjugation, FSRS (incl. reference vectors from ts-fsrs/fsrs-rs), queue (incl. reverse cards), streak, search/filter, quiz building and grading, statistics | `tests/unit/*.test.ts` | pure functions |
 | AI function: auth, input, repair/retry, timeouts, provider errors, cache, rate limits | `tests/unit/analyzeWord.test.ts` | stand-ins for the AI API and Supabase, defined in the test file |
-| Sign-in, token refresh, save/edit/duplicates, offline reviews, idempotent upload, two devices, paging, export, account deletion, isolation between accounts | `tests/unit/appData.test.ts` | `tests/fake-backend/fakeSupabase.ts` |
-| Schema, triggers, RLS, `apply_review`, `activity_by_day`, cascade delete | `tests/db/*.sql` | a real local PostgreSQL |
+| Sign-in, token refresh, save/edit/duplicates, offline reviews, idempotent upload, undo, reverse cards, groups, quiz upload, two devices, paging, export, account deletion, isolation between accounts | `tests/unit/appData.test.ts` | `tests/fake-backend/fakeSupabase.ts` |
+| Schema, triggers, RLS, `apply_review`, `undo_review`, `save_quiz`, `activity_by_day`, cascade delete | `tests/db/*.sql` | a real local PostgreSQL |
 | Full user flows on phone, small phone, landscape and desktop sizes | `tests/e2e/run.mjs` | Chromium + the fake backend |
 
 `tests/fake-backend` and `tests/fixtures` are **test-only**: nothing under `src/` imports them and they are not part of the build. They exist because failures such as timeouts, malformed AI output or a lost response cannot be provoked on the real services.
@@ -114,7 +117,7 @@ iPhone: open the address in **Safari** → Share → **Add to Home Screen**. And
 
 - AI keys and the Supabase service-role key exist only as Edge Function secrets. The browser bundle contains the project URL and the publishable key, nothing else.
 - Every user-owned table has row level security (`user_id = auth.uid()`); `tests/db/10_rls_and_reviews.sql` checks that one account cannot read or change another's rows. Review history is append-only; words are soft-deleted.
-- `analyze-word` requires a valid session, validates input before spending anything, limits fresh generations per user per minute/day and globally per day, and refuses to run if it cannot check usage.
+- `analyze-word` requires a valid session, validates input before spending anything, limits fresh generations per user per minute/day and globally per day (defaults 12 / 200 / 600, see `.env.example`), and refuses to run if it cannot check usage. A batch import is the same call once per entry, at most 40 entries per list; entries already in the bank or already cached cost nothing.
 - The word typed by a learner is sent to the AI provider. Name and e-mail are not. Finished analyses are cached and shared between accounts; a learner's edits are not.
 - `delete-account` removes the auth user; all owned rows go with it (`ON DELETE CASCADE`). AI usage logs are kept without the user id.
 - A Content-Security-Policy in `index.html` allows scripts, styles and fonts from the app's own origin only.
@@ -125,16 +128,18 @@ iPhone: open the address in **Safari** → Share → **Add to Home Screen**. And
 - **Audio** uses the device's built-in German voice (Web Speech API). Quality depends on the device; some desktop browsers have no German voice; the play buttons disappear once the browser reports that.
 - **AI content can be wrong.** It is validated for structure, not for linguistic truth — that is why every card is a draft until confirmed, and every field is editable. CEFR levels are estimates.
 - **Notifications** are not implemented. On iOS they would require the installed PWA plus a push server.
+- **Scanning a printed list** relies on the keyboard's own text scanner (iOS *Scan Text*); the app itself does no image recognition.
+- **Undo** covers the last answer of the current study session only.
 - Default AI model names in `aiProviders.ts` are configuration, not something the tests can verify; override with `AI_MODEL` if a provider renames a model.
 - Offline: a brand-new device must sync once online before it can be used offline.
 
 ## Roadmap
 
-1. Quiz (multiple choice and typing from the learner's own words; cloze via AI) with `quiz_*` tables kept separate from review history.
-2. Statistics (retention, forecast, difficult words).
+1. Server-side audio with caching behind the existing `AudioProvider` interface.
+2. Reminders (push notifications).
 3. XP, levels, milestones; streak freeze.
-4. Server-side audio with caching behind the existing `AudioProvider` interface.
-5. Production cards (Persian → German) via `cards.card_type`.
+4. Cloze questions in the quiz.
+5. A second target language (English); the schema already has `languages` / `user_languages`.
 6. Google / Apple sign-in; native packaging (Capacitor) for the App Store.
 
 ## Licences

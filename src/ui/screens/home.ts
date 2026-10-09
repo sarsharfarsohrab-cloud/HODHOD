@@ -4,12 +4,18 @@ import { dayKey, shiftDayKey } from '../../core/time.ts'
 import type { Ctx, Screen } from '../context.ts'
 import { h, icon, replace } from '../dom.ts'
 import { fa, faRelative, faWeekday } from '../format.ts'
-import { mascot, type MascotMood } from '../mascot.ts'
+import { mascot, reactMascot, type MascotMood } from '../mascot.ts'
 import { t } from '../strings.ts'
 import { iconButton, progressBar } from '../widgets.ts'
 
 export function homeScreen(ctx: Ctx): Screen {
   const el = h('main', { class: 'screen wide' })
+
+  /** The bird greets back when tapped — a small thing, but it makes the home screen feel alive. */
+  const bird = (mood: MascotMood) => {
+    const art = mascot(mood, { size: 96 })
+    return h('button', { class: 'mascot-button', type: 'button', 'aria-label': 'هدهد', onclick: () => reactMascot(art, 'excited', mood, 1500) }, art)
+  }
 
   const render = () => {
     const { data } = ctx
@@ -67,7 +73,7 @@ export function homeScreen(ctx: Ctx): Screen {
         h('h1', null, t.home.greeting(now.getHours(), data.profile.displayName)),
         iconButton('settings', t.nav.settings, () => ctx.go('/settings')),
       ),
-      h('div', { class: 'hello' }, mascot(mood, { size: 92 }), h('p', { class: 'bubble' }, line)),
+      h('div', { class: 'hello' }, bird(mood), h('p', { class: 'bubble' }, line)),
       h(
         'div',
         { class: 'cols' },
@@ -127,6 +133,12 @@ export function homeScreen(ctx: Ctx): Screen {
                 ),
               ),
             ),
+          ),
+          h(
+            'a',
+            { class: 'card tile', href: '#/stats' },
+            h('div', { class: 'row' }, icon('chart'), h('div', null, h('h2', null, t.nav.stats), h('span', { class: 'small muted' }, t.home.statsHint))),
+            h('span', { style: { transform: 'scaleX(-1)', display: 'grid' } }, icon('back', { size: 20 })),
           ),
           h(
             'a',

@@ -29,6 +29,19 @@ function configure() {
       return aiResponse(asAiOutput({ ...TISCH, lemma: 'Straße', ipa: 'ˈʃtʁaːsə', noun: { article: 'die', plural: 'Straßen', genitive: 'Straße', pluralOnly: false },
         meanings: [{ ...TISCH.meanings[0]!, translation: 'خیابان' }], collocations: [] }))
     }
+    const nouns: Record<string, ['der' | 'die' | 'das', string, string]> = {
+      lampe: ['die', 'Lampe', 'چراغ'], stuhl: ['der', 'Stuhl', 'صندلی'], haus: ['das', 'Haus', 'خانه'], fenster: ['das', 'Fenster', 'پنجره'],
+    }
+    const nounKey = key.replace(/^(der|die|das) /, '')
+    if (nouns[nounKey]) {
+      const [article, lemma, meaning] = nouns[nounKey]
+      return aiResponse(asAiOutput({ ...TISCH, lemma, noun: { article, plural: null, genitive: null, pluralOnly: false },
+        meanings: [{ ...TISCH.meanings[0]!, translation: meaning }], collocations: [] }))
+    }
+    if (key === 'bescheid sagen') {
+      return aiResponse(asAiOutput({ ...SCHNELL, lemma: 'Bescheid sagen', pos: 'phrase', cefr: 'B1', ipa: null, adjective: null, synonyms: ['informieren'], antonyms: [],
+        meanings: [{ ...SCHNELL.meanings[0]!, translation: 'خبر دادن، اطلاع دادن' }] }))
+    }
     if (/^wort[a-z]$/.test(key)) {
       return aiResponse(asAiOutput({ ...TISCH, lemma: `Wort${key.slice(4)}`, noun: { article: 'das', plural: 'Wörter', genitive: 'Wortes', pluralOnly: false },
         meanings: [{ ...TISCH.meanings[0]!, translation: 'واژهٔ آزمایشی' }], collocations: [] }))
@@ -83,6 +96,8 @@ Bun.serve({
             cards: backend.tables.cards,
             reviews: backend.tables.review_events,
             settings: backend.tables.user_settings,
+            quizSessions: backend.tables.quiz_sessions,
+            quizAnswers: backend.tables.quiz_answers,
             aiCalls: backend.aiCalls,
             logs: backend.tables.ai_generation_logs,
           })
