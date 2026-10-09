@@ -81,7 +81,7 @@ async function answer(d: Device, rating: Rating) {
   const next = nextCard(d.data.activeCards(), { settings: d.data.settings, now: now() })
   if (next.kind !== 'card') throw new Error(`no card to answer (${next.kind})`)
   const result = scheduler.preview(toSchedulingState(next.card), now())[rating]
-  return d.data.recordReview(next.card, result, scheduler.version, 4000, 'session-1')
+  return (await d.data.recordReview(next.card, result, scheduler.version, 4000, 'session-1')).card
 }
 const settle = () => new Promise((r) => setTimeout(r, 5))
 
@@ -343,7 +343,7 @@ describe('studying and sync', () => {
     await settle()
     expect(card.state).toBe('learning')
     expect(card.introducedAt).toBe(now().toISOString())
-    expect(d.data.today()).toEqual({ reviews: 1, again: 0, newCards: 1, durationMs: 4000 })
+    expect(d.data.today()).toEqual({ reviews: 1, again: 0, newCards: 1, durationMs: 4000, matureReviews: 0, matureAgain: 0 })
     expect(d.data.sync.pending).toBe(0)
     expect(backend.tables.review_events![0]).toMatchObject({
       word_id: word.id, rating: 3, state_before: 'new', state_after: 'learning', scheduler_version: 'fsrs-6/ts-fsrs-5.4.2',
@@ -538,5 +538,231 @@ describe('privacy', () => {
     expect(d.client.session).toBe(null)
     expect(await d.db.getAll('words')).toEqual([])
     expect(await kindOf(device().client.signIn('sohrab@example.test', 'correct horse'))).toBe('auth:invalid_credentials')
+  })
+})
+
+describe('undo of the last answer', () => {
+  const reviewAndKeep = async (d: Device, rating: Rating) => {
+    const next = nextCard(d.data.activeCards(), { settings: d.data.settings, now: now() })
+    if (next.kind !== 'card') throw new Error('no card')
+    const before = next.card
+    const result = await d.data.recordReview(before, scheduler.preview(toSchedulingState(before), now())[rating], scheduler.version, 4000, 's')
+    return { before, ...result }
+  }
+
+  test('puts the card, today’s numbers and the server back as they were', async () => {
+    const d = await signedIn()
+    const word = await d.data.saveWord(TISCH, { source: 'ai' })
+    const { before, event } = await reviewAndKeep(d, 4)
+    await settle()
+    expect(backend.tables.cards![0]!.state).toBe('review')
+
+    await d.data.undoReview(event, before)
+    await settle()
+    expect({ ...d.data.cards.get(word.id), updatedAt: '' }).toEqual({ ...before, updatedAt: '' })
+    expect(d.data.today()).toBe(undefined)
+    expect(d.data.sync.pending).toBe(0)
+    expect(backend.tables.cards![0]).toMatchObject({ state: 'new', reps: 0, last_review: null, introduced_at: null })
+    expect(backend.tables.review_events!.length).toBe(1) // kept…
+    expect(backend.tables.review_events![0]!.undone_at).toBeTruthy() // …and marked
+    await d.data.syncNow()
+    expect(d.data.activity.size).toBe(0) // the server no longer counts it either
+    expect(queueCounts(d.data.activeCards(), { settings: d.data.settings, now: now() }).newCards).toBe(1) // the word is a new card again
+  })
+  test('offline: an answer that never left the device is simply forgotten', async () => {
+    const d = await signedIn()
+    await d.data.saveWord(TISCH, { source: 'ai' })
+    d.online = false
+    const { before, event } = await reviewAndKeep(d, 3)
+    expect(d.data.sync.pending).toBe(1)
+    await d.data.undoReview(event, before)
+    expect(d.data.sync.pending).toBe(0)
+    d.online = true
+    await d.data.syncNow()
+    expect(backend.tables.review_events!.length).toBe(0)
+    expect(backend.tables.cards![0]!.state).toBe('new')
+  })
+  test('offline undo of an answer the server already has is uploaded later', async () => {
+    const d = await signedIn()
+    await d.data.saveWord(TISCH, { source: 'ai' })
+    const { before, event } = await reviewAndKeep(d, 3)
+    await settle()
+    d.online = false
+    await d.data.undoReview(event, before)
+    expect(d.data.sync.pending).toBe(1)
+    expect(backend.tables.cards![0]!.state).toBe('learning')
+    d.online = true
+    await d.data.syncNow()
+    expect(backend.tables.cards![0]!.state).toBe('new')
+    expect(d.data.sync.pending).toBe(0)
+  })
+  test('undo then answer again: only the second answer counts', async () => {
+    const d = await signedIn()
+    const word = await d.data.saveWord(TISCH, { source: 'ai' })
+    const { before, event } = await reviewAndKeep(d, 1)
+    await d.data.undoReview(event, before)
+    await reviewAndKeep(d, 4)
+    await settle()
+    await d.data.syncNow()
+    expect(d.data.cards.get(word.id)!.state).toBe('review')
+    expect(d.data.today()).toMatchObject({ reviews: 1, again: 0, newCards: 1 })
+    expect(backend.tables.review_events!.filter((e) => !e.undone_at).length).toBe(1)
+  })
+  test('an undo the server refuses (the card moved on elsewhere) does not get stuck', async () => {
+    const phone = await signedIn()
+    await phone.data.saveWord(TISCH, { source: 'ai' })
+    const { before, event } = await reviewAndKeep(phone, 3)
+    await settle()
+    const laptop = await signedIn()
+    clock += 11 * 60_000
+    await answer(laptop, 3) // a newer review from another device
+    await settle()
+    await phone.data.undoReview(event, before)
+    await settle()
+    expect(phone.data.sync.pending).toBe(0)
+    expect(backend.tables.cards![0]!.reps).toBe(2)
+    expect([...phone.data.cards.values()][0]!.reps).toBe(2) // the phone took the server's newer state
+  })
+})
+
+describe('reverse cards', () => {
+  test('are off by default; switching on creates them for the whole bank and for later words', async () => {
+    const d = await signedIn()
+    await d.data.saveWord(TISCH, { source: 'ai' })
+    await d.data.saveWord(AUFGEBEN, { source: 'ai' })
+    expect(d.data.reverseCards.size).toBe(0)
+    expect(d.data.activeCards().length).toBe(2)
+
+    await d.data.setReverseCards(true)
+    await settle()
+    await d.data.syncNow()
+    expect(d.data.settings.reverseCards).toBe(true)
+    expect(d.data.reverseCards.size).toBe(2)
+    expect(d.data.activeCards().length).toBe(4)
+    expect(backend.tables.user_settings![0]!.reverse_cards).toBe(true)
+
+    const word = await d.data.saveWord(SCHNELL, { source: 'ai' })
+    expect(d.data.reverseCards.get(word.id)?.cardType).toBe('production')
+    // nothing extra to study yet: reverse cards wait until their word has been learned
+    expect(queueCounts(d.data.activeCards(), { settings: d.data.settings, now: now() }).newCards).toBe(3)
+  })
+  test('switching off takes them out of the queue but keeps their progress', async () => {
+    const d = await signedIn()
+    const word = await d.data.saveWord(TISCH, { source: 'ai' })
+    await d.data.setReverseCards(true)
+    await settle()
+    await d.data.syncNow()
+    const reverse = d.data.reverseCards.get(word.id)!
+    await d.data.recordReview(reverse, scheduler.preview(toSchedulingState(reverse), now())[4], scheduler.version, 1000, null)
+    await d.data.setReverseCards(false)
+    await settle()
+    expect(d.data.activeCards().every((c) => c.cardType === 'recognition')).toBe(true)
+    expect(d.data.reverseCards.get(word.id)!.state).toBe('review')
+    expect(backend.tables.cards!.find((c) => c.card_type === 'production')!.state).toBe('review')
+  })
+  test('each direction keeps its own schedule', async () => {
+    const d = await signedIn()
+    const word = await d.data.saveWord(TISCH, { source: 'ai' })
+    await d.data.setReverseCards(true)
+    await settle()
+    await d.data.syncNow()
+    const recognition = d.data.cards.get(word.id)!
+    await d.data.recordReview(recognition, scheduler.preview(toSchedulingState(recognition), now())[4], scheduler.version, 1000, null)
+    await settle()
+    expect(d.data.cards.get(word.id)!.state).toBe('review')
+    expect(d.data.reverseCards.get(word.id)!.state).toBe('new')
+  })
+  test('switched on while offline: the cards appear after reconnecting', async () => {
+    const d = await signedIn()
+    await d.data.saveWord(TISCH, { source: 'ai' })
+    d.online = false
+    await d.data.setReverseCards(true)
+    expect(d.data.reverseCards.size).toBe(0)
+    d.online = true
+    await d.data.syncNow()
+    expect(d.data.reverseCards.size).toBe(1)
+  })
+})
+
+describe('word groups', () => {
+  test('a word can be saved into groups and regrouped later', async () => {
+    const d = await signedIn()
+    const word = await d.data.saveWord(TISCH, { source: 'ai', tags: [' Lektion 1 ', 'خانه', 'lektion 1', ''] })
+    expect(word.tags).toEqual(['Lektion 1', 'خانه'])
+    await d.data.setTags(word.id, ['خانه', 'سفر'])
+    await settle()
+    expect(backend.tables.words![0]!.tags).toEqual(['خانه', 'سفر'])
+    const other = await signedIn()
+    expect([...other.data.words.values()][0]!.tags).toEqual(['خانه', 'سفر'])
+  })
+  test('group names are listed by how many words they hold', async () => {
+    const d = await signedIn()
+    await d.data.saveWord(TISCH, { source: 'ai', tags: ['خانه'] })
+    await d.data.saveWord(AUFGEBEN, { source: 'ai', tags: ['خانه', 'فعل‌ها'] })
+    await d.data.saveWord(SCHNELL, { source: 'ai' })
+    expect(d.data.tags()).toEqual([{ name: 'خانه', count: 2 }, { name: 'فعل‌ها', count: 1 }])
+  })
+  test('grouping works offline; an archived word no longer counts', async () => {
+    const d = await signedIn()
+    const word = await d.data.saveWord(TISCH, { source: 'ai' })
+    d.online = false
+    await d.data.setTags(word.id, ['سفر'])
+    expect(d.data.tags()).toEqual([{ name: 'سفر', count: 1 }])
+    d.online = true
+    await d.data.syncNow()
+    expect(backend.tables.words![0]!.tags).toEqual(['سفر'])
+    await d.data.archiveWords([word.id])
+    expect(d.data.tags()).toEqual([])
+  })
+  test('editing a word keeps its groups', async () => {
+    const d = await signedIn()
+    const word = await d.data.saveWord(TISCH, { source: 'ai', tags: ['خانه'] })
+    const edited = structuredClone(TISCH)
+    edited.notes = 'یادداشت'
+    expect((await d.data.updateWordContent(word.id, edited)).tags).toEqual(['خانه'])
+  })
+})
+
+describe('quiz history', () => {
+  const quizAnswer = (wordId: string, correct: boolean) => ({
+    question: { type: 'article' as const, wordId, prompt: 'Tisch', promptLanguage: 'de' as const, options: null, expected: 'der' },
+    answer: correct ? 'der' : 'die', correct, note: null, durationMs: 1500, answeredAt: now().toISOString(),
+  })
+
+  test('a finished quiz is stored, counted per word, and never touches the card', async () => {
+    const d = await signedIn()
+    const word = await d.data.saveWord(TISCH, { source: 'ai' })
+    const cardBefore = structuredClone(d.data.cards.get(word.id))
+    await d.data.recordQuiz('article', now(), [quizAnswer(word.id, false), quizAnswer(word.id, true)])
+    await settle()
+    expect(d.data.quizStats.get(word.id)).toMatchObject({ attempts: 2, wrong: 1 })
+    expect(backend.tables.quiz_sessions![0]).toMatchObject({ kind: 'article', total: 2, correct: 1 })
+    expect(backend.tables.quiz_answers!.length).toBe(2)
+    expect(d.data.cards.get(word.id)).toEqual(cardBefore)
+    expect(backend.tables.review_events!.length).toBe(0)
+    expect(d.data.today()).toBe(undefined) // a quiz is not a review
+  })
+  test('offline quizzes are uploaded later, once; statistics survive a sync', async () => {
+    const d = await signedIn()
+    const word = await d.data.saveWord(TISCH, { source: 'ai' })
+    d.online = false
+    await d.data.recordQuiz('mixed', now(), [quizAnswer(word.id, false)])
+    expect(d.data.quizStats.get(word.id)!.attempts).toBe(1)
+    d.online = true
+    await d.data.syncNow()
+    await d.data.syncNow()
+    expect(backend.tables.quiz_answers!.length).toBe(1)
+    expect(d.data.quizStats.get(word.id)).toMatchObject({ attempts: 1, wrong: 1 })
+    const other = await signedIn()
+    expect(other.data.quizStats.get(word.id)).toMatchObject({ attempts: 1, wrong: 1 })
+  })
+  test('an empty quiz stores nothing; export includes quiz history', async () => {
+    const d = await signedIn()
+    const word = await d.data.saveWord(TISCH, { source: 'ai' })
+    await d.data.recordQuiz('mixed', now(), [])
+    expect(d.data.sync.pending).toBe(0)
+    await d.data.recordQuiz('mixed', now(), [quizAnswer(word.id, true)])
+    const dump = (await d.data.exportData()) as { quizSessions: unknown[]; quizAnswers: unknown[] }
+    expect([dump.quizSessions.length, dump.quizAnswers.length]).toEqual([1, 1])
   })
 })

@@ -42,6 +42,8 @@ export interface Card {
   lastReview: string | null
   introducedAt: string | null
   schedulerVersion: string | null
+  /** When the card was created (= when the word was saved). Absent in copies cached by older app versions. */
+  createdAt?: string
   updatedAt: string
 }
 

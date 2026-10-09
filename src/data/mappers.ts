@@ -14,6 +14,8 @@ export interface WordRow {
   primary_meaning: string
   content: WordContent
   is_favorite: boolean
+  /** Missing on databases that have not run migration 0002 yet. */
+  tags?: string[] | null
   source: Word['source']
   created_at: string
   updated_at: string
@@ -35,6 +37,7 @@ export interface CardRow {
   last_review: string | null
   introduced_at: string | null
   scheduler_version: string | null
+  created_at?: string
   updated_at: string
 }
 
@@ -46,6 +49,7 @@ export interface SettingsRow {
   theme: Settings['theme']
   speech_rate: number | string
   autoplay_audio: boolean
+  reverse_cards?: boolean
 }
 
 export interface ProfileRow {
@@ -60,6 +64,8 @@ export interface ActivityRow {
   again: number
   new_cards: number
   duration_ms: number | string
+  mature_reviews?: number
+  mature_again?: number
 }
 
 export const wordFromRow = (r: WordRow): Word => ({
@@ -73,6 +79,7 @@ export const wordFromRow = (r: WordRow): Word => ({
   primaryMeaning: r.primary_meaning,
   content: r.content,
   isFavorite: r.is_favorite,
+  tags: r.tags ?? [],
   source: r.source,
   createdAt: r.created_at,
   updatedAt: r.updated_at,
@@ -94,6 +101,7 @@ export const cardFromRow = (r: CardRow): Card => ({
   lastReview: r.last_review,
   introducedAt: r.introduced_at,
   schedulerVersion: r.scheduler_version,
+  createdAt: r.created_at,
   updatedAt: r.updated_at,
 })
 
@@ -105,6 +113,7 @@ export const settingsFromRow = (r: SettingsRow): Settings => ({
   theme: r.theme,
   speechRate: Number(r.speech_rate) || DEFAULT_SETTINGS.speechRate,
   autoplayAudio: r.autoplay_audio,
+  reverseCards: r.reverse_cards === true,
 })
 
 export function settingsToRow(patch: Partial<Settings>): Record<string, unknown> {
@@ -116,6 +125,7 @@ export function settingsToRow(patch: Partial<Settings>): Record<string, unknown>
   if (patch.theme !== undefined) row.theme = patch.theme
   if (patch.speechRate !== undefined) row.speech_rate = patch.speechRate
   if (patch.autoplayAudio !== undefined) row.autoplay_audio = patch.autoplayAudio
+  if (patch.reverseCards !== undefined) row.reverse_cards = patch.reverseCards
   return row
 }
 
@@ -127,7 +137,14 @@ export const profileFromRow = (r: ProfileRow): Profile => ({
 
 export const activityFromRow = (r: ActivityRow): [string, DayActivity] => [
   r.day,
-  { reviews: r.reviews, again: r.again, newCards: r.new_cards, durationMs: Number(r.duration_ms) || 0 },
+  {
+    reviews: r.reviews,
+    again: r.again,
+    newCards: r.new_cards,
+    durationMs: Number(r.duration_ms) || 0,
+    matureReviews: r.mature_reviews ?? 0,
+    matureAgain: r.mature_again ?? 0,
+  },
 ]
 
 /** The columns derived from a word's content; kept in step with it on every save. */
@@ -162,6 +179,44 @@ export const reviewEventToJson = (e: ReviewEvent): Record<string, unknown> => ({
   due_after: e.dueAfter,
   scheduler_version: e.schedulerVersion,
   session_id: e.sessionId,
+})
+
+/** The complete scheduling state of a card, as `undo_review` needs it to put a card back. */
+export const cardToUndoJson = (c: Card): Record<string, unknown> => ({
+  ...cardToReviewJson(c),
+  last_review: c.lastReview,
+  introduced_at: c.introducedAt,
+  scheduler_version: c.schedulerVersion,
+})
+
+export interface QuizSessionRecord {
+  id: string
+  kind: string
+  startedAt: string
+  finishedAt: string
+  total: number
+  correct: number
+}
+
+export interface QuizAnswerRecord {
+  id: string
+  wordId: string
+  questionType: string
+  prompt: string
+  expected: string
+  answer: string
+  isCorrect: boolean
+  durationMs: number
+  answeredAt: string
+}
+
+export const quizSessionToJson = (s: QuizSessionRecord): Record<string, unknown> => ({
+  id: s.id, kind: s.kind, started_at: s.startedAt, finished_at: s.finishedAt, total: s.total, correct: s.correct,
+})
+
+export const quizAnswerToJson = (a: QuizAnswerRecord): Record<string, unknown> => ({
+  id: a.id, word_id: a.wordId, question_type: a.questionType, prompt: a.prompt, expected: a.expected, answer: a.answer,
+  is_correct: a.isCorrect, duration_ms: a.durationMs, answered_at: a.answeredAt,
 })
 
 export const cardToReviewJson = (c: Card): Record<string, unknown> => ({

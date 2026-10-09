@@ -10,7 +10,7 @@ const iso = (days: number) => new Date(NOW.getTime() + days * 86_400_000).toISOS
 
 const word = (id: string, content: WordContent, extra: Partial<Word> = {}): Word => ({
   id, targetLanguage: 'de', nativeLanguage: 'fa', lemma: content.lemma, normalizedLemma: content.lemma, pos: content.pos, cefr: content.cefr,
-  primaryMeaning: content.meanings[0]!.translation, content, isFavorite: false, source: 'ai', createdAt: iso(-Number(id)), updatedAt: iso(-Number(id)), deletedAt: null, ...extra,
+  primaryMeaning: content.meanings[0]!.translation, content, isFavorite: false, tags: [], source: 'ai', createdAt: iso(-Number(id)), updatedAt: iso(-Number(id)), deletedAt: null, ...extra,
 })
 const card = (wordId: string, extra: Partial<Card> = {}): Card => ({
   id: `c${wordId}`, wordId, cardType: 'recognition', state: 'new', due: iso(0), stability: 0, difficulty: 0, scheduledDays: 0, learningSteps: 0,

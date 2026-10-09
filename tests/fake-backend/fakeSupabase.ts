@@ -30,7 +30,8 @@ export class FakeSupabase {
   readonly origin = 'https://fake.supabase.test'
   users: User[] = []
   tables: Record<string, Row[]> = {
-    profiles: [], user_settings: [], words: [], cards: [], review_events: [], ai_word_cache: [], ai_generation_logs: [],
+    profiles: [], user_settings: [], words: [], cards: [], review_events: [], quiz_sessions: [], quiz_answers: [],
+    ai_word_cache: [], ai_generation_logs: [],
   }
   /** access token → { userId, expires } */
   tokens = new Map<string, { userId: string; expires: number }>()
@@ -151,7 +152,7 @@ export class FakeSupabase {
     this.tables.profiles!.push({ id: user.id, display_name: display || null, native_language: 'fa', active_target_language: 'de', updated_at: this.stamp() })
     this.tables.user_settings!.push({
       user_id: user.id, new_per_day: 10, daily_goal_minutes: 20, max_reviews_per_day: null, desired_retention: 0.9,
-      theme: 'system', speech_rate: 1, autoplay_audio: false, updated_at: this.stamp(),
+      theme: 'system', speech_rate: 1, autoplay_audio: false, reverse_cards: false, updated_at: this.stamp(),
     })
     return user
   }
@@ -218,7 +219,7 @@ export class FakeSupabase {
       if (this.userOf(req) !== 'service') return json({ msg: 'forbidden' }, 403)
       const id = path.split('/').pop()!
       this.users = this.users.filter((u) => u.id !== id)
-      for (const name of ['profiles', 'user_settings', 'words', 'cards', 'review_events']) {
+      for (const name of ['profiles', 'user_settings', 'words', 'cards', 'review_events', 'quiz_sessions', 'quiz_answers']) {
         this.tables[name] = this.tables[name]!.filter((r) => r.user_id !== id && r.id !== id)
       }
       for (const log of this.tables.ai_generation_logs!) if (log.user_id === id) log.user_id = null
@@ -237,7 +238,11 @@ export class FakeSupabase {
     const body = req.method === 'GET' || req.method === 'HEAD' ? null : ((await req.json().catch(() => null)) as Row | null)
 
     if (name === 'rpc/apply_review') return this.applyReview(userId, body ?? {})
+    if (name === 'rpc/undo_review') return this.undoReview(userId, body ?? {})
     if (name === 'rpc/activity_by_day') return this.activityByDay(userId, body ?? {})
+    if (name === 'rpc/ensure_reverse_cards') return this.ensureReverseCards(userId)
+    if (name === 'rpc/save_quiz') return this.saveQuiz(userId, body ?? {})
+    if (name === 'rpc/quiz_word_stats') return this.quizWordStats(userId, body ?? {})
 
     const table = this.tables[name]
     if (!table) return json({ code: 'PGRST205', message: `table ${name} not found` }, 404)
@@ -291,6 +296,9 @@ export class FakeSupabase {
           const merged = { ...row, ...body }
           if (this.duplicateWord(merged, String(row.id))) return json({ code: '23505', message: 'duplicate key value violates unique constraint "words_unique_active"' }, 409)
         }
+        if (name === 'words' && Array.isArray(body.tags) && body.tags.length > 20) {
+          return json({ code: '23514', message: 'violates check constraint' }, 400)
+        }
         if (name === 'user_settings' && typeof body.new_per_day === 'number' && (body.new_per_day < 0 || body.new_per_day > 200)) {
           return json({ code: '23514', message: 'violates check constraint' }, 400)
         }
@@ -337,7 +345,7 @@ export class FakeSupabase {
     const stamp = this.stamp()
     const row: Row = {
       id: this.id(), user_id: userId, target_language: 'de', native_language: 'fa', is_favorite: false, source: 'ai',
-      cefr: null, deleted_at: null, ...body, created_at: stamp, updated_at: stamp,
+      cefr: null, deleted_at: null, tags: [], ...body, created_at: stamp, updated_at: stamp,
     }
     if (row.user_id !== userId) return json({ code: '42501', message: 'new row violates row-level security policy' }, 403)
     for (const required of ['lemma', 'normalized_lemma', 'pos', 'primary_meaning', 'content']) {
@@ -345,13 +353,70 @@ export class FakeSupabase {
     }
     if (this.duplicateWord(row)) return json({ code: '23505', message: 'duplicate key value violates unique constraint "words_unique_active"' }, 409)
     this.tables.words!.push(row)
-    const cardStamp = this.stamp()
-    this.tables.cards!.push({
-      id: this.id(), user_id: userId, word_id: row.id, card_type: 'recognition', state: 'new', due: cardStamp, stability: 0, difficulty: 0,
-      scheduled_days: 0, learning_steps: 0, reps: 0, lapses: 0, last_review: null, introduced_at: null, scheduler_version: null,
-      created_at: cardStamp, updated_at: cardStamp,
-    })
+    this.createCard(userId, String(row.id), 'recognition')
+    if (this.tables.user_settings!.some((s) => s.user_id === userId && s.reverse_cards === true)) this.createCard(userId, String(row.id), 'production')
     return json([row], 201)
+  }
+
+  private createCard(userId: string, wordId: string, type: string): boolean {
+    if (this.tables.cards!.some((c) => c.word_id === wordId && c.card_type === type)) return false
+    const stamp = this.stamp()
+    this.tables.cards!.push({
+      id: this.id(), user_id: userId, word_id: wordId, card_type: type, state: 'new', due: stamp, stability: 0, difficulty: 0,
+      scheduled_days: 0, learning_steps: 0, reps: 0, lapses: 0, last_review: null, introduced_at: null, scheduler_version: null,
+      created_at: stamp, updated_at: stamp,
+    })
+    return true
+  }
+
+  private ensureReverseCards(userId: string): Response {
+    let created = 0
+    for (const word of this.tables.words!) {
+      if (word.user_id === userId && word.deleted_at === null && this.createCard(userId, String(word.id), 'production')) created++
+    }
+    return json(created)
+  }
+
+  private undoReview(userId: string, body: Row): Response {
+    const event = this.tables.review_events!.find((e) => e.id === body.p_event_id && e.user_id === userId)
+    if (!event) return json({ code: 'P0002', message: 'review not found' }, 404)
+    const card = this.tables.cards!.find((c) => c.id === event.card_id && c.user_id === userId)
+    if (!card) return json({ code: 'P0002', message: 'card not found' }, 404)
+    if (event.undone_at) return json(card)
+    if (Date.parse(String(card.last_review)) !== Date.parse(String(event.reviewed_at))) {
+      return json({ code: 'P0001', message: 'only the latest review of a card can be undone' }, 400)
+    }
+    event.undone_at = new Date(this.now()).toISOString()
+    Object.assign(card, body.p_card as Row, { updated_at: this.stamp() })
+    return json(card)
+  }
+
+  private saveQuiz(userId: string, body: Row): Response {
+    const session = body.p_session as Row
+    const answers = body.p_answers as Row[]
+    if (!this.tables.quiz_sessions!.some((s) => s.id === session.id)) this.tables.quiz_sessions!.push({ ...session, user_id: userId })
+    let stored = 0
+    for (const answer of answers) {
+      if (this.tables.quiz_answers!.some((a) => a.id === answer.id)) continue
+      if (!this.tables.words!.some((w) => w.id === answer.word_id && w.user_id === userId)) continue
+      this.tables.quiz_answers!.push({ ...answer, user_id: userId, session_id: session.id })
+      stored++
+    }
+    return json(stored)
+  }
+
+  private quizWordStats(userId: string, body: Row): Response {
+    const since = Date.parse(String(body.p_since))
+    const stats = new Map<string, Row>()
+    for (const a of this.tables.quiz_answers!) {
+      if (a.user_id !== userId || Date.parse(String(a.answered_at)) < since) continue
+      const row = stats.get(String(a.word_id)) ?? { word_id: a.word_id, attempts: 0, wrong: 0, last_answered: null }
+      row.attempts = Number(row.attempts) + 1
+      if (!a.is_correct) row.wrong = Number(row.wrong) + 1
+      if (!row.last_answered || String(a.answered_at) > String(row.last_answered)) row.last_answered = a.answered_at
+      stats.set(String(a.word_id), row)
+    }
+    return json([...stats.values()])
   }
 
   private applyReview(userId: string, body: Row): Response {
@@ -377,10 +442,14 @@ export class FakeSupabase {
     const format = new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' })
     const days = new Map<string, Row>()
     for (const e of this.tables.review_events!) {
-      if (e.user_id !== userId) continue
+      if (e.user_id !== userId || e.undone_at) continue
       const key = format.format(new Date(Date.parse(String(e.reviewed_at)) - 4 * 3_600_000))
       if (key < String(body.p_since)) continue
-      const day = days.get(key) ?? { day: key, reviews: 0, again: 0, new_cards: 0, duration_ms: 0 }
+      const day = days.get(key) ?? { day: key, reviews: 0, again: 0, new_cards: 0, duration_ms: 0, mature_reviews: 0, mature_again: 0 }
+      if (e.state_before === 'review') {
+        day.mature_reviews = Number(day.mature_reviews) + 1
+        if (e.rating === 1) day.mature_again = Number(day.mature_again) + 1
+      }
       day.reviews = Number(day.reviews) + 1
       if (e.rating === 1) day.again = Number(day.again) + 1
       if (e.state_before === 'new') day.new_cards = Number(day.new_cards) + 1

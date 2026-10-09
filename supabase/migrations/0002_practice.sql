@@ -119,8 +119,9 @@ begin
     learning_steps = (p_card ->> 'learning_steps')::integer,
     reps           = (p_card ->> 'reps')::integer,
     lapses         = (p_card ->> 'lapses')::integer,
-    last_review    = (p_card ->> 'last_review')::timestamptz,
-    introduced_at  = (p_card ->> 'introduced_at')::timestamptz
+    last_review       = (p_card ->> 'last_review')::timestamptz,
+    introduced_at     = (p_card ->> 'introduced_at')::timestamptz,
+    scheduler_version = p_card ->> 'scheduler_version'
   where id = v_card.id
   returning * into v_card;
 

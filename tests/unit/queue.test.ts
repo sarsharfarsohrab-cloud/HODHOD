@@ -172,7 +172,7 @@ describe('order within a session', () => {
 })
 
 describe('workload estimate', () => {
-  const day = (reviews: number, durationMs: number): DayActivity => ({ reviews, again: 0, newCards: 0, durationMs })
+  const day = (reviews: number, durationMs: number): DayActivity => ({ reviews, again: 0, newCards: 0, durationMs, matureReviews: 0, matureAgain: 0 })
   test('uses product defaults until there is enough history', () => {
     expect(averageSecondsPerAnswer([day(10, 100_000)])).toBe(null)
     const counts = queueCounts([...reviews(28), ...newCards(10)], { settings: settings(10), now: NOW })
@@ -195,7 +195,7 @@ describe('workload estimate', () => {
 })
 
 describe('streak', () => {
-  const active: DayActivity = { reviews: 12, again: 1, newCards: 2, durationMs: 90_000 }
+  const active: DayActivity = { reviews: 12, again: 1, newCards: 2, durationMs: 90_000, matureReviews: 0, matureAgain: 0 }
   const map = (...keys: string[]) => new Map(keys.map((k) => [k, active]))
   const today = dayKey(NOW)
   const back = (n: number) => shiftDayKey(today, -n)

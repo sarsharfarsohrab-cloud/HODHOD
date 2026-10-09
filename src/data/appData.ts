@@ -10,17 +10,21 @@ import type { AnalyzeResult } from '../../supabase/functions/_shared/analyzeWord
 import { normalizeLemma, stripArticle } from '../../supabase/functions/_shared/inputRules.ts'
 import type { PartOfSpeech, WordContent } from '../../supabase/functions/_shared/wordSchema.ts'
 import { addToDay } from '../core/activity.ts'
+import type { QuizAnswer, QuizKind, WordQuizStat } from '../core/quiz.ts'
 import { applySchedulingState } from '../core/cards.ts'
 import type { SchedulingResult } from '../core/scheduler.ts'
 import { dayKey, localTimeZone, shiftDayKey } from '../core/time.ts'
-import { DEFAULT_SETTINGS, type Card, type DayActivity, type Profile, type ReviewEvent, type Settings, type Word } from '../core/types.ts'
+import { DEFAULT_SETTINGS, MAX_TAG_LENGTH, MAX_TAGS, type Card, type DayActivity, type Profile, type ReviewEvent, type Settings, type Word } from '../core/types.ts'
 import { AppError, toAppError } from './errors.ts'
 import type { LocalDb } from './localDb.ts'
 import {
   activityFromRow,
   cardFromRow,
   cardToReviewJson,
+  cardToUndoJson,
   profileFromRow,
+  quizAnswerToJson,
+  quizSessionToJson,
   reviewEventToJson,
   settingsFromRow,
   settingsToRow,
@@ -29,6 +33,8 @@ import {
   type ActivityRow,
   type CardRow,
   type ProfileRow,
+  type QuizAnswerRecord,
+  type QuizSessionRecord,
   type SettingsRow,
   type WordRow,
 } from './mappers.ts'
@@ -36,8 +42,11 @@ import type { SupabaseClient } from './supabase.ts'
 
 type OutboxOp =
   | { id: string; kind: 'review'; event: ReviewEvent; card: Card }
-  | { id: string; kind: 'word_patch'; wordId: string; patch: { is_favorite?: boolean; deleted_at?: string | null } }
+  | { id: string; kind: 'undo'; eventId: string; card: Card }
+  | { id: string; kind: 'word_patch'; wordId: string; patch: { is_favorite?: boolean; deleted_at?: string | null; tags?: string[] } }
   | { id: string; kind: 'settings'; patch: Partial<Settings> }
+  | { id: string; kind: 'ensure_reverse' }
+  | { id: string; kind: 'quiz'; session: QuizSessionRecord; answers: QuizAnswerRecord[] }
 
 export interface SyncState {
   online: boolean
@@ -50,6 +59,7 @@ export interface SyncState {
 
 const PAGE = 500
 const ACTIVITY_DAYS = 400
+const QUIZ_STATS_DAYS = 90
 const DEFAULT_PROFILE: Profile = { displayName: null, nativeLanguage: 'fa', activeTargetLanguage: 'de' }
 
 export interface AppDataDeps {
@@ -67,9 +77,13 @@ export class AppData {
   settings: Settings = DEFAULT_SETTINGS
   /** Words in the bank (archived ones are not kept in memory). */
   readonly words = new Map<string, Word>()
-  /** The recognition card of each word, by word id. */
+  /** The German → Persian card of each word, by word id. */
   readonly cards = new Map<string, Card>()
+  /** The optional Persian → German card of each word, by word id. */
+  readonly reverseCards = new Map<string, Card>()
   readonly activity = new Map<string, DayActivity>()
+  /** How each word did in recent quizzes, by word id. */
+  readonly quizStats = new Map<string, WordQuizStat>()
   sync: SyncState = { online: true, syncing: false, pending: 0, lastSyncedAt: null, problem: null }
   /** False until the on-device copy has been read. */
   loaded = false
@@ -119,7 +133,7 @@ export class AppData {
 
   /** Reads the on-device copy. Safe to call offline. */
   async load(): Promise<void> {
-    const [words, cards, outbox, settings, profile, activity, lastSyncedAt] = await Promise.all([
+    const [words, cards, outbox, settings, profile, activity, lastSyncedAt, quizStats] = await Promise.all([
       this.db.getAll<Word>('words'),
       this.db.getAll<Card>('cards'),
       this.db.getAll<OutboxOp>('outbox'),
@@ -127,13 +141,15 @@ export class AppData {
       this.db.getMeta<Profile>('profile'),
       this.db.getMeta<[string, DayActivity][]>('activity'),
       this.db.getMeta<string>('lastSyncedAt'),
+      this.db.getMeta<[string, WordQuizStat][]>('quizStats'),
     ])
-    for (const word of words) if (!word.deletedAt) this.words.set(word.id, word)
-    for (const card of cards) if (card.cardType === 'recognition') this.cards.set(card.wordId, card)
+    for (const word of words) if (!word.deletedAt) this.words.set(word.id, { ...word, tags: word.tags ?? [] })
+    for (const card of cards) this.remember(card)
+    for (const [id, stat] of quizStats ?? []) this.quizStats.set(id, stat)
     this.outbox = outbox.sort((a, b) => (a.id < b.id ? -1 : 1))
     if (settings) this.settings = { ...DEFAULT_SETTINGS, ...settings }
     if (profile) this.profile = profile
-    for (const [key, day] of activity ?? []) this.activity.set(key, day)
+    for (const [key, day] of activity ?? []) this.activity.set(key, { ...day, matureReviews: day.matureReviews ?? 0, matureAgain: day.matureAgain ?? 0 })
     this.hasSyncedOnce = Boolean(lastSyncedAt)
     this.sync = { ...this.sync, lastSyncedAt: lastSyncedAt ?? null }
     this.loaded = true
@@ -142,11 +158,30 @@ export class AppData {
 
   // --- reading -------------------------------------------------------------------
 
-  /** Cards of words that are in the bank — the input of the daily queue. */
+  private remember(card: Card): void {
+    if (card.cardType === 'recognition') this.cards.set(card.wordId, card)
+    else if (card.cardType === 'production') this.reverseCards.set(card.wordId, card)
+  }
+
+  /**
+   * Cards of words that are in the bank — the input of the daily queue.
+   * Reverse cards take part only while the learner has them switched on; switching
+   * them off keeps their progress for later.
+   */
   activeCards(): Card[] {
     const out: Card[] = []
     for (const [wordId, card] of this.cards) if (this.words.has(wordId)) out.push(card)
+    if (this.settings.reverseCards) {
+      for (const [wordId, card] of this.reverseCards) if (this.words.has(wordId)) out.push(card)
+    }
     return out
+  }
+
+  /** Every group name in use, most used first. */
+  tags(): { name: string; count: number }[] {
+    const counts = new Map<string, number>()
+    for (const word of this.words.values()) for (const tag of word.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1)
+    return [...counts.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'fa'))
   }
 
   wordOfCard(card: Card): Word | undefined {
@@ -210,6 +245,7 @@ export class AppData {
     await this.pullWords()
     await this.pullCards()
     await this.pullActivity()
+    await this.pullQuizStats()
 
     const stamp = this.now().toISOString()
     await Promise.all([
@@ -256,7 +292,7 @@ export class AppData {
     await this.pullChanged<CardRow>('cards', 'cursor.cards', async (rows) => {
       const cards = rows.map(cardFromRow)
       await this.db.putMany('cards', cards)
-      for (const card of cards) if (card.cardType === 'recognition') this.cards.set(card.wordId, card)
+      for (const card of cards) this.remember(card)
     })
   }
 
@@ -273,13 +309,41 @@ export class AppData {
     await this.saveActivity()
   }
 
-  private countReview(event: ReviewEvent): void {
-    addToDay(this.activity, dayKey(new Date(event.reviewedAt)), {
-      reviews: 1,
-      again: event.rating === 1 ? 1 : 0,
-      newCards: event.stateBefore === 'new' ? 1 : 0,
-      durationMs: event.durationMs ?? 0,
-    })
+  private countReview(event: ReviewEvent, sign: 1 | -1 = 1): void {
+    const mature = event.stateBefore === 'review'
+    addToDay(
+      this.activity,
+      dayKey(new Date(event.reviewedAt)),
+      {
+        reviews: 1,
+        again: event.rating === 1 ? 1 : 0,
+        newCards: event.stateBefore === 'new' ? 1 : 0,
+        durationMs: event.durationMs ?? 0,
+        matureReviews: mature ? 1 : 0,
+        matureAgain: mature && event.rating === 1 ? 1 : 0,
+      },
+      sign,
+    )
+  }
+
+  private async pullQuizStats(): Promise<void> {
+    const since = new Date(this.now().getTime() - QUIZ_STATS_DAYS * 86_400_000).toISOString()
+    const rows = await this.client.rpc<{ word_id: string; attempts: number; wrong: number; last_answered: string | null }[]>('quiz_word_stats', { p_since: since })
+    this.quizStats.clear()
+    for (const row of rows) this.quizStats.set(row.word_id, { attempts: row.attempts, wrong: row.wrong, lastAnswered: row.last_answered })
+    for (const op of this.outbox) if (op.kind === 'quiz') this.countQuiz(op.answers)
+    await this.db.setMeta('quizStats', [...this.quizStats.entries()])
+  }
+
+  private countQuiz(answers: readonly QuizAnswerRecord[]): void {
+    for (const a of answers) {
+      const stat = this.quizStats.get(a.wordId) ?? { attempts: 0, wrong: 0, lastAnswered: null }
+      this.quizStats.set(a.wordId, {
+        attempts: stat.attempts + 1,
+        wrong: stat.wrong + (a.isCorrect ? 0 : 1),
+        lastAnswered: stat.lastAnswered && stat.lastAnswered > a.answeredAt ? stat.lastAnswered : a.answeredAt,
+      })
+    }
   }
 
   private saveActivity(): Promise<void> {
@@ -315,7 +379,7 @@ export class AppData {
           await this.discard(op)
           continue
         }
-        this.outbox.shift()
+        this.outbox = this.outbox.filter((queued) => queued !== op)
         await this.db.remove('outbox', op.id)
         this.emit()
       }
@@ -334,11 +398,22 @@ export class AppData {
           p_event: reviewEventToJson(op.event),
           p_card: cardToReviewJson(op.card),
         })
-        // Take the server's row unless a later review of the same card is still queued.
-        const laterQueued = this.outbox.some((o) => o !== op && o.kind === 'review' && o.card.id === op.card.id)
-        if (row && !laterQueued) await this.storeCard(cardFromRow(row))
+        // Take the server's row unless a later change to the same card is still queued.
+        if (row && !this.laterQueued(op, op.card.id)) await this.storeCard(cardFromRow(row))
         return
       }
+      case 'undo': {
+        const row = await this.client.rpc<CardRow>('undo_review', { p_event_id: op.eventId, p_card: cardToUndoJson(op.card) })
+        if (row && !this.laterQueued(op, op.card.id)) await this.storeCard(cardFromRow(row))
+        return
+      }
+      case 'ensure_reverse':
+        await this.client.rpc<number>('ensure_reverse_cards', {})
+        await this.pullCards()
+        return
+      case 'quiz':
+        await this.client.rpc<number>('save_quiz', { p_session: quizSessionToJson(op.session), p_answers: op.answers.map(quizAnswerToJson) })
+        return
       case 'word_patch':
         await this.client.update<WordRow>('words', { id: `eq.${op.wordId}` }, op.patch)
         return
@@ -348,11 +423,15 @@ export class AppData {
     }
   }
 
+  private laterQueued(current: OutboxOp, cardId: string): boolean {
+    return this.outbox.some((o) => o !== current && (o.kind === 'review' || o.kind === 'undo') && o.card.id === cardId)
+  }
+
   private async discard(op: OutboxOp): Promise<void> {
     this.outbox = this.outbox.filter((o) => o !== op)
     await this.db.remove('outbox', op.id)
     try {
-      if (op.kind === 'review') {
+      if (op.kind === 'review' || op.kind === 'undo') {
         const rows = await this.client.select<CardRow>('cards', { select: '*', id: `eq.${op.card.id}` })
         if (rows[0]) await this.storeCard(cardFromRow(rows[0]))
       } else if (op.kind === 'word_patch') {
@@ -364,7 +443,7 @@ export class AppData {
   }
 
   private async storeCard(card: Card): Promise<void> {
-    if (card.cardType === 'recognition') this.cards.set(card.wordId, card)
+    this.remember(card)
     await this.db.putMany('cards', [card])
   }
 
@@ -388,7 +467,13 @@ export class AppData {
    * Records one answer. The card moves forward on this device immediately; the server
    * receives it right away when online, otherwise as soon as the connection returns.
    */
-  async recordReview(card: Card, result: SchedulingResult, schedulerVersion: string, durationMs: number | null, sessionId: string | null): Promise<Card> {
+  async recordReview(
+    card: Card,
+    result: SchedulingResult,
+    schedulerVersion: string,
+    durationMs: number | null,
+    sessionId: string | null,
+  ): Promise<{ card: Card; event: ReviewEvent }> {
     const reviewedAt = this.now()
     const next = applySchedulingState(card, result.next, reviewedAt, schedulerVersion)
     const event: ReviewEvent = {
@@ -411,12 +496,64 @@ export class AppData {
       schedulerVersion,
       sessionId,
     }
-    this.cards.set(card.wordId, next)
+    this.remember(next)
     this.countReview(event)
     await Promise.all([this.db.putMany('cards', [next]), this.enqueue({ kind: 'review', event, card: next }), this.saveActivity()])
     this.emit()
     void this.flushOutbox()
-    return next
+    return { card: next, event }
+  }
+
+  /**
+   * Takes back the most recent answer on a card: the card returns to `previous`
+   * (its state before the answer) and the review no longer counts.
+   */
+  async undoReview(event: ReviewEvent, previous: Card): Promise<void> {
+    // An upload in flight has to finish first, so we know whether the server already has the review.
+    if (this.flushRun) await this.flushRun.catch(() => undefined)
+    const queued = this.outbox.find((op) => op.kind === 'review' && op.event.id === event.id)
+    this.remember(previous)
+    this.countReview(event, -1)
+    await Promise.all([this.db.putMany('cards', [previous]), this.saveActivity()])
+    if (queued) {
+      // never left this device: simply forget it
+      this.outbox = this.outbox.filter((op) => op !== queued)
+      await this.db.remove('outbox', queued.id)
+    } else {
+      await this.enqueue({ kind: 'undo', eventId: event.id, card: previous })
+    }
+    this.emit()
+    void this.flushOutbox()
+  }
+
+  // --- quiz ------------------------------------------------------------------------------
+
+  /** Stores a finished quiz. Quiz answers never change a card's schedule. */
+  async recordQuiz(kind: QuizKind, startedAt: Date, answers: readonly QuizAnswer[]): Promise<void> {
+    if (answers.length === 0) return
+    const records: QuizAnswerRecord[] = answers.map((a) => ({
+      id: this.newId(),
+      wordId: a.question.wordId,
+      questionType: a.question.type,
+      prompt: a.question.prompt,
+      expected: a.question.expected,
+      answer: a.answer,
+      isCorrect: a.correct,
+      durationMs: a.durationMs,
+      answeredAt: a.answeredAt,
+    }))
+    const session: QuizSessionRecord = {
+      id: this.newId(),
+      kind,
+      startedAt: startedAt.toISOString(),
+      finishedAt: this.now().toISOString(),
+      total: records.length,
+      correct: records.filter((r) => r.isCorrect).length,
+    }
+    this.countQuiz(records)
+    await Promise.all([this.db.setMeta('quizStats', [...this.quizStats.entries()]), this.enqueue({ kind: 'quiz', session, answers: records })])
+    this.emit()
+    void this.flushOutbox()
   }
 
   // --- words -----------------------------------------------------------------------------
@@ -437,7 +574,10 @@ export class AppData {
   }
 
   /** Saves a confirmed draft to the Word Bank. Its card starts as "new" and waits for the daily queue. */
-  async saveWord(content: WordContent, meta: { source: 'ai' | 'manual'; promptVersion?: string; model?: string; favorite?: boolean }): Promise<Word> {
+  async saveWord(
+    content: WordContent,
+    meta: { source: 'ai' | 'manual'; promptVersion?: string; model?: string; favorite?: boolean; tags?: readonly string[] },
+  ): Promise<Word> {
     if (!this.isOnline()) throw new AppError('offline', 'offline')
     if (this.findDuplicate(content.lemma, content.pos)) throw new AppError('duplicate', 'duplicate_word')
     const row = await this.client.insert<WordRow>('words', {
@@ -445,6 +585,7 @@ export class AppData {
       target_language: this.profile.activeTargetLanguage,
       native_language: this.profile.nativeLanguage,
       is_favorite: meta.favorite === true,
+      ...(meta.tags && meta.tags.length > 0 ? { tags: cleanTags(meta.tags) } : {}),
       source: meta.source,
       ai_prompt_version: meta.promptVersion ?? null,
       ai_model: meta.model ?? null,
@@ -487,6 +628,18 @@ export class AppData {
     void this.flushOutbox()
   }
 
+  /** Replaces the groups a word belongs to. */
+  async setTags(id: string, tags: readonly string[]): Promise<void> {
+    const word = this.words.get(id)
+    if (!word) return
+    const next = cleanTags(tags)
+    if (next.length === word.tags.length && next.every((tag, i) => tag === word.tags[i])) return
+    await this.storeWord({ ...word, tags: next })
+    await this.enqueue({ kind: 'word_patch', wordId: id, patch: { tags: next } })
+    this.emit()
+    void this.flushOutbox()
+  }
+
   /** Removes words from the bank. Their review history stays in the database. */
   async archiveWords(ids: readonly string[]): Promise<void> {
     const stamp = this.now().toISOString()
@@ -501,6 +654,20 @@ export class AppData {
   }
 
   // --- settings & account -------------------------------------------------------------------
+
+  /**
+   * Switches Persian → German cards on or off. Switching on creates the missing cards
+   * for every word already in the bank; switching off only takes them out of the queue.
+   */
+  async setReverseCards(on: boolean): Promise<void> {
+    if (this.settings.reverseCards === on) return
+    await this.updateSettings({ reverseCards: on })
+    if (on) {
+      await this.enqueue({ kind: 'ensure_reverse' })
+      this.emit()
+      void this.flushOutbox()
+    }
+  }
 
   async updateSettings(patch: Partial<Settings>): Promise<void> {
     this.settings = { ...this.settings, ...patch }
@@ -539,6 +706,16 @@ export class AppData {
       reviews.push(...page)
       if (page.length < 1000) break
     }
+    const page = async (table: string, order: string) => {
+      const rows: Record<string, unknown>[] = []
+      for (let offset = 0; ; offset += 1000) {
+        const chunk = await this.client.select<Record<string, unknown>>(table, { select: '*', order, limit: '1000', offset: String(offset) })
+        rows.push(...chunk)
+        if (chunk.length < 1000) return rows
+      }
+    }
+    const quizSessions = await page('quiz_sessions', 'finished_at.asc,id.asc')
+    const quizAnswers = await page('quiz_answers', 'answered_at.asc,id.asc')
     const allWords = await this.db.getAll<Word>('words')
     const allCards = await this.db.getAll<Card>('cards')
     return {
@@ -550,6 +727,8 @@ export class AppData {
       words: allWords,
       cards: allCards,
       reviewEvents: reviews,
+      quizSessions,
+      quizAnswers,
     }
   }
 
@@ -568,4 +747,19 @@ export class AppData {
     await this.db.destroy()
     await this.client.signOut()
   }
+}
+
+/** Trims, de-duplicates and bounds a list of group names. */
+export function cleanTags(tags: readonly string[]): string[] {
+  const out: string[] = []
+  const seen = new Set<string>()
+  for (const raw of tags) {
+    const tag = raw.normalize('NFC').replace(/\s+/g, ' ').trim().slice(0, MAX_TAG_LENGTH)
+    const key = tag.toLocaleLowerCase()
+    if (!tag || seen.has(key)) continue
+    seen.add(key)
+    out.push(tag)
+    if (out.length === MAX_TAGS) break
+  }
+  return out
 }

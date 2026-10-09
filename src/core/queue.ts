@@ -95,7 +95,8 @@ function bucket(cards: readonly Card[], { settings, now }: QueueOptions): Bucket
   learning.sort((a, b) => time(a.due) - time(b.due))
   reviewsDue.sort((a, b) => time(a.due) - time(b.due))
   // oldest saved first: words wait their turn in the order they were added
-  fresh.sort((a, b) => a.updatedAt.localeCompare(b.updatedAt) || a.id.localeCompare(b.id))
+  const savedAt = (card: Card) => card.createdAt ?? card.updatedAt
+  fresh.sort((a, b) => savedAt(a).localeCompare(savedAt(b)) || a.id.localeCompare(b.id))
 
   const newAllowance = Math.max(0, settings.newPerDay - introducedToday)
   const newCards = fresh.slice(0, newAllowance)
