@@ -1,0 +1,24 @@
+{
+  "name": "هدهد — واژه‌های آلمانی",
+  "short_name": "هدهد",
+  "description": "یادگیری واژه‌های آلمانی برای فارسی‌زبانان با مرور فاصله‌دار.",
+  "lang": "fa",
+  "dir": "rtl",
+  "start_url": "./#/home",
+  "scope": "./",
+  "id": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f1f1f9",
+  "theme_color": "#f1f1f9",
+  "categories": ["education"],
+  "icons": [
+    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "مرور", "url": "./#/study" },
+    { "name": "کلمهٔ تازه", "url": "./#/create" }
+  ]
+}

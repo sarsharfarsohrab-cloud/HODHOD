@@ -1,0 +1,19 @@
+{
+  "name": "hodhod",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "هدهد — اپ یادگیری واژگان آلمانی برای فارسی‌زبانان (PWA)",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test tests/unit",
+    "build": "bun run scripts/build.ts",
+    "dev": "bun run scripts/build.ts --dev && bun run scripts/serve.ts",
+    "e2e": "bun run scripts/build.ts --dev && node tests/e2e/run.mjs",
+    "bundle:functions": "bun run scripts/bundle-functions.ts",
+    "check": "bun run typecheck && bun run test && bun run build"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}
