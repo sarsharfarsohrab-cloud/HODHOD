@@ -7,6 +7,38 @@ export interface FunctionEnv {
   allowedOrigins?: string
 }
 
+/**
+ * Finds the server-side key that may bypass row level security.
+ * Older projects expose it as SUPABASE_SERVICE_ROLE_KEY; projects on the newer key system
+ * expose a JSON dictionary of secret keys (SUPABASE_SECRET_KEYS) instead.
+ */
+export function resolveServiceKey(get: (name: string) => string | undefined): string {
+  const direct = get('SUPABASE_SERVICE_ROLE_KEY') ?? get('SUPABASE_SECRET_KEY')
+  if (direct) return direct
+  const raw = get('SUPABASE_SECRET_KEYS')
+  if (!raw) return ''
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    const pick = (value: unknown): string => {
+      if (typeof value === 'string') return value
+      if (value && typeof value === 'object') {
+        const record = value as Record<string, unknown>
+        for (const field of ['api_key', 'key', 'value', 'secret']) if (typeof record[field] === 'string') return record[field] as string
+      }
+      return ''
+    }
+    if (Array.isArray(parsed)) return parsed.map(pick).find(Boolean) ?? ''
+    if (parsed && typeof parsed === 'object') {
+      const record = parsed as Record<string, unknown>
+      return pick(record.default) || Object.values(record).map(pick).find(Boolean) || ''
+    }
+  } catch {
+    // not JSON: some setups store the bare key
+    return raw.trim()
+  }
+  return ''
+}
+
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>
 
 export class HttpError extends Error {

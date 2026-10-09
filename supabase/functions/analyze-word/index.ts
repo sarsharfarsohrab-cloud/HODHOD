@@ -1,6 +1,7 @@
 // Supabase Edge Function entry point (Deno). All logic lives in ../_shared so it can be unit-tested.
 import { resolveAiSettings } from '../_shared/aiProviders.ts'
 import { handleAnalyzeWord } from '../_shared/analyzeWord.ts'
+import { resolveServiceKey } from '../_shared/http.ts'
 
 const num = (name: string): number | undefined => {
   const raw = Deno.env.get(name)
@@ -11,7 +12,7 @@ const num = (name: string): number | undefined => {
 Deno.serve((req: Request) =>
   handleAnalyzeWord(req, {
     supabaseUrl: Deno.env.get('SUPABASE_URL') ?? '',
-    serviceRoleKey: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    serviceRoleKey: resolveServiceKey((name) => Deno.env.get(name) || undefined),
     allowedOrigins: Deno.env.get('ALLOWED_ORIGINS') ?? '',
     ...resolveAiSettings((name) => Deno.env.get(name) || undefined),
     perMinuteLimit: num('AI_LIMIT_PER_MINUTE'),

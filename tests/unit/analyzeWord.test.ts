@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, test } from 'bun:test'
 import { handleAnalyzeWord, type AnalyzeEnv } from '../../supabase/functions/_shared/analyzeWord.ts'
 import { handleDeleteAccount } from '../../supabase/functions/_shared/deleteAccount.ts'
 import { resolveAiSettings } from '../../supabase/functions/_shared/aiProviders.ts'
+import { resolveServiceKey } from '../../supabase/functions/_shared/http.ts'
 import { PROMPT_VERSION } from '../../supabase/functions/_shared/prompt.ts'
 import { asAiOutput, AUFGEBEN, TISCH } from '../fixtures/words.ts'
 
@@ -389,5 +390,23 @@ describe('delete-account', () => {
     const res = await del({ confirm: 'DELETE', userId: 'someone-else' })
     expect(res.status).toBe(200)
     expect(w.deletedUsers).toEqual([USER])
+  })
+})
+
+describe('server key lookup', () => {
+  const key = (vars: Record<string, string>) => resolveServiceKey((name) => vars[name])
+  test('older projects: SUPABASE_SERVICE_ROLE_KEY', () => {
+    expect(key({ SUPABASE_SERVICE_ROLE_KEY: 'legacy', SUPABASE_SECRET_KEYS: '{"default":"new"}' })).toBe('legacy')
+  })
+  test('newer projects: a dictionary of secret keys, "default" preferred', () => {
+    expect(key({ SUPABASE_SECRET_KEYS: '{"other":"sb_secret_b","default":"sb_secret_a"}' })).toBe('sb_secret_a')
+    expect(key({ SUPABASE_SECRET_KEYS: '{"main":"sb_secret_b"}' })).toBe('sb_secret_b')
+    expect(key({ SUPABASE_SECRET_KEYS: '[{"name":"default","api_key":"sb_secret_c"}]' })).toBe('sb_secret_c')
+    expect(key({ SUPABASE_SECRET_KEYS: 'sb_secret_plain' })).toBe('sb_secret_plain')
+  })
+  test('nothing configured gives an empty key, which the handlers refuse', async () => {
+    expect(key({})).toBe('')
+    expect(key({ SUPABASE_SECRET_KEYS: '{}' })).toBe('')
+    expect(await errorCode(await call({ word: 'Tisch' }, { env: { serviceRoleKey: '' } }))).toBe('not_configured')
   })
 })

@@ -19,6 +19,38 @@ function resolveAiSettings(get) {
 }
 
 // supabase/functions/_shared/http.ts
+function resolveServiceKey(get) {
+  const direct = get("SUPABASE_SERVICE_ROLE_KEY") ?? get("SUPABASE_SECRET_KEY");
+  if (direct)
+    return direct;
+  const raw = get("SUPABASE_SECRET_KEYS");
+  if (!raw)
+    return "";
+  try {
+    const parsed = JSON.parse(raw);
+    const pick = (value) => {
+      if (typeof value === "string")
+        return value;
+      if (value && typeof value === "object") {
+        const record = value;
+        for (const field of ["api_key", "key", "value", "secret"])
+          if (typeof record[field] === "string")
+            return record[field];
+      }
+      return "";
+    };
+    if (Array.isArray(parsed))
+      return parsed.map(pick).find(Boolean) ?? "";
+    if (parsed && typeof parsed === "object") {
+      const record = parsed;
+      return pick(record.default) || Object.values(record).map(pick).find(Boolean) || "";
+    }
+  } catch {
+    return raw.trim();
+  }
+  return "";
+}
+
 class HttpError extends Error {
   status;
   code;
@@ -858,7 +890,7 @@ var num = (name) => {
 };
 Deno.serve((req) => handleAnalyzeWord(req, {
   supabaseUrl: Deno.env.get("SUPABASE_URL") ?? "",
-  serviceRoleKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+  serviceRoleKey: resolveServiceKey((name) => Deno.env.get(name) || undefined),
   allowedOrigins: Deno.env.get("ALLOWED_ORIGINS") ?? "",
   ...resolveAiSettings((name) => Deno.env.get(name) || undefined),
   perMinuteLimit: num("AI_LIMIT_PER_MINUTE"),

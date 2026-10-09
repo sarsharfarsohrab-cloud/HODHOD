@@ -57,7 +57,7 @@ Key decisions:
 3. Deploy the two Edge Functions.
    - CLI: `supabase functions deploy analyze-word delete-account`
    - Dashboard: *Edge Functions → Deploy a new function → Via Editor*, name it exactly `analyze-word`, paste `deploy/analyze-word.ts` (generate with `bun run bundle:functions`); repeat for `delete-account`.
-   - Keep **Verify JWT** on for both.
+   - Turn **Verify JWT with legacy secret** off for both (function *Settings*). The functions verify the caller themselves by asking Supabase Auth, which also works with the newer signing keys.
 4. Set the function secrets (*Edge Functions → Secrets*). Names and defaults are listed in [`.env.example`](.env.example). Required: `AI_API_KEY`.
 5. *Authentication → URL Configuration*: set **Site URL** to the address the app is served from and add it to **Redirect URLs** (needed for e-mail confirmation and password-reset links).
 6. For a private installation: create the accounts, then turn off *Authentication → Sign In / Providers → Allow new users to sign up*. Otherwise anyone who finds the address can register and use AI credit (bounded by the limits in `.env.example`).
