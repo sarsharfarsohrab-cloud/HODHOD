@@ -120,7 +120,7 @@ export async function handleAnalyzeWord(
         .select<{ result: AnalyzeResult }>(`ai_word_cache?${cacheFilter}&select=result&limit=1`)
         .catch(() => [])
       const hit = rows[0]?.result
-      if (hit && isUsableCachedResult(hit)) {
+      if (hit && isUsableCachedResult(hit, input.cacheKey)) {
         await log('cache_hit')
         return json({ ...hit, cached: true }, 200, cors)
       }
@@ -137,6 +137,28 @@ export async function handleAnalyzeWord(
       const code = err instanceof HttpError ? err.code : 'internal'
       await log('error', { error_code: code })
       throw err
+    }
+
+    // "erfolg" → "did you mean Erfolg?" would send the learner round in circles: both have
+    // the same cache key. Analyse the suggested spelling straight away instead.
+    if (outcome.result.status === 'misspelled' && sameKey(outcome.result.suggestion, input.cacheKey)) {
+      try {
+        const again = await generate(outcome.result.suggestion, pair, env, fetchImpl, sleep)
+        outcome = {
+          result: again.result,
+          usage: {
+            inputTokens: outcome.usage.inputTokens + again.usage.inputTokens,
+            outputTokens: outcome.usage.outputTokens + again.usage.outputTokens,
+          },
+        }
+      } catch (err) {
+        const code = err instanceof HttpError ? err.code : 'internal'
+        await log('error', { error_code: code })
+        throw err
+      }
+      if (outcome.result.status === 'misspelled' && sameKey(outcome.result.suggestion, input.cacheKey)) {
+        outcome.result = { status: 'not_a_word', cached: false }
+      }
     }
 
     const { result, usage } = outcome
@@ -166,7 +188,14 @@ export async function handleAnalyzeWord(
   }
 }
 
-function isUsableCachedResult(hit: AnalyzeResult): boolean {
+function sameKey(word: string, cacheKey: string): boolean {
+  const checked = validateWordInput(word)
+  return checked.ok && checked.cacheKey === cacheKey
+}
+
+function isUsableCachedResult(hit: AnalyzeResult, cacheKey: string): boolean {
+  // older entries may suggest a spelling that differs only in capital letters
+  if (hit.status === 'misspelled') return typeof hit.suggestion === 'string' && !sameKey(hit.suggestion, cacheKey)
   if (hit.status !== 'ok') return AI_STATUS.includes(hit.status)
   // Re-validate: the cache must never be a way around the schema.
   return validateWordContent(hit.content, { mode: 'ai' }).ok

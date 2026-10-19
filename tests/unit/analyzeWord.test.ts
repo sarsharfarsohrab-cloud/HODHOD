@@ -216,6 +216,24 @@ describe('analyze-word: generation', () => {
     w.aiReplies.push(aiJson({ ...asAiOutput(TISCH), ...empty, status: 'misspelled', suggestion: 'Straße 12 (?)' }))
     expect(await (await call({ word: 'Strasse' })).json()).toEqual({ status: 'not_a_word', cached: false })
   })
+  test('a "correction" that only changes capital letters is analysed at once, never asked about in circles', async () => {
+    const empty = { lemma: '', meanings: [], noun: null, verb: null, adjective: null, pos: 'other', cefr: 'A1' }
+    w.aiReplies.push(aiJson({ ...asAiOutput(TISCH), ...empty, status: 'misspelled', suggestion: 'Tisch' }))
+    w.aiReplies.push(aiJson(asAiOutput(TISCH)))
+    const body = (await (await call({ word: 'tisch' })).json()) as { status: string; content: unknown }
+    expect(body.status).toBe('ok')
+    expect(body.content).toEqual(TISCH)
+    expect(w.aiRequests.length).toBe(2)
+    // the stored answer is the analysis, so the next learner gets it from the cache
+    const again = (await (await call({ word: 'Tisch' })).json()) as { status: string; cached: boolean }
+    expect(again).toMatchObject({ status: 'ok', cached: true })
+  })
+  test('an old cached "did you mean Tisch?" for "tisch" is ignored', async () => {
+    w.cache.set(`eq.tisch|eq.${PROMPT_VERSION}`, { status: 'misspelled', suggestion: 'Tisch' })
+    w.aiReplies.push(aiJson(asAiOutput(TISCH)))
+    const body = (await (await call({ word: 'Tisch' })).json()) as { status: string; cached: boolean }
+    expect(body).toMatchObject({ status: 'ok', cached: false })
+  })
 })
 
 describe('analyze-word: other providers (chat-completions format)', () => {

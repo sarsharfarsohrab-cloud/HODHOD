@@ -49,7 +49,13 @@ export function createScreen(ctx: Ctx, params: Record<string, string>): Screen {
     try {
       const result = await ctx.data.analyzeWord(word, { force: options.force, signal: mine.signal })
       if (mine.signal.aborted || destroyed) return
-      if (result.status === 'misspelled') return set({ step: 'suggest', word, suggestion: result.suggestion })
+      if (result.status === 'misspelled') {
+        // never ask "did you mean X?" about X itself (only capital letters differ)
+        if (result.suggestion.toLocaleLowerCase('de') !== word.toLocaleLowerCase('de')) {
+          return set({ step: 'suggest', word, suggestion: result.suggestion })
+        }
+        return set({ step: 'input', value: word, error: t.create.notAWord(word) })
+      }
       if (result.status !== 'ok') {
         return set({ step: 'input', value: word, error: result.status === 'wrong_language' ? t.create.wrongLanguage(word) : t.create.notAWord(word) })
       }

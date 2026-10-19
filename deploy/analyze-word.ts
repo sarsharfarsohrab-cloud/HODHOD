@@ -477,6 +477,7 @@ You receive ONE entry typed by a learner: a single German word, or a short fixed
 STEP 1 — decide "status":
 - "ok": the input is a real German word (any inflected form counts) or an established fixed expression that a dictionary or textbook would list as one unit.
 - "misspelled": it is clearly a typo of a German word or expression (missing umlaut, swapped letters). Put the corrected form in "suggestion". Do not analyse it.
+  Capitalisation alone is NEVER a misspelling: "erfolg", "TISCH" or "Aufgeben" are "ok" and are analysed (the lemma gets the correct capitalisation). "ss" written for "ß" is not a misspelling either.
 - "wrong_language": it is from another language and not used in German.
 - "not_a_word": random letters, a name with no dictionary meaning, several unrelated words, or a free sentence that is not a fixed expression.
 For every status except "ok": lemma = "", meanings = [], noun/verb/adjective = null, lists = [], other text fields null, pos = "other", cefr = "A1".
@@ -640,7 +641,7 @@ async function handleAnalyzeWord(req, env, fetchImpl = fetch, sleep = (ms) => ne
     if (!force) {
       const rows = await db.select(`ai_word_cache?${cacheFilter}&select=result&limit=1`).catch(() => []);
       const hit = rows[0]?.result;
-      if (hit && isUsableCachedResult(hit)) {
+      if (hit && isUsableCachedResult(hit, input.cacheKey)) {
         await log("cache_hit");
         return json({ ...hit, cached: true }, 200, cors);
       }
@@ -655,6 +656,25 @@ async function handleAnalyzeWord(req, env, fetchImpl = fetch, sleep = (ms) => ne
       const code = err instanceof HttpError ? err.code : "internal";
       await log("error", { error_code: code });
       throw err;
+    }
+    if (outcome.result.status === "misspelled" && sameKey(outcome.result.suggestion, input.cacheKey)) {
+      try {
+        const again = await generate(outcome.result.suggestion, pair, env, fetchImpl, sleep);
+        outcome = {
+          result: again.result,
+          usage: {
+            inputTokens: outcome.usage.inputTokens + again.usage.inputTokens,
+            outputTokens: outcome.usage.outputTokens + again.usage.outputTokens
+          }
+        };
+      } catch (err) {
+        const code = err instanceof HttpError ? err.code : "internal";
+        await log("error", { error_code: code });
+        throw err;
+      }
+      if (outcome.result.status === "misspelled" && sameKey(outcome.result.suggestion, input.cacheKey)) {
+        outcome.result = { status: "not_a_word", cached: false };
+      }
     }
     const { result, usage } = outcome;
     await log(result.status === "ok" ? "ok" : "rejected", {
@@ -675,7 +695,13 @@ async function handleAnalyzeWord(req, env, fetchImpl = fetch, sleep = (ms) => ne
     return errorResponse(err, cors);
   }
 }
-function isUsableCachedResult(hit) {
+function sameKey(word, cacheKey) {
+  const checked = validateWordInput(word);
+  return checked.ok && checked.cacheKey === cacheKey;
+}
+function isUsableCachedResult(hit, cacheKey) {
+  if (hit.status === "misspelled")
+    return typeof hit.suggestion === "string" && !sameKey(hit.suggestion, cacheKey);
   if (hit.status !== "ok")
     return AI_STATUS.includes(hit.status);
   return validateWordContent(hit.content, { mode: "ai" }).ok;

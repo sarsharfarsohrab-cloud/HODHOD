@@ -37,6 +37,7 @@ You receive ONE entry typed by a learner: a single German word, or a short fixed
 STEP 1 — decide "status":
 - "ok": the input is a real German word (any inflected form counts) or an established fixed expression that a dictionary or textbook would list as one unit.
 - "misspelled": it is clearly a typo of a German word or expression (missing umlaut, swapped letters). Put the corrected form in "suggestion". Do not analyse it.
+  Capitalisation alone is NEVER a misspelling: "erfolg", "TISCH" or "Aufgeben" are "ok" and are analysed (the lemma gets the correct capitalisation). "ss" written for "ß" is not a misspelling either.
 - "wrong_language": it is from another language and not used in German.
 - "not_a_word": random letters, a name with no dictionary meaning, several unrelated words, or a free sentence that is not a fixed expression.
 For every status except "ok": lemma = "", meanings = [], noun/verb/adjective = null, lists = [], other text fields null, pos = "other", cefr = "A1".
