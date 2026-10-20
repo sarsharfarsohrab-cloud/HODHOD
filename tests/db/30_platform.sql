@@ -114,9 +114,13 @@ do $$
 declare n integer;
 begin
   assert (select count(*) from public.pack_items) = 3, 'only ready items are visible';
+  assert (select items from public.store_packs() where slug = 'fruits-basic') = 3, 'the store counts ready items';
+  assert (select lessons from public.store_packs() where slug = 'fruits-basic') = 2, 'and lessons';
+  assert not (select owned from public.store_packs() where slug = 'fruits-basic'), 'not owned yet';
   n := public.start_pack_lesson('50000000-0000-0000-0000-000000000001', 1);
   assert n = 1, 'the word already in the bank is skipped';
   assert (select count(*) from public.user_packs) = 1, 'the pack is now the learner''s';
+  assert (select owned from public.store_packs() where slug = 'fruits-basic'), 'owned after starting a lesson';
   assert (select source from public.words where lemma = 'Apfel') = 'pack', 'source is pack';
   assert (select pack_id from public.words where lemma = 'Apfel') = '50000000-0000-0000-0000-000000000001', 'word remembers its pack';
   assert (select tags from public.words where lemma = 'Apfel') = array['میوه‌ها'], 'word carries the pack as group';

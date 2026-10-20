@@ -90,7 +90,7 @@ def remove_background(rgb_u8, ground=True):
     # 1b) hairline slivers of paper between feathers (too thin for the blob
     #     test). Skip anything touching a pale prop (card/page rims) or a
     #     neutral-black pupil (catchlights).
-    sliver = (dist_white <= 16) & (spread <= 6) & ~bg_paper
+    sliver = (dist_white <= 30) & (spread <= 10) & ~bg_paper
     slab, _ = ndi.label(sliver, structure=np.ones((3, 3)))
     for i, sl in enumerate(ndi.find_objects(slab), start=1):
         if sl is None:
@@ -143,7 +143,7 @@ def remove_background(rgb_u8, ground=True):
                                zip(areas, ndi.center_of_mass(emit if False else elab > 0, elab, np.arange(1, en + 1))) if a >= 800])
     glow_a = np.zeros((h, w), np.float32)
     glow_rgb = np.zeros_like(rgb)
-    if emit.any():
+    if ground and emit.any():  # (flying sheet: no props, skip)
         edist = ndi.distance_transform_edt(~emit)
         zone = edist <= GLOW_REACH
         glowish = zone & (dist_white < 110) & (rgb[..., 0] > 228) & ~emit & ~bg_paper
@@ -422,12 +422,14 @@ def repair_clipped_wing(c, anchor, tol=12):
     mir = canvas[:, ::-1]
     cx = np.arange(cw) - half
     short = min(left, right)
-    if left < right:
-        zone = cx < -(short - 20)
-    else:
-        zone = cx > (short - 20)
-    use = zone[None, :] & (mir[..., 3] > canvas[..., 3])
-    canvas[use] = mir[use]
+    # blend weight ramps in over 14 px so the seam is not a hard line
+    depth = (-cx if left < right else cx) - (short - 24)
+    wgt = np.clip(depth / 14.0, 0, 1)[None, :, None] * np.ones_like(mir[..., 3:4])
+    pa = canvas[..., 3:4] * (1 - wgt) + mir[..., 3:4] * wgt
+    prem = canvas[..., :3] * canvas[..., 3:4] * (1 - wgt) + mir[..., :3] * mir[..., 3:4] * wgt
+    with np.errstate(invalid="ignore", divide="ignore"):
+        rgbn = np.where(pa > 1e-4, prem / np.maximum(pa, 1e-4), 0)
+    canvas = np.concatenate([rgbn, pa], axis=2).astype(np.float32)
     xs = np.nonzero(canvas[..., 3].max(axis=0) > 0.004)[0]
     a, b = xs.min(), xs.max() + 1
     c["crop"] = canvas[:, a:b]

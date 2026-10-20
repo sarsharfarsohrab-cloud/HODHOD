@@ -272,6 +272,20 @@ export class SupabaseClient {
     })
   }
 
+  /** Inserts or updates several rows; returns them as stored. */
+  async upsert<T>(table: string, rows: Json[], onConflict: string): Promise<T[]> {
+    return this.json<T[]>(`/rest/v1/${table}?${new URLSearchParams({ on_conflict: onConflict, select: '*' })}`, {
+      method: 'POST',
+      body: rows,
+      auth: 'user',
+      headers: { Prefer: 'return=representation,resolution=merge-duplicates' },
+    })
+  }
+
+  async remove(table: string, match: Record<string, string>): Promise<void> {
+    await this.json<unknown>(`/rest/v1/${table}?${new URLSearchParams(match)}`, { method: 'DELETE', auth: 'user', headers: { Prefer: 'return=minimal' } })
+  }
+
   async rpc<T>(name: string, args: Json): Promise<T> {
     return this.json<T>(`/rest/v1/rpc/${name}`, { method: 'POST', body: args, auth: 'user' })
   }
@@ -381,6 +395,8 @@ async function errorFromResponse(res: Response, path: string): Promise<AppError>
       case 'payload_too_large':
       case 'confirmation_required':
         return new AppError('validation', String(nested?.reason ?? code), message, detail)
+      case 'account_blocked':
+        return new AppError('validation', 'account_blocked', message)
       case 'not_configured':
       case 'ai_quota_exhausted':
         return new AppError('not_configured', code, message)

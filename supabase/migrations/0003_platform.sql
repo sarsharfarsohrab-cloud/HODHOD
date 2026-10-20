@@ -308,6 +308,28 @@ alter table public.words
   add column pack_item_id uuid references public.pack_items (id) on delete set null;
 create index words_pack on public.words (user_id, pack_id) where pack_id is not null;
 
+-- The store window: packs with their size and whether the learner already has them.
+create or replace function public.store_packs()
+returns table (
+  id uuid, slug text, topic text, kind text, level text, title text, description text, emoji text,
+  lesson_size integer, published boolean, sort_order integer, items integer, lessons integer,
+  owned boolean, added_at timestamptz
+)
+language sql
+stable
+set search_path = ''
+as $$
+  select
+    p.id, p.slug, p.topic, p.kind, p.level, p.title, p.description, p.emoji, p.lesson_size, p.published, p.sort_order,
+    (select count(*)::integer from public.pack_items i where i.pack_id = p.id and i.status = 'ready'),
+    (select coalesce(max(i.lesson), 0)::integer from public.pack_items i where i.pack_id = p.id and i.status = 'ready'),
+    up.user_id is not null,
+    up.added_at
+  from public.packs p
+  left join public.user_packs up on up.pack_id = p.id and up.user_id = auth.uid()
+  order by p.sort_order, p.title;
+$$;
+
 -- Puts the words of one lesson of a pack into the learner's bank. Words the learner
 -- already has are left alone. Returns how many words were added.
 create or replace function public.start_pack_lesson(p_pack uuid, p_lesson integer)
@@ -973,6 +995,7 @@ revoke all on function public.ai_cost(text, text, integer, integer) from anon, a
 revoke all on function public.ai_budget_status(uuid, text) from anon, authenticated, public;
 revoke all on function public.log_client_error(text, text, text, text, text) from anon, public;
 revoke all on function public.start_pack_lesson(uuid, integer) from anon, public;
+revoke all on function public.store_packs() from anon, public;
 revoke all on function public.import_words(jsonb) from anon, public;
 revoke all on function public.push_candidates(timestamptz) from anon, authenticated, public;
 revoke all on function public.user_streak(uuid, text) from anon, authenticated, public;
@@ -990,6 +1013,7 @@ revoke all on function public.admin_fix_cache(text, jsonb) from anon, public;
 grant execute on function public.is_admin() to authenticated;
 grant execute on function public.log_client_error(text, text, text, text, text) to authenticated;
 grant execute on function public.start_pack_lesson(uuid, integer) to authenticated;
+grant execute on function public.store_packs() to authenticated;
 grant execute on function public.import_words(jsonb) to authenticated;
 grant execute on function public.friend_request(text) to authenticated;
 grant execute on function public.friend_respond(uuid, boolean) to authenticated;

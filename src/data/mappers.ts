@@ -17,6 +17,9 @@ export interface WordRow {
   /** Missing on databases that have not run migration 0002 yet. */
   tags?: string[] | null
   source: Word['source']
+  /** Missing before migration 0003. */
+  pack_id?: string | null
+  pack_item_id?: string | null
   created_at: string
   updated_at: string
   deleted_at: string | null
@@ -50,6 +53,15 @@ export interface SettingsRow {
   speech_rate: number | string
   autoplay_audio: boolean
   reverse_cards?: boolean
+  // since migration 0003
+  ai_voice?: boolean
+  time_zone?: string | null
+  onboarded_at?: string | null
+  notify_daily?: boolean
+  notify_time?: string
+  notify_streak?: boolean
+  notify_updates?: boolean
+  celebrated_streaks?: number[] | null
 }
 
 export interface ProfileRow {
@@ -81,6 +93,8 @@ export const wordFromRow = (r: WordRow): Word => ({
   isFavorite: r.is_favorite,
   tags: r.tags ?? [],
   source: r.source,
+  packId: r.pack_id ?? null,
+  packItemId: r.pack_item_id ?? null,
   createdAt: r.created_at,
   updatedAt: r.updated_at,
   deletedAt: r.deleted_at,
@@ -114,6 +128,15 @@ export const settingsFromRow = (r: SettingsRow): Settings => ({
   speechRate: Number(r.speech_rate) || DEFAULT_SETTINGS.speechRate,
   autoplayAudio: r.autoplay_audio,
   reverseCards: r.reverse_cards === true,
+  aiVoice: r.ai_voice ?? DEFAULT_SETTINGS.aiVoice,
+  timeZone: r.time_zone ?? null,
+  // a database without the column (before migration 0003) never shows the welcome tour
+  onboarded: !('onboarded_at' in r) || r.onboarded_at !== null,
+  notifyDaily: r.notify_daily ?? DEFAULT_SETTINGS.notifyDaily,
+  notifyTime: r.notify_time ?? DEFAULT_SETTINGS.notifyTime,
+  notifyStreak: r.notify_streak ?? DEFAULT_SETTINGS.notifyStreak,
+  notifyUpdates: r.notify_updates ?? DEFAULT_SETTINGS.notifyUpdates,
+  celebratedStreaks: r.celebrated_streaks ?? [],
 })
 
 export function settingsToRow(patch: Partial<Settings>): Record<string, unknown> {
@@ -126,6 +149,14 @@ export function settingsToRow(patch: Partial<Settings>): Record<string, unknown>
   if (patch.speechRate !== undefined) row.speech_rate = patch.speechRate
   if (patch.autoplayAudio !== undefined) row.autoplay_audio = patch.autoplayAudio
   if (patch.reverseCards !== undefined) row.reverse_cards = patch.reverseCards
+  if (patch.aiVoice !== undefined) row.ai_voice = patch.aiVoice
+  if (patch.timeZone !== undefined) row.time_zone = patch.timeZone
+  if (patch.onboarded !== undefined) row.onboarded_at = patch.onboarded ? new Date().toISOString() : null
+  if (patch.notifyDaily !== undefined) row.notify_daily = patch.notifyDaily
+  if (patch.notifyTime !== undefined) row.notify_time = patch.notifyTime
+  if (patch.notifyStreak !== undefined) row.notify_streak = patch.notifyStreak
+  if (patch.notifyUpdates !== undefined) row.notify_updates = patch.notifyUpdates
+  if (patch.celebratedStreaks !== undefined) row.celebrated_streaks = patch.celebratedStreaks
   return row
 }
 

@@ -20,7 +20,10 @@ export interface Word {
   isFavorite: boolean
   /** Free-form groups the learner put the word in ("Lektion 3", "سفر"). */
   tags: string[]
-  source: 'ai' | 'manual'
+  source: 'ai' | 'manual' | 'pack' | 'import'
+  /** Set when the word came from a word pack of the store. */
+  packId?: string | null
+  packItemId?: string | null
   createdAt: string
   updatedAt: string
   deletedAt: string | null
@@ -58,6 +61,19 @@ export interface Settings {
   autoplayAudio: boolean
   /** Also practise Persian → German (a second card per word). */
   reverseCards: boolean
+  /** Natural (AI) voice instead of the phone's own voice. */
+  aiVoice: boolean
+  /** IANA time zone of the device, used for reminders and streaks. */
+  timeZone: string | null
+  /** False until the welcome tour was finished or skipped. */
+  onboarded: boolean
+  notifyDaily: boolean
+  /** "HH:MM", local time of the daily reminder. */
+  notifyTime: string
+  notifyStreak: boolean
+  notifyUpdates: boolean
+  /** Streak milestones already celebrated (each is shown once). */
+  celebratedStreaks: number[]
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -69,6 +85,14 @@ export const DEFAULT_SETTINGS: Settings = {
   speechRate: 1,
   autoplayAudio: false,
   reverseCards: false,
+  aiVoice: true,
+  timeZone: null,
+  onboarded: true,
+  notifyDaily: false,
+  notifyTime: '20:00',
+  notifyStreak: true,
+  notifyUpdates: true,
+  celebratedStreaks: [],
 }
 
 export const SETTINGS_LIMITS = {
