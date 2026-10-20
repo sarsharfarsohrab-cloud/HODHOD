@@ -42,6 +42,16 @@ function configure() {
       return aiResponse(asAiOutput({ ...SCHNELL, lemma: 'Bescheid sagen', pos: 'phrase', cefr: 'B1', ipa: null, adjective: null, synonyms: ['informieren'], antonyms: [],
         meanings: [{ ...SCHNELL.meanings[0]!, translation: 'خبر دادن، اطلاع دادن' }] }))
     }
+    if (key === "wie geht's dir?" || key === 'wie gehts dir?') {
+      return aiResponse(asAiOutput({ ...SCHNELL, lemma: "Wie geht's dir?", pos: 'sentence', cefr: 'A1', ipa: null, adjective: null, synonyms: [], antonyms: [], collocations: [],
+        meanings: [{ translation: 'حالت چطور است؟', note: 'خودمانی؛ به دوست و آشنا', examples: [] }],
+        register: 'informal', frequency: 3, literal: null, alternatives: ['Wie geht es dir?', 'Wie läuft’s?'], reply: { de: 'Danke, gut. Und dir?', fa: 'ممنون، خوبم. تو چطوری؟' }, notes: null }))
+    }
+    if (key === 'die nase voll haben') {
+      return aiResponse(asAiOutput({ ...SCHNELL, lemma: 'die Nase voll haben', pos: 'phrase', cefr: 'B1', ipa: null, adjective: null, synonyms: [], antonyms: [], collocations: [],
+        meanings: [{ translation: 'خسته و کلافه شدن از چیزی', note: null, examples: SCHNELL.meanings[0]!.examples }],
+        register: 'informal', frequency: 3, literal: '«دماغ را پُر داشتن»', alternatives: ['es satthaben'], reply: null, notes: null }))
+    }
     if (/^wort[a-z]$/.test(key)) {
       return aiResponse(asAiOutput({ ...TISCH, lemma: `Wort${key.slice(4)}`, noun: { article: 'das', plural: 'Wörter', genitive: 'Wortes', pluralOnly: false },
         meanings: [{ ...TISCH.meanings[0]!, translation: 'واژهٔ آزمایشی' }], collocations: [] }))

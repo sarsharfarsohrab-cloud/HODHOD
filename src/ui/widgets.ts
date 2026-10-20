@@ -125,7 +125,9 @@ export function speakButton(ctx: Ctx, text: string, options: { compact?: boolean
 /** "der Tisch" with the article in its gender colour (and still readable without colour). */
 export function wordTitle(content: Pick<WordContent, 'lemma' | 'noun'>, tag: 'h1' | 'div' | 'span' = 'div', className = 'word-title'): HTMLElement {
   const article = content.noun?.article
-  const el = h(tag, { class: className, lang: 'de', dir: 'ltr' })
+  // sentences and long expressions get a smaller title so they still fit on a phone
+  const size = content.lemma.length > 60 ? ' title-long' : content.lemma.length > 24 ? ' title-mid' : ''
+  const el = h(tag, { class: className + size, lang: 'de', dir: 'ltr' })
   if (article) el.append(h('span', { class: `article-${article}` }, article), ' ')
   el.append(content.lemma)
   el.setAttribute('aria-label', displayWord(content))

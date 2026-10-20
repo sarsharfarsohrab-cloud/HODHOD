@@ -9,6 +9,7 @@ import {
   LIMITS,
   PERSONS,
   POS_VALUES,
+  REGISTER_VALUES,
   validateWordContent,
   type Example,
   type SixForms,
@@ -86,6 +87,7 @@ export function createEditor(initial: WordContent): Editor {
   const meanings = h('section', { class: 'card stack' })
   const grammar = h('section', { class: 'card stack' })
   const related = h('section', { class: 'card stack' })
+  const expression = h('section', { class: 'card stack' })
   const problems = h('div', { role: 'alert' })
 
   const renderBasics = () => {
@@ -94,7 +96,7 @@ export function createEditor(initial: WordContent): Editor {
       h(
         'div',
         { class: 'form-grid' },
-        field(f.word, textInput(draft.lemma, (v) => (draft.lemma = v), { german: true, maxLength: LIMITS.lemma, path: 'lemma' }), 'full'),
+        field(f.word, textInput(draft.lemma, (v) => (draft.lemma = v), { german: true, maxLength: LIMITS.lemmaSentence, path: 'lemma' }), 'full'),
         field(
           f.pos,
           select(draft.pos, POS_VALUES.map((p) => ({ value: p, label: t.pos[p] })), (v) => {
@@ -281,11 +283,38 @@ export function createEditor(initial: WordContent): Editor {
     )
   }
 
+  const renderExpression = () => {
+    draft.alternatives ??= []
+    const reply = draft.reply ?? { de: '', fa: '' }
+    replace(
+      expression,
+      h('h2', null, f.expression),
+      h(
+        'div',
+        { class: 'form-grid' },
+        field(
+          f.register,
+          select(draft.register ?? '', [{ value: '', label: '—' }, ...REGISTER_VALUES.map((r) => ({ value: r, label: t.register[r] }))], (v) => (draft.register = (v || null) as WordContent['register']), 'register'),
+        ),
+        field(
+          f.frequency,
+          select(String(draft.frequency ?? ''), [{ value: '', label: '—' }, ...([3, 2, 1] as const).map((n) => ({ value: String(n), label: t.frequency[n] }))], (v) => (draft.frequency = v ? (Number(v) as 1 | 2 | 3) : null), 'frequency'),
+        ),
+        field(`${f.literal} (${t.common.optional})`, textInput(draft.literal ?? '', (v) => (draft.literal = v || null), { maxLength: LIMITS.translationSentence, path: 'literal' }), 'full'),
+      ),
+      listInput(f.alternatives, draft.alternatives, 'alternatives'),
+      h('span', { class: 'label' }, `${f.reply} (${t.common.optional})`),
+      textInput(reply.de, (v) => { reply.de = v; draft.reply = reply.de || reply.fa ? reply : null }, { german: true, placeholder: f.replyDe, path: 'reply.de' }),
+      textInput(reply.fa, (v) => { reply.fa = v; draft.reply = reply.de || reply.fa ? reply : null }, { placeholder: f.replyFa, path: 'reply.fa' }),
+    )
+  }
+
   renderBasics()
   renderMeanings()
+  renderExpression()
   renderGrammar()
   renderRelated()
-  const el = h('div', { class: 'stack', style: { gap: 'var(--s4)' } }, problems, basics, meanings, grammar, related)
+  const el = h('div', { class: 'stack', style: { gap: 'var(--s4)' } }, problems, basics, meanings, expression, grammar, related)
 
   return {
     el,

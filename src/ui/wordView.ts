@@ -18,6 +18,8 @@ export function wordHeader(ctx: Ctx, content: WordContent, trailing: (Node | nul
       { class: 'row wrap' },
       h('span', { class: 'chip' }, t.pos[content.pos]),
       cefrChip(content.cefr),
+      content.register && content.register !== 'neutral' ? h('span', { class: `chip register-${content.register}` }, t.register[content.register]) : null,
+      content.frequency ? h('span', { class: `chip freq-${content.frequency}`, title: t.draft.fields.frequency }, '●'.repeat(content.frequency), ' ', t.frequency[content.frequency]) : null,
       content.ipa ? h('span', { class: 'ipa' }, `[${content.ipa}]`) : null,
     ),
   )
@@ -28,7 +30,7 @@ export function meaningsCard(ctx: Ctx, content: WordContent): HTMLElement {
   return h(
     'section',
     { class: 'card' },
-    h('h2', null, t.detail.meanings),
+    h('h2', null, content.pos === 'sentence' ? t.detail.translation : t.detail.meanings),
     content.meanings.map((meaning, i) =>
       h(
         'div',
@@ -132,7 +134,35 @@ export function relatedCards(content: WordContent): (HTMLElement | null)[] {
   ]
 }
 
+/** What belongs to idioms and sentences: the word-for-word rendering, other ways to say it, a typical answer. */
+export function expressionCard(ctx: Ctx, content: WordContent): HTMLElement | null {
+  const d = t.detail
+  const alternatives = content.alternatives ?? []
+  if (!content.literal && alternatives.length === 0 && !content.reply) return null
+  return h(
+    'section',
+    { class: 'card stack' },
+    content.literal ? h('div', { class: 'stack', style: { gap: 'var(--s1)' } }, h('h2', null, d.literal), h('p', { class: 'literal' }, content.literal)) : null,
+    alternatives.length
+      ? h(
+          'div',
+          { class: 'stack', style: { gap: 'var(--s2)' } },
+          h('h2', null, d.alternatives),
+          alternatives.map((alt) => h('div', { class: 'example' }, h('div', null, de(alt)), speakButton(ctx, alt, { compact: true }))),
+        )
+      : null,
+    content.reply
+      ? h(
+          'div',
+          { class: 'stack', style: { gap: 'var(--s2)' } },
+          h('h2', null, d.reply),
+          h('div', { class: 'example reply' }, h('div', null, de(content.reply.de)), speakButton(ctx, content.reply.de, { compact: true }), h('span', { class: 'fa' }, content.reply.fa)),
+        )
+      : null,
+  )
+}
+
 /** The whole body of a word, in reading order. */
 export function wordBody(ctx: Ctx, content: WordContent): (HTMLElement | null)[] {
-  return [meaningsCard(ctx, content), grammarCard(ctx, content), conjugationCard(ctx, content), ...relatedCards(content)]
+  return [meaningsCard(ctx, content), expressionCard(ctx, content), grammarCard(ctx, content), conjugationCard(ctx, content), ...relatedCards(content)]
 }

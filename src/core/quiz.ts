@@ -138,6 +138,8 @@ export function buildQuestion(type: QuestionType, word: Word, all: readonly Word
       }
     }
     case 'typing_fa_de':
+      // a whole sentence is too long to type exactly from memory: sentences are asked as multiple choice
+      if (word.pos === 'sentence') return null
       return { type, wordId: word.id, prompt: word.primaryMeaning, promptLanguage: 'fa', options: null, expected: display(word) }
   }
 }

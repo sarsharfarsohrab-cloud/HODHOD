@@ -2961,3 +2961,48 @@ button.quiz-option:hover {
   color: var(--on-perch);
   font-weight: 900;
 }
+
+/* ---------------------------------------------------------------- sentences and expressions */
+
+.word-title.title-mid {
+  font-size: 0.72em;
+  line-height: 1.35;
+}
+
+.word-title.title-long {
+  font-size: 0.58em;
+  line-height: 1.45;
+}
+
+.literal {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--ink-2);
+}
+
+.example.reply {
+  border-inline-start: 3px solid var(--brand);
+}
+
+.chip.register-informal,
+.chip.register-slang {
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+  border-color: transparent;
+}
+
+.chip.register-formal {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: transparent;
+}
+
+.chip.register-vulgar {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: transparent;
+}
+
+.chip.freq-3 {
+  color: var(--good);
+}

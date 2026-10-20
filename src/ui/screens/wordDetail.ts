@@ -7,7 +7,7 @@ import { createEditor } from '../editor.ts'
 import { fa, faDate, faDuration, faPercent, faRelative } from '../format.ts'
 import { describeError, t } from '../strings.ts'
 import { emptyState, iconButton, statusChip, tagEditor } from '../widgets.ts'
-import { conjugationCard, grammarCard, meaningsCard, relatedCards, wordHeader } from '../wordView.ts'
+import { conjugationCard, expressionCard, grammarCard, meaningsCard, relatedCards, wordHeader } from '../wordView.ts'
 
 /** Position of a card in the single-column (phone) reading order. */
 function order<T extends HTMLElement | null>(position: number, el: T): T {
@@ -84,7 +84,7 @@ export function wordDetailScreen(ctx: Ctx, params: Record<string, string>): Scre
       h(
         'div',
         { class: 'cols' },
-        h('div', { class: 'col' }, order(1, meaningsCard(ctx, word.content)), ...relatedCards(word.content).map((card) => order(4, card))),
+        h('div', { class: 'col' }, order(1, meaningsCard(ctx, word.content)), order(1, expressionCard(ctx, word.content)), ...relatedCards(word.content).map((card) => order(4, card))),
         h(
           'div',
           { class: 'col' },

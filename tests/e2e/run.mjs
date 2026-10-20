@@ -888,6 +888,43 @@ await test('a three-day streak gets a big celebration, once', async () => {
   return page
 })
 
+await test('sentences and idioms get their own card details', async () => {
+  const page = await newPage()
+  await signUp(page)
+  await page.goto(`${BASE}/#/create`)
+  await page.getByLabel('کلمه یا عبارت آلمانی').fill("wie geht's dir?")
+  await page.getByRole('button', { name: 'ساخت کارت' }).click()
+  await page.getByText('پیش‌نویس است و هنوز ذخیره نشده').waitFor()
+  await page.getByRole('heading', { name: 'ترجمه' }).waitFor()
+  await page.getByText('حالت چطور است؟').waitFor()
+  await page.getByText('خودمانی', { exact: true }).waitFor()
+  await page.getByText('Danke, gut. Und dir?').waitFor()
+  await page.getByText('Wie geht es dir?').waitFor()
+  await noHorizontalScroll(page, 'sentence draft')
+  await snap(page, 'sentence-draft')
+  await page.getByRole('button', { name: 'تأیید و ذخیره' }).click()
+  await page.getByText('وضعیت یادگیری').waitFor()
+  let s = await state()
+  assert(s.words[0].pos === 'sentence' && s.words[0].content.reply.de === 'Danke, gut. Und dir?', 'the sentence is stored with its details')
+
+  await createWord(page, 'die Nase voll haben')
+  await page.getByText('«دماغ را پُر داشتن»').waitFor()
+  await snap(page, 'idiom-detail')
+  // the editor shows the new fields
+  await page.getByRole('button', { name: 'ویرایش' }).first().click()
+  await page.getByText('جزئیات عبارت و جمله').waitFor()
+  await page.locator('[data-path="literal"]').fill('«بینی را پر داشتن»')
+  await page.getByRole('button', { name: /ذخیره/ }).first().click()
+  await page.getByText('«بینی را پر داشتن»').waitFor()
+
+  // studying a sentence: the long German text fits the card
+  await page.goto(`${BASE}/#/study`)
+  await page.getByRole('button', { name: 'نمایش جواب' }).waitFor()
+  await noHorizontalScroll(page, 'sentence card')
+  await snap(page, 'study-sentence')
+  return page
+})
+
 // ---------------------------------------------------------------------------------------------
 
 await browser.close()

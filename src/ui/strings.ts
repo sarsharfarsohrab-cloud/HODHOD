@@ -233,6 +233,14 @@ export const t = {
       notes: 'نکته',
       favorite: 'علاقه‌مندی',
       tags: 'دسته‌ها',
+      expression: 'جزئیات عبارت و جمله',
+      literal: 'ترجمهٔ تحت‌اللفظی',
+      register: 'سبک گفتار',
+      frequency: 'رایج بودن',
+      alternatives: 'شکل‌های دیگر گفتن',
+      reply: 'جواب رایج',
+      replyDe: 'جواب به آلمانی',
+      replyFa: 'ترجمهٔ جواب',
     },
     issue(issue: ValidationIssue): string {
       const where = describePath(issue.path)
@@ -335,6 +343,10 @@ export const t = {
   detail: {
     notFound: 'این کلمه پیدا نشد. شاید حذف شده باشد.',
     meanings: 'معنی',
+    translation: 'ترجمه',
+    literal: 'ترجمهٔ تحت‌اللفظی',
+    alternatives: 'شکل‌های دیگر گفتن',
+    reply: 'جواب رایج',
     grammar: 'دستور زبان',
     conjugation: 'صرف فعل',
     synonyms: 'مترادف',
@@ -684,6 +696,11 @@ function describePath(path: string): string {
   if (parts[0] === 'synonyms') return f.synonyms
   if (parts[0] === 'antonyms') return f.antonyms
   if (parts[0] === 'collocations') return parts.length > 1 ? `ترکیب ${n(1)}` : f.collocations
+  if (parts[0] === 'literal') return f.literal
+  if (parts[0] === 'register') return f.register
+  if (parts[0] === 'frequency') return f.frequency
+  if (parts[0] === 'alternatives') return f.alternatives
+  if (parts[0] === 'reply') return f.reply
   if (parts[0] === 'notes') return f.notes
   return 'یک بخش'
 }
