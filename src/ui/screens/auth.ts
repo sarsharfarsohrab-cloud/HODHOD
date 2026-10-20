@@ -16,6 +16,8 @@ export function appUrl(): string {
 }
 
 function authMessage(error: AppError): string {
+  // Supabase's own limits (e-mails per hour, sign-ups per hour) arrive as "too many requests"
+  if (error.kind === 'rate_limit' && t.auth.errors[error.code]) return t.auth.errors[error.code]!
   if (error.kind === 'auth' || error.kind === 'validation') {
     const known = t.auth.errors[error.code === 'validation_failed' || error.code === 'email_address_invalid' ? 'email_invalid' : error.code]
     return known ?? t.auth.errors.fallback!
