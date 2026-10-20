@@ -461,7 +461,7 @@ describe('analyze-word: sentences, hints and older analyses', () => {
     expect([...w.cache.keys()].sort()).toEqual([`eq.tisch|eq.${PROMPT_VERSION}`, `eq.tisch|میز ناهارخوری|eq.${PROMPT_VERSION}`].sort())
   })
   test('analyses cached by the previous prompt are still served, upgraded to the current content version', async () => {
-    const old = structuredClone(TISCH) as Record<string, unknown>
+    const old = structuredClone(TISCH) as unknown as Record<string, unknown>
     for (const key of ['literal', 'register', 'frequency', 'alternatives', 'reply']) delete old[key]
     old.version = 1
     w.cache.set('eq.tisch|eq.word_analysis_v2', { status: 'ok', content: old, inputNote: null, promptVersion: 'word_analysis_v2', model: 'm', cached: false })

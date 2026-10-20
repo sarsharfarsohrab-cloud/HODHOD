@@ -41,7 +41,7 @@ WEBP_BUDGET = 45 * 1024
 # --------------------------------------------------------------------------
 # background removal
 # --------------------------------------------------------------------------
-def remove_background(rgb_u8):
+def remove_background(rgb_u8, ground=True):
     """Return float RGBA (0..1 alpha, 0..255 colour) with the border-connected
     near-white background removed and a decontaminated anti-aliased edge."""
     rgb = rgb_u8.astype(np.float32)
@@ -81,10 +81,38 @@ def remove_background(rgb_u8):
         rc = rgb[y0:y1, x0:x1][ring]
         bright = (rl > 140).mean()
         # eye whites border a warm black/brown iris; wings are blue-black
-        eyeish = ((rl < 110) & (rc[:, 0] >= rc[:, 2] - 3)).mean()
+        eyeish = ((rl < 110) & (rc[:, 0] > rc[:, 2] + 8)).mean()
         if area >= 6 and fill > 0.3 and bright > 0.35 and eyeish < 0.04:
             grow = ndi.binary_dilation(comp, structure=disk(1)) & paperlike[y0:y1, x0:x1]
+            if os.environ.get("MASCOT_DEBUG"):
+                print("pocket", (xs.start, ys.start, xs.stop, ys.stop), int(area), round(bright, 2), round(eyeish, 3))
             bg_paper[y0:y1, x0:x1] |= grow
+    # 1b) hairline slivers of paper between feathers (too thin for the blob
+    #     test). Skip anything touching a pale prop (card/page rims) or a
+    #     neutral-black pupil (catchlights).
+    sliver = (dist_white <= 16) & (spread <= 6) & ~bg_paper
+    slab, _ = ndi.label(sliver, structure=np.ones((3, 3)))
+    for i, sl in enumerate(ndi.find_objects(slab), start=1):
+        if sl is None:
+            continue
+        ys, xs = sl
+        y0, y1 = max(ys.start - 4, 0), min(ys.stop + 4, h)
+        x0, x1 = max(xs.start - 4, 0), min(xs.stop + 4, w)
+        comp = slab[y0:y1, x0:x1] == i
+        area = comp.sum()
+        if area < 3 or area > 400:
+            continue
+        ring = ndi.binary_dilation(comp, structure=disk(2)) & ~comp
+        rl = lum[y0:y1, x0:x1][ring]
+        rc = rgb[y0:y1, x0:x1][ring]
+        rd = dist_white[y0:y1, x0:x1][ring]
+        pale = ((rd < 45) & ~bg_paper[y0:y1, x0:x1][ring]).mean()
+        pupil = ((rl < 70) & (np.abs(rc[:, 0] - rc[:, 2]) <= 8)).mean()
+        iris = ((rl < 110) & (rc[:, 0] > rc[:, 2] + 8)).mean()
+        if pale < 0.2 and pupil < 0.15 and iris < 0.04:
+            bg_paper[y0:y1, x0:x1] |= comp
+            if os.environ.get("MASCOT_DEBUG"):
+                print("sliver", (xs.start, ys.start, xs.stop, ys.stop), int(area), round(pale, 2), round(pupil, 2))
     # 2) ground shadow: greyish pixels with paper a short way straight below
     #    them (so a pale prop like the blank card is never flooded).
     down = np.full((h, w), 10 ** 6, np.int32)
@@ -96,6 +124,8 @@ def remove_background(rgb_u8):
     # warm ambient light/occlusion right on the ground line
     warm_ground = (spread <= 0.6 * dist_white + 8) & (dist_white < 100) & (down <= 20)
     soft = (greyish & (down <= SHADOW_REACH)) | warm_ground
+    if not ground:  # floating figures: no ground line, shadow is a separate blob
+        soft &= False
     soft_open = ndi.binary_opening(soft, structure=disk(2))
     lab, _ = ndi.label(soft_open | bg_paper)
     keep = np.unique(lab[bg_paper])
@@ -134,7 +164,7 @@ def remove_background(rgb_u8):
         glow_rgb[region] = gcol[region]
         bg_paper = bg_paper | glow
     # small pale specks left on the ground line become part of the shadow layer
-    pale = ~(bg_paper | grown) & (dist_white < 45) & (down <= 20)
+    pale = ~(bg_paper | grown) & (dist_white < 45) & (down <= 20) & ground
     plab, pn = ndi.label(pale)
     if pn:
         idx = np.arange(1, pn + 1)
@@ -243,9 +273,17 @@ def components_by_cell(alpha, cols, rows, min_area=12):
     return lab, cells
 
 
-def cut_cells(rgba, cols, rows):
-    """Return list (cell order) of dicts: crop (float rgba), box, main-bottom."""
+def cut_cells(rgba, cols, rows, drop_shadows=False):
+    """Return list (cell order) of dicts: crop (float rgba), box, main-bottom.
+    drop_shadows: discard groups that are only soft shadow (no solid pixel)."""
     lab, cells = components_by_cell(rgba[..., 3], cols, rows)
+    if drop_shadows:
+        rgb = rgba[..., :3]
+        dw = 255 - rgb.min(axis=2)
+        strong = ((dw > 70) & (rgba[..., 3] > 0.5)).astype(np.float32)
+        idx = np.arange(1, lab.max() + 1)
+        frac = 1 - ndi.mean(strong, lab, idx)   # ~1 for a pale shadow blob
+        cells = {k: [c for c in v if frac[c[0] - 1] < 0.97] for k, v in cells.items()}
     out = []
     for k in range(cols * rows):
         comps = cells.get(k, [])
@@ -333,7 +371,7 @@ def orange_mask(rgb, alpha):
 
 
 def fly_frames(rgba):
-    cells = cut_cells(rgba, 6, 1)
+    cells = cut_cells(rgba, 6, 1, drop_shadows=True)
     full = rgba
     # coarse anchor: centroid of the orange (crest/head/body) pixels
     anchors = []
@@ -364,6 +402,39 @@ def fly_frames(rgba):
     return cells, anchors
 
 
+def repair_clipped_wing(c, anchor, tol=12):
+    """Front-view frames are near-symmetric. If one wing is visibly shorter
+    (the source sheet clipped a wing tip), restore the tip from the mirrored
+    opposite wing, only beyond the short side's extent."""
+    x0, y0, x1, y1 = c["box"]
+    ax = anchor[0] - x0
+    crop = c["crop"]
+    hh, ww, _ = crop.shape
+    left, right = ax, ww - ax
+    if abs(left - right) <= tol:
+        return None
+    # mirror about ax onto a canvas wide enough for both sides
+    half = int(np.ceil(max(left, right))) + 2
+    cw = 2 * half
+    off = int(round(half - ax))
+    canvas = np.zeros((hh, cw, 4), np.float32)
+    canvas[:, off:off + ww] = crop
+    mir = canvas[:, ::-1]
+    cx = np.arange(cw) - half
+    short = min(left, right)
+    if left < right:
+        zone = cx < -(short - 20)
+    else:
+        zone = cx > (short - 20)
+    use = zone[None, :] & (mir[..., 3] > canvas[..., 3])
+    canvas[use] = mir[use]
+    xs = np.nonzero(canvas[..., 3].max(axis=0) > 0.004)[0]
+    a, b = xs.min(), xs.max() + 1
+    c["crop"] = canvas[:, a:b]
+    c["box"] = (x0 - off + a, y0, x0 - off + b, y1)
+    return "left" if left < right else "right"
+
+
 def frame_on_canvas(c, anchor, ref, scale, size):
     x0, y0, x1, y1 = c["box"]
     big = Image.new("RGBA", (size, size), (0, 0, 0, 0))
@@ -389,8 +460,9 @@ def frame_on_canvas(c, anchor, ref, scale, size):
 
 
 def build_fly(path, out_dir, check):
-    rgba = remove_background(np.asarray(Image.open(path).convert("RGB")))
+    rgba = remove_background(np.asarray(Image.open(path).convert("RGB")), ground=False)
     cells, anchors = fly_frames(rgba)
+    repaired = [repair_clipped_wing(c, a) for c, a in zip(cells, anchors)]
     # near-duplicate test: last frame vs first, aligned
     def aligned_alpha(i, pad=0):
         c = cells[i]
@@ -427,7 +499,7 @@ def build_fly(path, out_dir, check):
     for k, f in enumerate(frames):
         sheet.alpha_composite(f, (k * FLY_SIZE, 0))
     q, nbytes = save_pair(sheet, os.path.join(out_dir, "fly-sprite"), budget=10 ** 9)
-    info = dict(frames=len(frames), order=[i + 1 for i in order], dropped=None if dropped is None else dropped + 1,
+    info = dict(repaired=repaired, frames=len(frames), order=[i + 1 for i in order], dropped=None if dropped is None else dropped + 1,
                 diff_last_first=d61, diff_1_2=d12, anchors=anchors.round(1).tolist(), scale=scale)
     if check:
         overlay = Image.new("RGBA", (FLY_SIZE, FLY_SIZE), (0, 0, 0, 0))

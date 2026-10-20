@@ -148,6 +148,29 @@ function adminRest(env, fetchImpl) {
         throw new Error("count: missing content-range");
       return n;
     },
+    async rpc(name, args) {
+      const res = await fetchImpl(`${base}/rpc/${name}`, { method: "POST", headers, body: JSON.stringify(args) });
+      if (res.status === 404)
+        return;
+      if (!res.ok)
+        throw new Error(`rpc ${name} failed: ${res.status}`);
+      const text = await res.text();
+      return text ? JSON.parse(text) : null;
+    },
+    async update(path, patch) {
+      const res = await fetchImpl(`${base}/${path}`, {
+        method: "PATCH",
+        headers: { ...headers, Prefer: "return=minimal" },
+        body: JSON.stringify(patch)
+      });
+      if (!res.ok)
+        throw new Error(`update ${path.split("?")[0]} failed: ${res.status}`);
+    },
+    async remove(path) {
+      const res = await fetchImpl(`${base}/${path}`, { method: "DELETE", headers: { ...headers, Prefer: "return=minimal" } });
+      if (!res.ok)
+        throw new Error(`delete ${path.split("?")[0]} failed: ${res.status}`);
+    },
     async insert(table, row, upsertOn) {
       const url = upsertOn ? `${base}/${table}?on_conflict=${upsertOn}` : `${base}/${table}`;
       const res = await fetchImpl(url, {
@@ -164,15 +187,179 @@ function adminRest(env, fetchImpl) {
   };
 }
 
+// supabase/functions/_shared/aiClient.ts
+async function callStructured(messages, env, output, fetchImpl, sleep) {
+  const base = env.aiBaseUrl.replace(/\/+$/, "");
+  const format = { name: output.name, strict: true, schema: output.schema };
+  const MAX_OUTPUT_TOKENS = output.maxOutputTokens ?? 8000;
+  const url = env.aiApiStyle === "chat" ? `${base}/chat/completions` : `${base}/responses`;
+  const payload = JSON.stringify(env.aiApiStyle === "chat" ? {
+    model: env.aiModel,
+    messages,
+    max_tokens: MAX_OUTPUT_TOKENS,
+    response_format: { type: "json_schema", json_schema: format }
+  } : {
+    model: env.aiModel,
+    input: messages,
+    max_output_tokens: MAX_OUTPUT_TOKENS,
+    store: false,
+    text: { format: { type: "json_schema", ...format } }
+  });
+  const maxAttempts = 3;
+  let lastError = new HttpError(502, "ai_unavailable", "The AI service did not answer");
+  for (let attempt = 1;attempt <= maxAttempts; attempt++) {
+    const controller = new AbortController;
+    const timer = setTimeout(() => controller.abort(), env.timeoutMs ?? 60000);
+    let res = null;
+    let body = "";
+    try {
+      res = await fetchImpl(url, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${env.aiApiKey}`, "Content-Type": "application/json" },
+        body: payload,
+        signal: controller.signal
+      });
+      body = await res.text();
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") {
+        throw new HttpError(504, "ai_timeout", "The AI service took too long");
+      }
+      res = null;
+      lastError = new HttpError(502, "ai_unavailable", "The AI service could not be reached");
+    } finally {
+      clearTimeout(timer);
+    }
+    if (res) {
+      if (res.ok) {
+        let data;
+        try {
+          data = JSON.parse(body);
+        } catch {
+          throw new HttpError(502, "ai_invalid_output", "The AI answer was not readable");
+        }
+        return env.aiApiStyle === "chat" ? extractChatText(data) : extractText(data);
+      }
+      console.error("ai provider error", res.status, body.slice(0, 300));
+      if (res.status === 401 || res.status === 403) {
+        throw new HttpError(500, "not_configured", "The AI key was rejected");
+      }
+      if (res.status === 404 || res.status === 400 && /model/i.test(body)) {
+        throw new HttpError(500, "not_configured", "The configured AI model is not available");
+      }
+      if ((res.status === 429 || res.status === 402) && /insufficient_quota|billing|credit|payment/i.test(body)) {
+        throw new HttpError(503, "ai_quota_exhausted", "The AI account has no credit left");
+      }
+      lastError = new HttpError(502, "ai_unavailable", "The AI service returned an error");
+      if (res.status !== 429 && res.status < 500)
+        throw lastError;
+    }
+    if (attempt < maxAttempts)
+      await sleep(400 * 2 ** (attempt - 1));
+  }
+  throw lastError;
+}
+function extractText(data) {
+  const usageRaw = data.usage ?? {};
+  const usage = {
+    inputTokens: Number(usageRaw.input_tokens) || 0,
+    outputTokens: Number(usageRaw.output_tokens) || 0
+  };
+  if (data.status === "incomplete")
+    throw new HttpError(502, "ai_invalid_output", "The AI answer was cut off");
+  const output = Array.isArray(data.output) ? data.output : [];
+  for (const item of output) {
+    if (item.type !== "message" || !Array.isArray(item.content))
+      continue;
+    for (const part of item.content) {
+      if (part.type === "refusal")
+        throw new HttpError(502, "ai_invalid_output", "The AI declined to answer");
+      if (part.type === "output_text" && typeof part.text === "string")
+        return { text: part.text, usage };
+    }
+  }
+  throw new HttpError(502, "ai_invalid_output", "The AI answer was empty");
+}
+function extractChatText(data) {
+  const usageRaw = data.usage ?? {};
+  const usage = {
+    inputTokens: Number(usageRaw.prompt_tokens) || 0,
+    outputTokens: Number(usageRaw.completion_tokens) || 0
+  };
+  const choice = Array.isArray(data.choices) ? data.choices[0] : null;
+  if (!choice)
+    throw new HttpError(502, "ai_invalid_output", "The AI answer was empty");
+  if (choice.finish_reason === "length")
+    throw new HttpError(502, "ai_invalid_output", "The AI answer was cut off");
+  const message = choice.message ?? {};
+  if (typeof message.refusal === "string" && message.refusal)
+    throw new HttpError(502, "ai_invalid_output", "The AI declined to answer");
+  const content = message.content;
+  if (typeof content === "string" && content.trim())
+    return { text: content, usage };
+  if (Array.isArray(content)) {
+    const text = content.map((part) => typeof part.text === "string" ? part.text : "").join("");
+    if (text.trim())
+      return { text, usage };
+  }
+  throw new HttpError(502, "ai_invalid_output", "The AI answer was empty");
+}
+
+// supabase/functions/_shared/budget.ts
+async function isAdmin(db, userId) {
+  try {
+    const rows = await db.select(`admins?user_id=eq.${userId}&select=user_id`);
+    return rows.length > 0;
+  } catch {
+    return false;
+  }
+}
+async function checkAllowance(db, userId, kind, defaultPerDay) {
+  let row;
+  try {
+    const rows = await db.rpc("ai_budget_status", { p_user: userId, p_kind: kind });
+    row = rows?.[0];
+  } catch (e) {
+    console.error("budget check failed", e instanceof Error ? e.message : e);
+    throw new HttpError(503, "rate_limit_unavailable", "Usage could not be checked, try again shortly");
+  }
+  if (!row)
+    return { admin: false };
+  if (row.blocked)
+    throw new HttpError(403, "account_blocked", "This account may not use the AI service");
+  const admin = await isAdmin(db, userId);
+  if (admin)
+    return { admin };
+  let limit = row.user_limit ?? row.kind_per_day ?? defaultPerDay;
+  const ageHours = Number(row.account_age_hours);
+  if (row.user_limit === null && kind === "analyze_word" && ageHours < row.new_user_days * 24) {
+    limit = Math.min(limit, row.new_user_per_day);
+  }
+  if (row.user_today >= limit) {
+    throw new HttpError(429, "rate_limited", "Daily limit reached", { scope: "day", retryAfterSeconds: 3600 });
+  }
+  if (Number(row.spent_today_usd) >= Number(row.daily_usd)) {
+    throw new HttpError(429, "rate_limited", "Daily budget reached", { scope: "budget", retryAfterSeconds: 3600 });
+  }
+  return { admin };
+}
+
 // supabase/functions/_shared/inputRules.ts
 var MAX_INPUT_LENGTH = 60;
 var MAX_INPUT_WORDS = 5;
+var MAX_SENTENCE_LENGTH = 200;
+var MAX_SENTENCE_WORDS = 20;
 var ARTICLES = new Set(["der", "die", "das", "ein", "eine"]);
 var PERSIAN_ARABIC = /[؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]/;
 var TOKEN = /^\p{Script=Latin}+(?:[-'’]\p{Script=Latin}+)*$/u;
+var ABBREVIATION = /^(?:jdn|jdm|jds|jd|etw|bzw|usw|ca|z|B|d|h|o|ä|Dr|Fr|Hr|Nr|Str|bzgl|evtl|ggf|inkl|vgl)\.$/u;
+var SENTENCE_CHARS = /^[\p{Script=Latin}\p{Nd}\s.,:!?'’"„“”‚‘«»()\-–—…/%€]+$/u;
 var EDGE_PUNCTUATION = /^[\s"'„“”‚‘’«»()[\].,;:!?…]+|[\s"'„“”‚‘’«»()[\].,;:!?…]+$/g;
+var SENTENCE_EDGES = /^[\s"'„“”‚‘’«»(\-–—•*·]+|[\s"'„“”‚‘’«»)]+$/g;
 function cleanInput(raw) {
-  return raw.normalize("NFC").replace(/[​-‏‪-‮⁦-⁩﻿]/g, "").replace(/\s+/g, " ").replace(EDGE_PUNCTUATION, "").trim();
+  return raw.normalize("NFC").replace(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g, "").replace(/\s+/g, " ").replace(EDGE_PUNCTUATION, "").trim();
+}
+function cleanSentence(raw) {
+  return raw.normalize("NFC").replace(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g, "").replace(/\s+/g, " ").replace(SENTENCE_EDGES, "").replace(/\s+([.,;:!?])/g, "$1").trim();
 }
 function validateWordInput(raw) {
   if (typeof raw !== "string")
@@ -180,22 +367,31 @@ function validateWordInput(raw) {
   const value = cleanInput(raw);
   if (value.length === 0)
     return { ok: false, code: "empty" };
-  if (value.length > MAX_INPUT_LENGTH)
-    return { ok: false, code: "too_long" };
   if (PERSIAN_ARABIC.test(value))
     return { ok: false, code: "wrong_script" };
   const tokens = value.split(" ");
-  for (const token of tokens) {
-    if (!TOKEN.test(token))
-      return { ok: false, code: "invalid_characters" };
+  const sentenceLike = tokens.length > MAX_INPUT_WORDS || /[,!?]/.test(value) || tokens.length >= 2 && /[.!?]["'“”»]?\s*$/.test(raw.trim());
+  if (!sentenceLike) {
+    for (const token of tokens)
+      if (!TOKEN.test(token) && !ABBREVIATION.test(token))
+        return { ok: false, code: "invalid_characters" };
+    if (value.length > MAX_INPUT_LENGTH)
+      return { ok: false, code: "too_long" };
+    return { ok: true, value, cacheKey: value.toLocaleLowerCase("de"), kind: "word" };
   }
-  if (tokens.length > MAX_INPUT_WORDS)
+  const sentence = cleanSentence(raw);
+  if (!SENTENCE_CHARS.test(sentence) || !/\p{Script=Latin}/u.test(sentence))
+    return { ok: false, code: "invalid_characters" };
+  if (sentence.length > MAX_SENTENCE_LENGTH)
+    return { ok: false, code: "too_long" };
+  const words = sentence.split(" ").filter((w) => /[\p{Script=Latin}\p{Nd}]/u.test(w));
+  if (words.length > MAX_SENTENCE_WORDS)
     return { ok: false, code: "multiple_words" };
-  return { ok: true, value, cacheKey: value.toLocaleLowerCase("de") };
+  return { ok: true, value: sentence, cacheKey: cleanInput(sentence).toLocaleLowerCase("de"), kind: words.length > MAX_INPUT_WORDS ? "sentence" : "word" };
 }
 
 // supabase/functions/_shared/wordSchema.ts
-var CONTENT_VERSION = 1;
+var CONTENT_VERSION = 2;
 var POS_VALUES = [
   "noun",
   "verb",
@@ -209,13 +405,19 @@ var POS_VALUES = [
   "interjection",
   "particle",
   "phrase",
+  "sentence",
   "other"
 ];
 var CEFR_VALUES = ["A1", "A2", "B1", "B2", "C1", "C2"];
 var EXAMPLE_LEVELS = ["easy", "medium", "hard"];
 var ARTICLE_VALUES = ["der", "die", "das"];
+var REGISTER_VALUES = ["neutral", "informal", "formal", "slang", "vulgar"];
 var LIMITS = {
   lemma: 60,
+  lemmaPhrase: 120,
+  lemmaSentence: 200,
+  translationSentence: 300,
+  alternatives: 5,
   meanings: 3,
   examplesPerMeaning: 6,
   listItems: 8,
@@ -254,16 +456,18 @@ function validateWordContent(input, options) {
   const add = (path, code) => issues.push({ path, code });
   if (!isRec(input))
     return { ok: false, issues: [{ path: "", code: "required" }] };
-  const lemma = text(input.lemma);
-  if (!lemma)
-    add("lemma", "required");
-  else if (lemma.length > LIMITS.lemma)
-    add("lemma", "too_long");
-  else if (!LATIN.test(lemma) || PERSIAN.test(lemma))
-    add("lemma", "wrong_script");
   const pos = input.pos;
   if (!POS_VALUES.includes(pos))
     add("pos", "invalid_value");
+  const isSentence = pos === "sentence";
+  const lemma = text(input.lemma);
+  const lemmaMax = isSentence ? LIMITS.lemmaSentence : pos === "phrase" ? LIMITS.lemmaPhrase : LIMITS.lemma;
+  if (!lemma)
+    add("lemma", "required");
+  else if (lemma.length > lemmaMax)
+    add("lemma", "too_long");
+  else if (!LATIN.test(lemma) || PERSIAN.test(lemma))
+    add("lemma", "wrong_script");
   let cefr = null;
   if (input.cefr !== null && input.cefr !== undefined && input.cefr !== "") {
     if (CEFR_VALUES.includes(input.cefr))
@@ -289,7 +493,7 @@ function validateWordContent(input, options) {
     const translation = text(raw.translation);
     if (!translation)
       add(`${p}.translation`, "required");
-    else if (translation.length > LIMITS.shortText)
+    else if (translation.length > (isSentence ? LIMITS.translationSentence : LIMITS.shortText))
       add(`${p}.translation`, "too_long");
     else if (!PERSIAN.test(translation))
       add(`${p}.translation`, "wrong_script");
@@ -323,7 +527,7 @@ function validateWordContent(input, options) {
         add(`${q}.fa`, "wrong_script");
       examples.push({ level, de, fa });
     });
-    if (options.mode === "ai") {
+    if (options.mode === "ai" && !isSentence) {
       const levels = new Set(examples.map((e) => e.level));
       if (examples.length !== EXAMPLE_LEVELS.length || levels.size !== EXAMPLE_LEVELS.length) {
         add(`${p}.examples`, "missing_levels");
@@ -441,6 +645,44 @@ function validateWordContent(input, options) {
   const notes = optionalText(input.notes);
   if (notes && notes.length > LIMITS.note)
     add("notes", "too_long");
+  const literal = optionalText(input.literal);
+  if (literal && literal.length > LIMITS.translationSentence)
+    add("literal", "too_long");
+  else if (literal && !PERSIAN.test(literal))
+    add("literal", "wrong_script");
+  let register = null;
+  if (input.register !== null && input.register !== undefined && input.register !== "") {
+    if (REGISTER_VALUES.includes(input.register))
+      register = input.register;
+    else
+      add("register", "invalid_value");
+  }
+  let frequency = null;
+  if (input.frequency !== null && input.frequency !== undefined) {
+    if (input.frequency === 1 || input.frequency === 2 || input.frequency === 3)
+      frequency = input.frequency;
+    else
+      add("frequency", "invalid_value");
+  }
+  const alternatives = uniqueList(input.alternatives).filter((a) => a !== lemma);
+  if (alternatives.some((a) => a.length > LIMITS.lemmaSentence || PERSIAN.test(a) || !LATIN.test(a)))
+    add("alternatives", "invalid_value");
+  let reply = null;
+  if (isRec(input.reply)) {
+    const de = text(input.reply.de);
+    const fa = text(input.reply.fa);
+    if (de || fa) {
+      if (!de)
+        add("reply.de", "required");
+      else if (de.length > LIMITS.sentence || PERSIAN.test(de))
+        add("reply.de", "invalid_value");
+      if (!fa)
+        add("reply.fa", "required");
+      else if (fa.length > LIMITS.sentence || !PERSIAN.test(fa))
+        add("reply.fa", "invalid_value");
+      reply = { de, fa };
+    }
+  }
   if (issues.length > 0)
     return { ok: false, issues };
   return {
@@ -458,13 +700,19 @@ function validateWordContent(input, options) {
       synonyms,
       antonyms,
       collocations,
-      notes
+      notes,
+      literal,
+      register,
+      frequency,
+      alternatives: alternatives.slice(0, LIMITS.alternatives),
+      reply
     }
   };
 }
 
 // supabase/functions/_shared/prompt.ts
-var PROMPT_VERSION = "word_analysis_v2";
+var PROMPT_VERSION = "word_analysis_v3";
+var COMPATIBLE_PROMPT_VERSIONS = ["word_analysis_v2"];
 var SUPPORTED_PAIRS = [{ target: "de", native: "fa" }];
 function isSupportedPair(pair) {
   return SUPPORTED_PAIRS.some((p) => p.target === pair.target && p.native === pair.native);
@@ -472,26 +720,32 @@ function isSupportedPair(pair) {
 var AI_STATUS = ["ok", "not_a_word", "wrong_language", "misspelled"];
 var SYSTEM_DE_FA = `You are a careful German lexicographer and teacher writing vocabulary cards for native Persian (Farsi) speakers who are learning German.
 
-You receive ONE entry typed by a learner: a single German word, or a short fixed expression (idiom, set phrase, common collocation, verb with a fixed preposition or noun such as "Bescheid sagen", "auf jeden Fall", "sich Sorgen machen"). Return a single JSON object that follows the provided schema exactly.
+You receive ONE entry typed by a learner: a single German word, a fixed expression (idiom, set phrase, common collocation, verb with a fixed preposition or noun such as "Bescheid sagen", "auf jeden Fall", "sich Sorgen machen", "jdm. auf die Nerven gehen"), or a short everyday sentence ("Kannst du mir kurz helfen?", "Das ist mir egal."). Return a single JSON object that follows the provided schema exactly.
 
 STEP 1 — decide "status":
-- "ok": the input is a real German word (any inflected form counts) or an established fixed expression that a dictionary or textbook would list as one unit.
+- "ok": the input is a real German word (any inflected form counts), an established fixed expression that a dictionary or textbook would list as one unit, or a natural everyday German sentence (up to about 20 words) that is useful to learn as a whole. Small mistakes in a sentence (missing comma, wrong capitalisation, a wrong ending) are corrected silently in "lemma" and mentioned in "input_note".
 - "misspelled": it is clearly a typo of a German word or expression (missing umlaut, swapped letters). Put the corrected form in "suggestion". Do not analyse it.
   Capitalisation alone is NEVER a misspelling: "erfolg", "TISCH" or "Aufgeben" are "ok" and are analysed (the lemma gets the correct capitalisation). "ss" written for "ß" is not a misspelling either.
 - "wrong_language": it is from another language and not used in German.
-- "not_a_word": random letters, a name with no dictionary meaning, several unrelated words, or a free sentence that is not a fixed expression.
-For every status except "ok": lemma = "", meanings = [], noun/verb/adjective = null, lists = [], other text fields null, pos = "other", cefr = "A1".
+- "not_a_word": random letters, a name with no dictionary meaning, several unrelated words, or text that is not natural German at all.
+For every status except "ok": lemma = "", meanings = [], noun/verb/adjective/reply = null, lists = [], other text fields null, pos = "other", cefr = "A1", register = null, frequency = null.
 
 STEP 2 — when status is "ok":
 - "lemma": the dictionary form. Nouns: nominative singular WITHOUT article, capitalised ("Tisch"). Verbs: infinitive ("aufgeben"); truly reflexive verbs as "sich freuen". Adjectives: base form. Fixed expressions: the citation form with the verb in the infinitive at the end ("Bescheid sagen", "sich Sorgen machen", "auf jeden Fall"), correct capitalisation, no final punctuation.
 - If the learner typed an inflected form ("ging", "Häuser", "besser"), analyse the lemma and explain the relation in one short Persian sentence in "input_note". Otherwise "input_note" is null.
-- "pos": the most common part of speech of this word. For every fixed expression of two or more words use "phrase" (the only exception: a single reflexive verb such as "sich freuen" is a "verb"). For "phrase": noun, verb and adjective are null, "ipa" may be null, and "collocations" may be empty.
+- "pos": the most common part of speech of this word. For every fixed expression of two or more words use "phrase" (the only exception: a single reflexive verb such as "sich freuen" is a "verb"). For a complete sentence or a set conversational formula that works as a whole utterance ("Wie geht's?", "Das kannst du vergessen!", "Ich hätte gern einen Termin.") use "sentence". For "phrase" and "sentence": noun, verb and adjective are null, "ipa" may be null, and "collocations" may be empty.
+- For "sentence": "lemma" is the corrected sentence with its final punctuation; exactly ONE meaning whose "translation" is a natural, idiomatic Persian rendering of the whole sentence (what a Persian speaker would really say in that situation, not word for word); "note" says in Persian when and to whom it is said, if useful; "examples": 0 to 2 short related lines (e.g. a typical previous or next line in the same conversation) with levels "easy"/"medium", or an empty list; "synonyms"/"antonyms" are empty.
+- "register": who says it — "neutral", "informal" (friends, family), "formal" (offices, strangers, Sie), "slang" (youth/very casual) or "vulgar" (rude, offensive). Give it for phrases and sentences, and for single words whose register is not neutral; otherwise "neutral".
+- "frequency": how common this is in everyday spoken German today: 3 = very common, 2 = common, 1 = rare or old-fashioned.
+- "literal": ONLY for idioms and expressions whose meaning is not the sum of their words: a word-for-word Persian rendering in Persian script inside «» (e.g. "die Nase voll haben" → «دماغ را پُر داشتن»). null for everything else.
+- "alternatives": 0 to 3 other common German ways to say the same thing (phrases and sentences only; for single words use synonyms instead), else empty.
+- "reply": when the entry is a question, greeting, thanks or apology that typically gets an answer, one natural typical answer {"de", "fa"}; else null.
 - "cefr": the level at which a learner typically meets this word (your best estimate).
 - "ipa": IPA transcription of the lemma in standard German, without slashes or brackets.
 - "meanings": the 1 to 3 most common, practically useful meanings, most important first. Add a second or third meaning ONLY when it is genuinely common in everyday German. This is not a dictionary dump.
   - "translation": natural Persian equivalent(s), short (a few words, comma-separated synonyms allowed).
   - "note": optional short Persian hint that tells this meaning apart (register, context). null if not needed.
-  - "examples": EXACTLY three, one of each level:
+  - "examples": for words and phrases EXACTLY three, one of each level (for sentences see above):
       "easy"   — A1/A2, short main clause, present tense.
       "medium" — B1, a longer sentence, e.g. perfect tense or a subordinate clause.
       "hard"   — B2+, natural idiomatic usage.
@@ -516,10 +770,14 @@ LANGUAGE RULES:
 - All Persian text is in modern standard written Persian, in Persian script, with correct half-spaces (نیم‌فاصله). No transliteration, no English.
 - All German text follows current standard orthography (ß, umlauts, noun capitalisation).
 - Never invent words, forms or meanings. If you are unsure whether a form exists, choose the standard form found in Duden.`;
-function buildMessages(pair, word) {
+function buildMessages(pair, word, hint) {
   if (!isSupportedPair(pair))
     throw new Error(`unsupported language pair ${pair.target}/${pair.native}`);
-  return { system: SYSTEM_DE_FA, user: `German word: ${JSON.stringify(word)}` };
+  let user = `German entry: ${JSON.stringify(word)}`;
+  if (hint)
+    user += `
+The meaning the learner wants (Persian or German, use it to pick the right sense; do not copy it blindly): ${JSON.stringify(hint)}`;
+  return { system: SYSTEM_DE_FA, user };
 }
 function buildRepairMessage(issues) {
   const list = issues.slice(0, 12).map((i) => `- ${i.path || "(root)"}: ${i.code}`).join(`
@@ -580,7 +838,12 @@ var AI_OUTPUT_SCHEMA = obj({
   synonyms: strList,
   antonyms: strList,
   collocations: { type: "array", items: obj({ de: str, fa: str }) },
-  learner_note: strOrNull
+  learner_note: strOrNull,
+  register: nullable({ type: "string", enum: [...REGISTER_VALUES] }),
+  frequency: nullable({ type: "integer", enum: [1, 2, 3] }),
+  literal: strOrNull,
+  alternatives: strList,
+  reply: nullable(obj({ de: str, fa: str }))
 });
 function aiOutputToContentInput(raw) {
   const noun = raw.noun;
@@ -596,7 +859,12 @@ function aiOutputToContentInput(raw) {
     synonyms: raw.synonyms,
     antonyms: raw.antonyms,
     collocations: raw.collocations,
-    notes: raw.learner_note
+    notes: raw.learner_note,
+    register: raw.register ?? null,
+    frequency: raw.frequency ?? null,
+    literal: raw.literal ?? null,
+    alternatives: raw.alternatives ?? [],
+    reply: raw.reply ?? null
   };
 }
 
@@ -625,6 +893,8 @@ async function handleAnalyzeWord(req, env, fetchImpl = fetch, sleep = (ms) => ne
     if (!isSupportedPair(pair))
       throw new HttpError(400, "unsupported_language", "This language pair is not available yet");
     const force = body.force === true;
+    const hint = typeof body.hint === "string" ? body.hint.normalize("NFC").replace(/\s+/g, " ").trim().slice(0, 200) || null : null;
+    const inputKey = hint ? `${input.cacheKey}|${hint.toLocaleLowerCase("de")}` : input.cacheKey;
     const db = adminRest(env, fetchImpl);
     const started = Date.now();
     const log = (status, extra = {}) => db.insert("ai_generation_logs", {
@@ -637,21 +907,25 @@ async function handleAnalyzeWord(req, env, fetchImpl = fetch, sleep = (ms) => ne
       duration_ms: Date.now() - started,
       ...extra
     }).catch((e) => console.error("log failed", e instanceof Error ? e.message : e));
-    const cacheFilter = `target_language=eq.${pair.target}&native_language=eq.${pair.native}` + `&input_key=eq.${encodeURIComponent(input.cacheKey)}&prompt_version=eq.${PROMPT_VERSION}`;
+    const cacheFilter = (version) => `target_language=eq.${pair.target}&native_language=eq.${pair.native}` + `&input_key=eq.${encodeURIComponent(inputKey)}&prompt_version=eq.${version}`;
     if (!force) {
-      const rows = await db.select(`ai_word_cache?${cacheFilter}&select=result&limit=1`).catch(() => []);
-      const hit = rows[0]?.result;
-      if (hit && isUsableCachedResult(hit, input.cacheKey)) {
-        await log("cache_hit");
-        return json({ ...hit, cached: true }, 200, cors);
+      for (const version of [PROMPT_VERSION, ...COMPATIBLE_PROMPT_VERSIONS]) {
+        const rows = await db.select(`ai_word_cache?${cacheFilter(version)}&select=result&limit=1`).catch(() => []);
+        const hit = rows[0]?.result;
+        if (hit && (version === PROMPT_VERSION || hit.status === "ok") && isUsableCachedResult(hit, input.cacheKey)) {
+          await log("cache_hit");
+          return json({ ...upgradeCached(hit), cached: true }, 200, cors);
+        }
       }
     }
-    await enforceRateLimits(db, user.id, env);
+    const allowance = await checkAllowance(db, user.id, "analyze_word", env.perDayLimit ?? DEFAULTS.perDay);
+    if (!allowance.admin)
+      await enforceRateLimits(db, user.id, env);
     if (!env.aiApiKey || !env.aiModel || !env.aiBaseUrl)
       throw new HttpError(500, "not_configured", "The AI service is not configured");
     let outcome;
     try {
-      outcome = await generate(input.value, pair, env, fetchImpl, sleep);
+      outcome = await generate(input.value, pair, env, fetchImpl, sleep, hint);
     } catch (err) {
       const code = err instanceof HttpError ? err.code : "internal";
       await log("error", { error_code: code });
@@ -659,7 +933,7 @@ async function handleAnalyzeWord(req, env, fetchImpl = fetch, sleep = (ms) => ne
     }
     if (outcome.result.status === "misspelled" && sameKey(outcome.result.suggestion, input.cacheKey)) {
       try {
-        const again = await generate(outcome.result.suggestion, pair, env, fetchImpl, sleep);
+        const again = await generate(outcome.result.suggestion, pair, env, fetchImpl, sleep, hint);
         outcome = {
           result: again.result,
           usage: {
@@ -684,7 +958,7 @@ async function handleAnalyzeWord(req, env, fetchImpl = fetch, sleep = (ms) => ne
     await db.insert("ai_word_cache", {
       target_language: pair.target,
       native_language: pair.native,
-      input_key: input.cacheKey,
+      input_key: inputKey,
       prompt_version: PROMPT_VERSION,
       model: env.aiModel,
       result,
@@ -698,6 +972,12 @@ async function handleAnalyzeWord(req, env, fetchImpl = fetch, sleep = (ms) => ne
 function sameKey(word, cacheKey) {
   const checked = validateWordInput(word);
   return checked.ok && checked.cacheKey === cacheKey;
+}
+function upgradeCached(hit) {
+  if (hit.status !== "ok")
+    return hit;
+  const checked = validateWordContent(hit.content, { mode: "ai" });
+  return checked.ok ? { ...hit, content: checked.value } : hit;
 }
 function isUsableCachedResult(hit, cacheKey) {
   if (hit.status === "misspelled")
@@ -734,8 +1014,8 @@ async function enforceRateLimits(db, userId, env) {
     throw new HttpError(429, "rate_limited", "Daily limit reached", { scope: "global", retryAfterSeconds: 3600 });
   }
 }
-async function generate(word, pair, env, fetchImpl, sleep) {
-  const { system, user } = buildMessages(pair, word);
+async function generate(word, pair, env, fetchImpl, sleep, hint = null) {
+  const { system, user } = buildMessages(pair, word, hint);
   const messages = [
     { role: "system", content: system },
     { role: "user", content: user }
@@ -743,7 +1023,7 @@ async function generate(word, pair, env, fetchImpl, sleep) {
   const usage = { inputTokens: 0, outputTokens: 0 };
   let lastIssues = [];
   for (let attempt = 0;attempt < 2; attempt++) {
-    const answer = await callModel(messages, env, fetchImpl, sleep);
+    const answer = await callStructured(messages, env, { name: "word_analysis", schema: AI_OUTPUT_SCHEMA, maxOutputTokens: MAX_OUTPUT_TOKENS }, fetchImpl, sleep);
     usage.inputTokens += answer.usage.inputTokens;
     usage.outputTokens += answer.usage.outputTokens;
     const parsed = interpret(answer.text, env.aiModel);
@@ -786,120 +1066,6 @@ function interpret(text, model) {
     ok: true,
     result: { status: "ok", content: checked.value, inputNote, promptVersion: PROMPT_VERSION, model, cached: false }
   };
-}
-async function callModel(messages, env, fetchImpl, sleep) {
-  const base = env.aiBaseUrl.replace(/\/+$/, "");
-  const format = { name: "word_analysis", strict: true, schema: AI_OUTPUT_SCHEMA };
-  const url = env.aiApiStyle === "chat" ? `${base}/chat/completions` : `${base}/responses`;
-  const payload = JSON.stringify(env.aiApiStyle === "chat" ? {
-    model: env.aiModel,
-    messages,
-    max_tokens: MAX_OUTPUT_TOKENS,
-    response_format: { type: "json_schema", json_schema: format }
-  } : {
-    model: env.aiModel,
-    input: messages,
-    max_output_tokens: MAX_OUTPUT_TOKENS,
-    store: false,
-    text: { format: { type: "json_schema", ...format } }
-  });
-  const maxAttempts = 3;
-  let lastError = new HttpError(502, "ai_unavailable", "The AI service did not answer");
-  for (let attempt = 1;attempt <= maxAttempts; attempt++) {
-    const controller = new AbortController;
-    const timer = setTimeout(() => controller.abort(), env.timeoutMs ?? DEFAULTS.timeoutMs);
-    let res = null;
-    let body = "";
-    try {
-      res = await fetchImpl(url, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${env.aiApiKey}`, "Content-Type": "application/json" },
-        body: payload,
-        signal: controller.signal
-      });
-      body = await res.text();
-    } catch (err) {
-      if (err instanceof Error && err.name === "AbortError") {
-        throw new HttpError(504, "ai_timeout", "The AI service took too long");
-      }
-      res = null;
-      lastError = new HttpError(502, "ai_unavailable", "The AI service could not be reached");
-    } finally {
-      clearTimeout(timer);
-    }
-    if (res) {
-      if (res.ok) {
-        let data;
-        try {
-          data = JSON.parse(body);
-        } catch {
-          throw new HttpError(502, "ai_invalid_output", "The AI answer was not readable");
-        }
-        return env.aiApiStyle === "chat" ? extractChatText(data) : extractText(data);
-      }
-      console.error("ai provider error", res.status, body.slice(0, 300));
-      if (res.status === 401 || res.status === 403) {
-        throw new HttpError(500, "not_configured", "The AI key was rejected");
-      }
-      if (res.status === 404 || res.status === 400 && /model/i.test(body)) {
-        throw new HttpError(500, "not_configured", "The configured AI model is not available");
-      }
-      if ((res.status === 429 || res.status === 402) && /insufficient_quota|billing|credit|payment/i.test(body)) {
-        throw new HttpError(503, "ai_quota_exhausted", "The AI account has no credit left");
-      }
-      lastError = new HttpError(502, "ai_unavailable", "The AI service returned an error");
-      if (res.status !== 429 && res.status < 500)
-        throw lastError;
-    }
-    if (attempt < maxAttempts)
-      await sleep(400 * 2 ** (attempt - 1));
-  }
-  throw lastError;
-}
-function extractText(data) {
-  const usageRaw = data.usage ?? {};
-  const usage = {
-    inputTokens: Number(usageRaw.input_tokens) || 0,
-    outputTokens: Number(usageRaw.output_tokens) || 0
-  };
-  if (data.status === "incomplete")
-    throw new HttpError(502, "ai_invalid_output", "The AI answer was cut off");
-  const output = Array.isArray(data.output) ? data.output : [];
-  for (const item of output) {
-    if (item.type !== "message" || !Array.isArray(item.content))
-      continue;
-    for (const part of item.content) {
-      if (part.type === "refusal")
-        throw new HttpError(502, "ai_invalid_output", "The AI declined to answer");
-      if (part.type === "output_text" && typeof part.text === "string")
-        return { text: part.text, usage };
-    }
-  }
-  throw new HttpError(502, "ai_invalid_output", "The AI answer was empty");
-}
-function extractChatText(data) {
-  const usageRaw = data.usage ?? {};
-  const usage = {
-    inputTokens: Number(usageRaw.prompt_tokens) || 0,
-    outputTokens: Number(usageRaw.completion_tokens) || 0
-  };
-  const choice = Array.isArray(data.choices) ? data.choices[0] : null;
-  if (!choice)
-    throw new HttpError(502, "ai_invalid_output", "The AI answer was empty");
-  if (choice.finish_reason === "length")
-    throw new HttpError(502, "ai_invalid_output", "The AI answer was cut off");
-  const message = choice.message ?? {};
-  if (typeof message.refusal === "string" && message.refusal)
-    throw new HttpError(502, "ai_invalid_output", "The AI declined to answer");
-  const content = message.content;
-  if (typeof content === "string" && content.trim())
-    return { text: content, usage };
-  if (Array.isArray(content)) {
-    const text = content.map((part) => typeof part.text === "string" ? part.text : "").join("");
-    if (text.trim())
-      return { text, usage };
-  }
-  throw new HttpError(502, "ai_invalid_output", "The AI answer was empty");
 }
 
 // supabase/functions/analyze-word/index.ts
