@@ -121,9 +121,9 @@ describe('quiz questions', () => {
   })
   test('choice questions need four words with different meanings', () => {
     expect(buildQuestion('choice_de_fa', BANK[0]!, BANK.slice(0, 3), seeded(1))).toBe(null)
-    expect(quizAvailability(BANK.slice(0, 3))).toEqual({ choice: false, article: true, typing: true, mixed: true })
+    expect(quizAvailability(BANK.slice(0, 3))).toEqual({ choice: false, article: true, typing: true, mixed: true, listening: true, speaking: true })
     expect(quizAvailability([BANK[0]!, BANK[2]!]).article).toBe(false)
-    expect(quizAvailability([])).toEqual({ choice: false, article: false, typing: false, mixed: false })
+    expect(quizAvailability([])).toEqual({ choice: false, article: false, typing: false, mixed: false, listening: false, speaking: false })
     expect(quizAvailability(BANK).choice).toBe(true)
   })
   test('a quiz asks about each word once and respects the requested length', () => {

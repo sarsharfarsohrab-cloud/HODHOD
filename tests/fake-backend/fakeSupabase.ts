@@ -59,6 +59,8 @@ export class FakeSupabase {
   /** What the stand-in for OpenAI answers; receives the word that was asked for. */
   aiReply: (word: string) => Response | Promise<Response> = () => json({ error: 'no aiReply configured' }, 500)
   aiCalls = 0
+  /** Like Supabase with "Enable Captcha protection": auth calls need a token. */
+  requireCaptcha = false
   now: () => number = () => Date.now()
 
   private seq = 0
@@ -188,6 +190,11 @@ export class FakeSupabase {
   private async auth(req: Request, url: URL): Promise<Response> {
     const path = url.pathname.replace('/auth/v1', '')
     const body = req.method === 'GET' || req.method === 'DELETE' ? {} : ((await req.json().catch(() => ({}))) as Row)
+
+    const needsCaptcha = (path === '/signup' || path === '/recover' || (path === '/token' && url.searchParams.get('grant_type') === 'password')) && req.method === 'POST'
+    if (this.requireCaptcha && needsCaptcha && !(body.gotrue_meta_security as Row | undefined)?.captcha_token) {
+      return json({ code: 400, error_code: 'captcha_failed', msg: 'captcha protection: request disallowed' }, 400)
+    }
 
     if (path === '/signup' && req.method === 'POST') {
       const email = String(body.email ?? '').toLowerCase()

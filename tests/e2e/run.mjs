@@ -1164,7 +1164,7 @@ await test('a short story is written around the words being learned', async () =
     await page.getByRole('button', { name: /خوب/ }).first().click()
   }
   await page.goto(`${BASE}/#/home`)
-  await page.getByRole('link', { name: /داستان کوتاه/ }).click()
+  await page.getByRole('link', { name: /^داستان/ }).click()
   await page.getByText('Bescheid sagen', { exact: true }).waitFor()
   await snap(page, 'story-maker')
   await page.getByRole('button', { name: 'نوشتن داستان' }).click()
@@ -1251,6 +1251,42 @@ await test('listening and speaking practice', async () => {
   await noHorizontalScroll(page, 'speaking feedback')
   const s = await state()
   assert(s.quizAnswers.some((a) => a.question_type === 'dictation' && a.is_correct), 'the dictation answer is saved')
+  return page
+})
+
+await test('sign-up asks the human check when the server wants one', async () => {
+  await control('captcha', { on: true })
+  const page = await newPage()
+  // a stand-in for Cloudflare Turnstile: passes after a moment
+  await page.route('https://challenges.cloudflare.com/**', (route) =>
+    route.fulfill({
+      contentType: 'text/javascript',
+      body: "window.turnstile = { render(el, o) { el.textContent = 'human check'; setTimeout(() => o.callback('test-token'), 100); return 'w1' }, reset() {}, remove() {} }",
+    }),
+  )
+  await signUp(page)
+  // the token is single-use: a later sign-in gets a fresh one
+  await page.goto(`${BASE}/#/settings`)
+  await page.getByRole('button', { name: 'خروج از حساب' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'خروج از حساب' }).click()
+  await page.getByLabel('ایمیل').fill('sohrab@example.test')
+  await page.getByLabel('رمز عبور').fill('correct horse battery')
+  await page.getByRole('button', { name: 'وارد شو' }).click()
+  await page.getByRole('heading', { name: /سهراب/ }).waitFor()
+  return page
+})
+
+await test('the test version under /staging/ is marked and keeps its own sign-in', async () => {
+  const page = await newPage()
+  await signUp(page) // the real app
+  await page.goto(`${BASE}/staging/`)
+  await page.locator('.staging-ribbon').waitFor()
+  // not signed in there: the session of the real app is not shared
+  await page.getByRole('button', { name: 'ساخت حساب', exact: true }).waitFor()
+  await snap(page, 'staging')
+  await page.goto(`${BASE}/`)
+  await page.getByRole('heading', { name: /سهراب/ }).waitFor()
+  assert((await page.locator('.staging-ribbon').count()) === 0, 'the real app has no ribbon')
   return page
 })
 

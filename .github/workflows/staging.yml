@@ -1,0 +1,20 @@
+# A push to the staging branch republishes the site (deploy.yml, which runs from main and
+# builds the test version from this branch into …/HODHOD/staging/).
+name: Staging
+
+on:
+  push:
+    branches: [staging]
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Start the deploy workflow on main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --repo "${{ github.repository }}" --ref main

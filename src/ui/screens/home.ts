@@ -190,7 +190,7 @@ export function homeScreen(ctx: Ctx): Screen {
           { class: 'home-tiles', 'aria-label': t.home.bank },
           h('a', { class: 'tile-link', href: '#/stats' }, h('span', { class: 'tile-icon' }, icon('chart')), h('span', null, h('b', null, t.nav.stats), h('small', null, t.home.statsHint))),
           h('a', { class: 'tile-link', href: '#/words' }, h('span', { class: 'tile-icon' }, icon('book')), h('span', null, h('b', null, t.home.bank), h('small', null, t.home.bankCount(data.words.size)))),
-          h('a', { class: 'tile-link', href: '#/stories' }, h('span', { class: 'tile-icon' }, icon('book')), h('span', null, h('b', null, t.stories.tile), h('small', null, t.stories.tileHint))),
+          h('a', { class: 'tile-link', href: '#/stories' }, h('span', { class: 'tile-icon' }, icon('sparkle')), h('span', null, h('b', null, t.stories.tile), h('small', null, t.stories.tileHint))),
           h('a', { class: 'tile-link', href: '#/friends' }, h('span', { class: 'tile-icon' }, icon('users')), h('span', null, h('b', null, t.friends.tile), h('small', null, t.friends.tileHint))),
           h('a', { class: 'tile-link store-tile', href: '#/store' }, h('span', { class: 'tile-icon' }, icon('bag')), h('span', null, h('b', null, t.store.tile), h('small', null, t.store.tileHint))),
         ),

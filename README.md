@@ -5,8 +5,9 @@
 A vocabulary app for Persian speakers learning German. Installable web app (PWA) for iPhone, Android and desktop browsers.
 
 - **Stage 1:** accounts, AI word creation with a mandatory draft/confirm step, Word Bank (search, filters, favourites, archive), word detail with full conjugation and audio, FSRS flashcards with a daily queue, streak and daily goal, settings, offline reviews, data export, account deletion.
-- **Stage 2 (this version):** batch import of a pasted / typed / scanned word list (one draft per entry, each confirmed by the learner), fixed expressions of up to five words (`Bescheid sagen`), word groups (tags) with a filter, undo of the last answer, optional reverse cards (Persian → German), quiz (multiple choice, typing, der/die/das) that never moves a card, statistics, and a mascot that reacts to what happens.
-- **Not built:** XP/achievements, server-generated audio, push notifications, Google/Apple sign-in, guest mode (see [Roadmap](#roadmap)).
+- **Stage 2:** batch import of a pasted / typed / scanned word list (one draft per entry, each confirmed by the learner), fixed expressions of up to five words (`Bescheid sagen`), word groups (tags) with a filter, undo of the last answer, optional reverse cards (Persian → German), quiz (multiple choice, typing, der/die/das) that never moves a card, statistics, and a mascot that reacts to what happens.
+- **Stage 3 (this version):** illustrated mascot with moods and celebrations, redesigned home and statistics, welcome tour; sentence and idiom cards (literal meaning, register, frequency, alternatives, typical reply); free pack store with lessons that open one after another; admin panel (users, AI credit and limits, inbox, announcements, pack builder); card reports fixed centrally; problem/idea form and error log; natural AI voice (generated once, cached for everyone, phone voice as fallback); listening (dictation) and speaking (speech recognition) practice; short stories from the learner's own words; learning with friends (codes, weekly board); Anki/Quizlet import and export; push reminders; "new version" banner; captcha and daily AI budget against abuse; nightly encrypted backups; a separate test version under `/staging/`.
+- **Not built:** XP/achievements, payments in the store, Google/Apple sign-in, guest mode (see [Roadmap](#roadmap)).
 
 ---
 
@@ -17,9 +18,12 @@ Browser (static files, no framework)            Supabase project
 ┌───────────────────────────────┐   HTTPS   ┌──────────────────────────────────────┐
 │ src/ui      screens, widgets  │──────────▶│ Auth          e-mail + password       │
 │ src/core    scheduler, queue  │           │ Postgres      tables + row level sec. │
-│ src/data    sync, outbox,     │           │ Edge Function analyze-word ──▶ AI API │
-│             IndexedDB copy    │           │ Edge Function delete-account          │
-└───────────────────────────────┘           └──────────────────────────────────────┘
+│ src/data    sync, outbox,     │           │ Edge Functions                        │
+│             IndexedDB copy    │           │   analyze-word, story ──▶ AI API      │
+│ src/sw.ts   offline, push     │           │   tts ──▶ AI speech ──▶ Storage (mp3) │
+└───────────────────────────────┘           │   push (Web Push, pg_cron every 15 m) │
+                                            │   admin-actions, delete-account       │
+                                            └──────────────────────────────────────┘
 ```
 
 | Layer | Where | Notes |
@@ -56,14 +60,17 @@ Key decisions:
 ### 1. Supabase
 
 1. Create a project. Copy **Project URL** and the **publishable (anon) key** into `public/config.js` (see `public/config.example.js`). These two values are public by design.
-2. Run the migrations in order (`0001_init.sql`, then `0002_practice.sql`). Dashboard: *SQL Editor* → paste the file → *Run*, one file at a time. CLI: `supabase link --project-ref <ref> && supabase db push`. Each migration is additive: the previously deployed app keeps working after it, so run the migration first, deploy the functions second and publish the app last.
-3. Deploy the two Edge Functions.
-   - CLI: `supabase functions deploy analyze-word delete-account`
-   - Dashboard: *Edge Functions → Deploy a new function → Via Editor*, name it exactly `analyze-word`, paste `deploy/analyze-word.ts` (generate with `bun run bundle:functions`); repeat for `delete-account`.
-   - Turn **Verify JWT with legacy secret** off for both (function *Settings*). The functions verify the caller themselves by asking Supabase Auth, which also works with the newer signing keys.
+2. Run the migrations in order (`0001_init.sql`, `0002_practice.sql`, `0003_platform.sql`). Dashboard: *SQL Editor* → paste the file → *Run*, one file at a time. CLI: `supabase link --project-ref <ref> && supabase db push`. Each migration is additive: the previously deployed app keeps working after it, so run the migration first, deploy the functions second and publish the app last.
+3. Deploy the Edge Functions `analyze-word`, `delete-account`, `tts`, `push`, `story`, `admin-actions`.
+   - CLI: `supabase functions deploy analyze-word delete-account tts push story admin-actions`
+   - Dashboard: *Edge Functions → Deploy a new function → Via Editor*, name it exactly like the file, paste `deploy/<name>.ts` (generate with `bun run bundle:functions`).
+   - Turn **Verify JWT with legacy secret** off for all of them (function *Settings*). The functions verify the caller themselves by asking Supabase Auth; `push` is also called by the scheduler with its own secret.
+   - Make yourself administrator once: `select public.make_admin('you@example.com');` in the SQL editor.
+   - Reminders: run `supabase/setup/push-schedule.sql` once (pg_cron calls `push` every 15 minutes).
 4. Set the function secrets (*Edge Functions → Secrets*). Names and defaults are listed in [`.env.example`](.env.example). Required: `AI_API_KEY`.
 5. *Authentication → URL Configuration*: set **Site URL** to the address the app is served from and add it to **Redirect URLs** (needed for e-mail confirmation and password-reset links).
-6. For a private installation: create the accounts, then turn off *Authentication → Sign In / Providers → Allow new users to sign up*. Otherwise anyone who finds the address can register and use AI credit (bounded by the limits in `.env.example`).
+6. For a private installation: create the accounts, then turn off *Authentication → Sign In / Providers → Allow new users to sign up*. For an open installation: turn on *Confirm email*, and *Authentication → Attack Protection → Captcha* with Cloudflare Turnstile (secret key there; the public site key goes into `public/config.js` as `turnstileSiteKey`). AI spending is bounded per user, for new accounts and per day in dollars (admin panel → prices and limits).
+7. Backups: see [docs/backup.md](docs/backup.md).
 
 ### 2. AI provider
 
@@ -83,6 +90,7 @@ Requires [Bun](https://bun.sh) ≥ 1.2. Nothing to install.
 bun run typecheck        # tsc (needs `typescript` on PATH or `bun install`)
 bun test tests/unit      # 200+ unit tests
 ./scripts/test-db.sh     # migrations + RLS tests on a throw-away local PostgreSQL
+./scripts/test-backup.sh # backup → encrypt → restore round trip
 bun run build            # → dist/
 bun run dev              # build and serve dist/ on http://localhost:4173
 bun run e2e              # browser tests (needs Playwright: NODE_PATH=$(npm root -g))
@@ -93,6 +101,7 @@ bun run e2e              # browser tests (needs Playwright: NODE_PATH=$(npm root
 `dist/` is a folder of static files; any static host works.
 
 - **GitHub Pages:** push to `main`; `.github/workflows/deploy.yml` tests, builds and publishes. In the repository: *Settings → Pages → Source: GitHub Actions*.
+- **Test version:** the branch `staging` is published at `…/staging/` against its own Supabase project (`config/staging.js`), marked with a red ribbon and with its own sign-in. A push to `staging` starts the deploy on `main` (`staging.yml`), so both are always published together.
 - The app uses hash routes (`#/home`), so no server rewrite rules are needed and it works from a sub-path.
 
 ### 5. Installing on a phone
@@ -125,9 +134,9 @@ iPhone: open the address in **Safari** → Share → **Add to Home Screen**. And
 ## Known limitations
 
 - **Not verified on real devices or against the live services from the development environment.** Automated browser tests run in Chromium against the test backend. iPhone Safari, home-screen installation, real Supabase and the real AI provider have to be checked once after deployment.
-- **Audio** uses the device's built-in German voice (Web Speech API). Quality depends on the device; some desktop browsers have no German voice; the play buttons disappear once the browser reports that.
+- **Audio**: the natural voice needs a connection and AI credit; otherwise the device's built-in German voice is used. Speaking practice uses the browser's speech recognition (Chrome, Safari); where it is missing or the microphone is refused, the learner judges themselves.
 - **AI content can be wrong.** It is validated for structure, not for linguistic truth — that is why every card is a draft until confirmed, and every field is editable. CEFR levels are estimates.
-- **Notifications** are not implemented. On iOS they would require the installed PWA plus a push server.
+- **Notifications** on iPhone work only for the app added to the home screen (iOS 16.4+). Push delivery and the speech services could not be tested end to end from the development environment.
 - **Scanning a printed list** relies on the keyboard's own text scanner (iOS *Scan Text*); the app itself does no image recognition.
 - **Undo** covers the last answer of the current study session only.
 - Default AI model names in `aiProviders.ts` are configuration, not something the tests can verify; override with `AI_MODEL` if a provider renames a model.
@@ -135,8 +144,8 @@ iPhone: open the address in **Safari** → Share → **Add to Home Screen**. And
 
 ## Roadmap
 
-1. Server-side audio with caching behind the existing `AudioProvider` interface.
-2. Reminders (push notifications).
+1. Idiom packs (owner's decision pending).
+2. Payments for store packs.
 3. XP, levels, milestones; streak freeze.
 4. Cloze questions in the quiz.
 5. A second target language (English); the schema already has `languages` / `user_languages`.

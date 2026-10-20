@@ -78,6 +78,9 @@ Bun.serve({
           aiMode = 'ok'
           configure()
           break
+        case '/__test/captcha':
+          backend.requireCaptcha = body.on === true
+          break
         case '/__test/make-admin': {
           const user = backend.users.find((u) => u.email === String(body.email).toLowerCase())
           if (user) backend.tables.admins!.push({ user_id: user.id, created_at: new Date().toISOString() })
@@ -134,11 +137,14 @@ Bun.serve({
       return backend.handle(new Request(`${backend.origin}${path}${url.search}`, { method: req.method, headers: req.headers, body: req.method === 'GET' || req.method === 'HEAD' ? undefined : await req.arrayBuffer() }))
     }
 
-    if (path === '/config.js') {
-      return new Response(`window.HODHOD_CONFIG = { supabaseUrl: 'http://localhost:${port}', supabaseAnonKey: '${FAKE_ANON_KEY}' }`, { headers: { 'content-type': 'text/javascript' } })
+    // the test version is the same build, served under /staging/
+    const asset = path.startsWith('/staging/') ? path.slice('/staging'.length) : path
+    if (asset === '/config.js') {
+      const captcha = backend.requireCaptcha ? `, turnstileSiteKey: '1x00000000000000000000AA'` : ''
+      return new Response(`window.HODHOD_CONFIG = { supabaseUrl: 'http://localhost:${port}', supabaseAnonKey: '${FAKE_ANON_KEY}'${captcha} }`, { headers: { 'content-type': 'text/javascript' } })
     }
 
-    const clean = normalize(decodeURIComponent(path)).replace(/^(\.\.[/\\])+/, '')
+    const clean = normalize(decodeURIComponent(asset)).replace(/^(\.\.[/\\])+/, '')
     const file = Bun.file(join(dist, clean === '/' ? 'index.html' : clean))
     return (await file.exists()) ? new Response(file) : new Response('not found', { status: 404 })
   },

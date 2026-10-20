@@ -48,6 +48,13 @@ const STALE_SYNC_MS = 5 * 60_000
 
 // --- small platform wrappers ---------------------------------------------------
 
+/**
+ * The test version lives under /staging/ on the same site, so it shares the browser's
+ * storage with the real app: its keys get their own prefix (different accounts, different server).
+ */
+const STAGING = /\/staging\//.test(location.pathname)
+const ns = (key: string) => (STAGING ? `staging:${key}` : key)
+
 /** localStorage that never throws (blocked storage, private mode). */
 const storage: KeyValueStore = (() => {
   const memory = new Map<string, string>()
@@ -59,14 +66,14 @@ const storage: KeyValueStore = (() => {
     }
   }
   return {
-    getItem: (key) => safe(() => localStorage.getItem(key), null) ?? memory.get(key) ?? null,
+    getItem: (key) => safe(() => localStorage.getItem(ns(key)), null) ?? memory.get(key) ?? null,
     setItem: (key, value) => {
       memory.set(key, value)
-      safe(() => localStorage.setItem(key, value), undefined)
+      safe(() => localStorage.setItem(ns(key), value), undefined)
     },
     removeItem: (key) => {
       memory.delete(key)
-      safe(() => localStorage.removeItem(key), undefined)
+      safe(() => localStorage.removeItem(ns(key)), undefined)
     },
   }
 })()
@@ -336,6 +343,7 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
 // --- boot -------------------------------------------------------------------------------
 
 async function boot() {
+  if (STAGING) document.body.append(h('div', { class: 'staging-ribbon', 'aria-hidden': 'true' }, t.staging))
   applyTheme((storage.getItem(THEME_KEY) as Settings['theme'] | null) ?? 'system')
   const config = readConfig()
   if (!config) {

@@ -124,10 +124,10 @@ export class SupabaseClient {
 
   // --- auth --------------------------------------------------------------------
 
-  async signUp(email: string, password: string, displayName: string, redirectTo: string): Promise<{ needsEmailConfirmation: boolean }> {
+  async signUp(email: string, password: string, displayName: string, redirectTo: string, captchaToken?: string | null): Promise<{ needsEmailConfirmation: boolean }> {
     const data = await this.json<Json>(`/auth/v1/signup?redirect_to=${encodeURIComponent(redirectTo)}`, {
       method: 'POST',
-      body: { email, password, data: { display_name: displayName } },
+      body: { email, password, data: { display_name: displayName }, ...captcha(captchaToken) },
     })
     if (typeof data.access_token === 'string') {
       this.setSession(this.sessionFromTokenResponse(data))
@@ -141,8 +141,8 @@ export class SupabaseClient {
     return { needsEmailConfirmation: true }
   }
 
-  async signIn(email: string, password: string): Promise<void> {
-    const data = await this.json<Json>('/auth/v1/token?grant_type=password', { method: 'POST', body: { email, password } })
+  async signIn(email: string, password: string, captchaToken?: string | null): Promise<void> {
+    const data = await this.json<Json>('/auth/v1/token?grant_type=password', { method: 'POST', body: { email, password, ...captcha(captchaToken) } })
     this.setSession(this.sessionFromTokenResponse(data))
   }
 
@@ -162,8 +162,8 @@ export class SupabaseClient {
     }
   }
 
-  async sendPasswordReset(email: string, redirectTo: string): Promise<void> {
-    await this.json(`/auth/v1/recover?redirect_to=${encodeURIComponent(redirectTo)}`, { method: 'POST', body: { email } })
+  async sendPasswordReset(email: string, redirectTo: string, captchaToken?: string | null): Promise<void> {
+    await this.json(`/auth/v1/recover?redirect_to=${encodeURIComponent(redirectTo)}`, { method: 'POST', body: { email, ...captcha(captchaToken) } })
   }
 
   async updatePassword(password: string): Promise<void> {
@@ -417,4 +417,9 @@ async function errorFromResponse(res: Response, path: string): Promise<AppError>
   if (code.startsWith('PGRST2') || code === '42P01' || code === '42883') return new AppError('not_configured', code, message)
   if (res.status >= 500) return new AppError('server', code || `http_${res.status}`, message)
   return new AppError('validation', code || `http_${res.status}`, message)
+}
+
+/** The human check token in the shape Supabase Auth expects (nothing when captcha is off). */
+function captcha(token: string | null | undefined): Record<string, unknown> {
+  return token ? { gotrue_meta_security: { captcha_token: token } } : {}
 }

@@ -1,4 +1,8 @@
-# Tests, builds and publishes the app to GitHub Pages on every push to main.
+# Tests, builds and publishes the app to GitHub Pages:
+#   branch main    → the real app       …/HODHOD/
+#   branch staging → the test version   …/HODHOD/staging/  (its own Supabase project, config/staging.js)
+# GitHub Pages publishes one site at a time, so every run builds both. A push to staging
+# starts this workflow on main (see staging.yml), which Pages allows to publish.
 name: Deploy
 
 on:
@@ -20,17 +24,53 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: app
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.x
-      - name: Unit tests
+      - name: Unit tests (main)
+        working-directory: app
         run: bun test tests/unit
-      - name: Build
+      - name: Build (main)
+        working-directory: app
         run: bun run scripts/build.ts
+
+      - name: Is there a test version?
+        id: staging
+        run: |
+          if git ls-remote --exit-code --heads "https://github.com/${{ github.repository }}.git" staging > /dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.staging.outputs.exists == 'true'
+        with:
+          ref: staging
+          path: staging
+      - name: Build (staging)
+        if: steps.staging.outputs.exists == 'true'
+        # a broken test version must never stop the real app from being published
+        continue-on-error: true
+        working-directory: staging
+        run: |
+          if [ ! -f config/staging.js ] || grep -q REPLACE config/staging.js; then
+            echo "::notice::Test version skipped: config/staging.js is not filled in yet."
+            exit 0
+          fi
+          bun test tests/unit
+          bun run scripts/build.ts
+          cp config/staging.js dist/config.js
+          sed -i 's/"short_name": "HODHOD"/"short_name": "HODHOD Test"/; s/"name": "HODHOD/"name": "HODHOD Test/' dist/manifest.webmanifest
+          rm -rf ../app/dist/staging
+          mv dist ../app/dist/staging
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: app/dist
 
   deploy:
     needs: build

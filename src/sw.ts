@@ -7,7 +7,12 @@ const sw = self as unknown as ServiceWorkerGlobalScope
 declare const __BUILD_ID__: string
 declare const __PRECACHE__: string[]
 
-const CACHE = `hodhod-${__BUILD_ID__}`
+// The real app and the test version (/staging/) share one site: each keeps its own caches.
+const SCOPE = new URL(sw.registration.scope).pathname.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'root'
+const PREFIX = `hodhod-${SCOPE}-`
+const CACHE = `${PREFIX}${__BUILD_ID__}`
+/** Caches of older app versions, named before the test version existed. */
+const LEGACY = /^hodhod-[0-9a-f]{12}$/
 
 sw.addEventListener('install', (event) => {
   event.waitUntil(
@@ -22,7 +27,7 @@ sw.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((key) => key.startsWith('hodhod-') && key !== CACHE).map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(keys.filter((key) => (key.startsWith(PREFIX) && key !== CACHE) || LEGACY.test(key)).map((key) => caches.delete(key))))
       .then(() => sw.clients.claim()),
   )
 })

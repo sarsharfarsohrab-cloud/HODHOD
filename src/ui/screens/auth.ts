@@ -4,6 +4,7 @@ import { h, replace } from '../dom.ts'
 import { mascot } from '../mascot.ts'
 import { APP_NAME, describeError, t } from '../strings.ts'
 import { segmented } from '../widgets.ts'
+import { captchaSiteKey, createCaptcha } from '../captcha.ts'
 
 type Mode = 'signin' | 'signup' | 'recovery'
 
@@ -30,6 +31,15 @@ export function authScreen(client: SupabaseClient, options: { mode?: Mode; notic
   const message = h('div', { role: 'alert', 'aria-live': 'assertive' })
 
   const show = (text: string, kind: 'error' | 'ok') => replace(message, h('div', { class: `notice ${kind}` }, text))
+  // the human check, when the server asks for one (one widget for the whole screen)
+  const siteKey = captchaSiteKey()
+  const captcha = siteKey ? createCaptcha(siteKey) : null
+  const token = async () => {
+    if (!captcha) return null
+    const value = await captcha.token()
+    if (!value) throw new AppError('auth', 'captcha_failed')
+    return value
+  }
 
   const render = () => {
     const name = h('input', { class: 'input', type: 'text', name: 'name', autocomplete: 'given-name', maxLength: 60, placeholder: t.auth.namePlaceholder })
@@ -50,6 +60,7 @@ export function authScreen(client: SupabaseClient, options: { mode?: Mode; notic
       } catch (err) {
         show(authMessage(toAppError(err)), 'error')
       } finally {
+        captcha?.reset()
         busy = false
         submit.disabled = false
       }
@@ -61,9 +72,9 @@ export function authScreen(client: SupabaseClient, options: { mode?: Mode; notic
       if (mode !== 'recovery' && !/^\S+@\S+\.\S+$/.test(mail)) return show(t.auth.errors.email_invalid!, 'error')
       if (mode !== 'signin' && password.value.length < MIN_PASSWORD) return show(t.auth.errors.password_short!, 'error')
       void run(async () => {
-        if (mode === 'signin') await client.signIn(mail, password.value)
+        if (mode === 'signin') await client.signIn(mail, password.value, await token())
         else if (mode === 'signup') {
-          const result = await client.signUp(mail, password.value, name.value.trim(), appUrl())
+          const result = await client.signUp(mail, password.value, name.value.trim(), appUrl(), await token())
           if (result.needsEmailConfirmation) {
             mode = 'signin'
             render()
@@ -84,6 +95,7 @@ export function authScreen(client: SupabaseClient, options: { mode?: Mode; notic
       mode === 'signup' ? h('label', { class: 'field' }, h('span', null, t.auth.name), name) : null,
       mode !== 'recovery' ? h('label', { class: 'field' }, h('span', null, t.auth.email), email) : null,
       h('label', { class: 'field' }, h('span', null, t.auth.password), password, mode !== 'signin' ? h('span', { class: 'help' }, t.auth.passwordHint) : null),
+      mode !== 'recovery' ? captcha?.el ?? null : null,
       message,
       submit,
       mode === 'signin'
@@ -96,7 +108,7 @@ export function authScreen(client: SupabaseClient, options: { mode?: Mode; notic
                 const mail = email.value.trim()
                 if (!/^\S+@\S+\.\S+$/.test(mail)) return show(t.auth.resetNeedsEmail, 'error')
                 void run(async () => {
-                  await client.sendPasswordReset(mail, appUrl())
+                  await client.sendPasswordReset(mail, appUrl(), await token())
                   show(t.auth.resetSent, 'ok')
                 })
               },
