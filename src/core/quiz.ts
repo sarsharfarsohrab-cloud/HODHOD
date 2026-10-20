@@ -8,8 +8,8 @@ import { isDifficult } from './cards.ts'
 import { foldGerman, foldGermanLoose, foldPersian } from './text.ts'
 import type { Card, Word } from './types.ts'
 
-export type QuestionType = 'choice_de_fa' | 'choice_fa_de' | 'typing_fa_de' | 'article'
-export type QuizKind = 'mixed' | 'choice' | 'typing' | 'article'
+export type QuestionType = 'choice_de_fa' | 'choice_fa_de' | 'typing_fa_de' | 'article' | 'dictation' | 'speaking'
+export type QuizKind = 'mixed' | 'choice' | 'typing' | 'article' | 'listening' | 'speaking'
 
 export const QUIZ_LENGTHS = [5, 10, 20] as const
 export const DEFAULT_QUIZ_LENGTH = 10
@@ -93,7 +93,8 @@ export function quizAvailability(words: readonly Word[]): Record<QuizKind, boole
   const choice = words.length >= CHOICE_OPTIONS && meanings.size >= CHOICE_OPTIONS
   const article = words.some(hasArticle)
   const typing = words.length >= 1
-  return { choice, article, typing, mixed: typing }
+  // listening and speaking also need the device (sound, microphone); the screen checks that
+  return { choice, article, typing, mixed: typing, listening: typing, speaking: typing }
 }
 
 function distractors(target: Word, all: readonly Word[], key: (w: Word) => string, label: (w: Word) => string, rng: Rng): string[] | null {
@@ -141,6 +142,11 @@ export function buildQuestion(type: QuestionType, word: Word, all: readonly Word
       // a whole sentence is too long to type exactly from memory: sentences are asked as multiple choice
       if (word.pos === 'sentence') return null
       return { type, wordId: word.id, prompt: word.primaryMeaning, promptLanguage: 'fa', options: null, expected: display(word) }
+    case 'dictation':
+      // heard, then written: the prompt is the German text that is played (and shown after answering)
+      return { type, wordId: word.id, prompt: display(word), promptLanguage: 'de', options: null, expected: display(word) }
+    case 'speaking':
+      return { type, wordId: word.id, prompt: display(word), promptLanguage: 'de', options: null, expected: display(word) }
   }
 }
 
@@ -149,6 +155,8 @@ const TYPES_BY_KIND: Record<QuizKind, QuestionType[]> = {
   choice: ['choice_de_fa', 'choice_fa_de'],
   typing: ['typing_fa_de'],
   mixed: ['choice_de_fa', 'choice_fa_de', 'typing_fa_de', 'article'],
+  listening: ['dictation'],
+  speaking: ['speaking'],
 }
 
 /** Builds a quiz of up to `length` questions, each about a different word. */
@@ -214,6 +222,48 @@ export function gradeTyped(input: string, word: Word): Grade {
   }
   if (givenArticle && givenArticle !== article) return { correct: false, note: 'wrong_article' }
   return { correct: true, note }
+}
+
+const words = (text: string) =>
+  foldGermanLoose(text)
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+
+/** Share of the expected words found, in order (a forgiving word-level match). */
+export function wordOverlap(heard: string, expected: string): number {
+  const a = words(heard)
+  const b = words(expected).filter((w, i, all) => !(i === 0 && all.length > 1 && (ARTICLES as readonly string[]).includes(w)))
+  if (b.length === 0) return 0
+  // longest common subsequence of words
+  const dp = Array.from({ length: a.length + 1 }, () => new Array<number>(b.length + 1).fill(0))
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) dp[i]![j] = a[i - 1] === b[j - 1] ? dp[i - 1]![j - 1]! + 1 : Math.max(dp[i - 1]![j]!, dp[i]![j - 1]!)
+  }
+  return dp[a.length]![b.length]! / b.length
+}
+
+/**
+ * Dictation: a word is graded like typing; a sentence must have every word right, while
+ * capital letters and punctuation are only pointed out.
+ */
+export function gradeDictation(input: string, word: Word): Grade {
+  if (word.pos !== 'sentence' && !word.lemma.includes(' ')) return gradeTyped(input, word)
+  const answer = squeeze(input)
+  if (!answer) return { correct: false, note: null }
+  const target = display(word)
+  if (answer === target) return { correct: true, note: null }
+  const plain = (text: string) => text.replace(/[^\p{L}\p{N}\s]/gu, '').replace(/\s+/g, ' ').trim()
+  if (plain(answer).toLocaleLowerCase('de') === plain(target).toLocaleLowerCase('de')) return { correct: true, note: 'case' }
+  if (words(answer).join(' ') === words(target).join(' ')) return { correct: true, note: 'spelling' }
+  return { correct: false, note: null }
+}
+
+/** Speaking: what the speech recogniser heard (several guesses) against the expected text. */
+export function gradeSpoken(heard: readonly string[], word: Word): Grade {
+  const target = display(word)
+  const best = Math.max(0, ...heard.map((h) => wordOverlap(h, target)))
+  return { correct: best >= 0.8, note: null }
 }
 
 export function gradeChoice(choice: string, question: Question): Grade {

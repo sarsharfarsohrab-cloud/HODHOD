@@ -21,10 +21,12 @@ import { createScreen } from './ui/screens/create.ts'
 import { homeScreen } from './ui/screens/home.ts'
 import { deckImportScreen } from './ui/screens/deckImport.ts'
 import { importScreen } from './ui/screens/import.ts'
+import { friendsScreen } from './ui/screens/friends.ts'
 import { quizScreen } from './ui/screens/quiz.ts'
 import { settingsScreen } from './ui/screens/settings.ts'
 import { statsScreen } from './ui/screens/stats.ts'
 import { packScreen, storeScreen } from './ui/screens/store.ts'
+import { storiesScreen, storyScreen } from './ui/screens/stories.ts'
 import { studyScreen } from './ui/screens/study.ts'
 import { wordDetailScreen, wordEditScreen } from './ui/screens/wordDetail.ts'
 import { welcomeScreen } from './ui/screens/welcome.ts'
@@ -102,6 +104,9 @@ const ROUTES: { pattern: RegExp; keys: string[]; screen: ScreenFactory; tab: str
   { pattern: /^\/settings$/, keys: [], screen: settingsScreen, tab: null },
   { pattern: /^\/welcome$/, keys: [], screen: welcomeScreen, tab: null },
   { pattern: /^\/store$/, keys: [], screen: storeScreen, tab: 'home' },
+  { pattern: /^\/stories$/, keys: [], screen: storiesScreen, tab: 'home' },
+  { pattern: /^\/friends$/, keys: [], screen: friendsScreen, tab: 'home' },
+  { pattern: /^\/stories\/([^/]+)$/, keys: ['id'], screen: storyScreen, tab: 'home' },
   { pattern: /^\/store\/([^/]+)$/, keys: ['id'], screen: packScreen, tab: 'home' },
   { pattern: /^\/admin$/, keys: [], screen: adminScreen, tab: null },
   { pattern: /^\/admin\/(overview|users|inbox|news|packs)$/, keys: ['tab'], screen: adminScreen, tab: null },

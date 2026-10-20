@@ -10,6 +10,8 @@ type Row = Record<string, unknown>
 export const PLATFORM_TABLES = (): Record<string, Row[]> => ({
   admins: [],
   tts_cache: [],
+  stories: [],
+  friendships: [],
   packs: [],
   pack_items: [],
   user_packs: [],
@@ -35,6 +37,10 @@ export async function handlePlatform(fake: FakeSupabase, userId: string, name: s
   const admin = userId === 'service' || t.admins!.some((a) => a.user_id === userId)
   const now = () => new Date(fake.now()).toISOString()
   const args = (body ?? {}) as Row
+
+  // every profile has a friend code (set by a trigger in the real database)
+  for (const p of t.profiles!) p.friend_code ??= `FRND${String(t.profiles!.indexOf(p) + 2).padStart(4, '2')}`.replace(/[01]/g, '2')
+  const pair = (a: unknown, b: unknown) => t.friendships!.find((f) => (f.requester === a && f.addressee === b) || (f.requester === b && f.addressee === a))
 
   // --- functions -----------------------------------------------------------------
   if (name.startsWith('rpc/')) {
@@ -89,6 +95,48 @@ export async function handlePlatform(fake: FakeSupabase, userId: string, name: s
           added++
         }
         return json(added)
+      }
+      case 'friend_request': {
+        const other = t.profiles!.find((p) => p.friend_code === String(args.p_code).trim().toUpperCase())
+        if (!other) return json('not_found')
+        if (other.id === userId) return json('self')
+        const existing = pair(userId, other.id)
+        if (existing) {
+          if (existing.status === 'pending' && existing.addressee === userId) {
+            existing.status = 'accepted'
+            return json('accepted')
+          }
+          return json('exists')
+        }
+        t.friendships!.push({ id: fake.id(), requester: userId, addressee: other.id, status: 'pending', created_at: now() })
+        return json('sent')
+      }
+      case 'friend_respond': {
+        const f = t.friendships!.find((x) => x.id === args.p_id && x.addressee === userId && x.status === 'pending')
+        if (f && args.p_accept) f.status = 'accepted'
+        else if (f) t.friendships = t.friendships!.filter((x) => x !== f)
+        return new Response(null, { status: 204 })
+      }
+      case 'friend_remove':
+        t.friendships = t.friendships!.filter((x) => !(x.id === args.p_id && (x.requester === userId || x.addressee === userId)))
+        return new Response(null, { status: 204 })
+      case 'friend_board': {
+        const people: { fid: unknown; uid: unknown; status: unknown; incoming: boolean }[] = [{ fid: null, uid: userId, status: 'accepted', incoming: false }]
+        for (const f of t.friendships!) {
+          if (f.requester !== userId && f.addressee !== userId) continue
+          people.push({ fid: f.id, uid: f.requester === userId ? f.addressee : f.requester, status: f.status, incoming: f.addressee === userId && f.status === 'pending' })
+        }
+        return json(
+          people.map((p) => {
+            const ok = p.status === 'accepted'
+            const reviews = t.review_events!.filter((e) => e.user_id === p.uid && !e.undone_at)
+            return {
+              friendship_id: p.fid, user_id: p.uid, display_name: t.profiles!.find((x) => x.id === p.uid)?.display_name ?? null, is_me: p.uid === userId,
+              status: p.status, incoming: p.incoming, streak: ok && reviews.length > 0 ? 1 : 0, week_reviews: ok ? reviews.length : 0,
+              learned: ok ? t.cards!.filter((c) => c.user_id === p.uid && c.state === 'review').length : 0,
+            }
+          }),
+        )
       }
       case 'log_client_error':
         t.client_errors!.push({ id: fake.id(), user_id: userId, message: args.p_message, stack: args.p_stack, url: args.p_url, app_version: args.p_version, user_agent: args.p_agent, created_at: now() })
@@ -172,6 +220,7 @@ export async function handlePlatform(fake: FakeSupabase, userId: string, name: s
       case 'feedback':
       case 'card_reports':
       case 'user_packs':
+      case 'stories':
       case 'admins':
       case 'user_limits':
         return r.user_id === userId
@@ -228,7 +277,7 @@ export async function handlePlatform(fake: FakeSupabase, userId: string, name: s
   }
 
   if (req.method === 'PATCH' && body) {
-    if (!admin) return denied()
+    if (!admin && name !== 'stories') return denied()
     const rows = visible()
     for (const row of rows) Object.assign(row, body, { updated_at: now() })
     return json(rows)

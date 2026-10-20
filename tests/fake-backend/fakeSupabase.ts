@@ -10,6 +10,7 @@
  */
 import { handleAnalyzeWord } from '../../supabase/functions/_shared/analyzeWord.ts'
 import { handleAdminActions } from '../../supabase/functions/_shared/adminActions.ts'
+import { handleStory } from '../../supabase/functions/_shared/story.ts'
 import { handleTts } from '../../supabase/functions/_shared/tts.ts'
 import { handleDeleteAccount } from '../../supabase/functions/_shared/deleteAccount.ts'
 import { handlePlatform, PLATFORM_TABLES } from './fakePlatform.ts'
@@ -521,6 +522,14 @@ export class FakeSupabase {
     }
     if (name === 'delete-account') return handleDeleteAccount(req, env, internal)
     if (name === 'admin-actions') return handleAdminActions(req, env, internal)
+    if (name === 'story') {
+      return handleStory(
+        req,
+        { ...env, aiApiKey: 'fake-ai-key', aiModel: 'fake-model', aiBaseUrl: `${this.origin}/openai`, aiApiStyle: 'responses', timeoutMs: 2_000 },
+        internal,
+        async () => {},
+      )
+    }
     if (name === 'tts') {
       return handleTts(req, { ...env, ttsApiKey: 'fake-ai-key', ttsBaseUrl: `${this.origin}/openai`, ttsModel: 'fake-tts', voiceFemale: 'nova', voiceMale: 'onyx', timeoutMs: 2_000 }, internal)
     }
@@ -532,6 +541,21 @@ export class FakeSupabase {
     const body = (await req.json()) as { input: { role: string; content: string }[] }
     const user = body.input.find((m) => m.role === 'user')?.content ?? ''
     const first = user.split('\n')[0] ?? ''
+    if (first.startsWith('Level:')) {
+      // the story writer: a fixed little story that uses the first given words
+      const words = JSON.parse(user.split('\n')[1]!.replace(/^Words: /, '')) as string[]
+      return aiResponse({
+        title_de: 'Ein Abend zu Hause',
+        title_fa: 'یک شب در خانه',
+        sentences: [
+          { de: `Anna stellt die Lampe auf den Tisch.`, fa: 'آنا چراغ را روی میز می‌گذارد.' },
+          { de: 'Dann ruft sie ihre Mutter an.', fa: 'بعد به مادرش زنگ می‌زند.' },
+          { de: 'Sie sagt ihr Bescheid, dass sie heute schnell nach Hause kommt.', fa: 'به او خبر می‌دهد که امروز زود به خانه می‌آید.' },
+          { de: 'Der Abend ist ruhig und schön.', fa: 'شب آرام و زیباست.' },
+        ],
+        used_words: words.slice(0, 3),
+      })
+    }
     const word = JSON.parse(first.replace(/^German (?:word|entry): /, '')) as string
     return this.aiReply(word)
   }

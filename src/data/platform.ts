@@ -482,3 +482,67 @@ export function parseItemList(text: string): { input: string; hint: string | nul
   }
   return out
 }
+
+// --- short stories --------------------------------------------------------------------------
+
+export interface StoryRow {
+  id: string
+  level: string | null
+  title_de: string
+  title_fa: string
+  sentences: { de: string; fa: string }[]
+  words: string[]
+  read_at: string | null
+  created_at: string
+}
+
+export const stories = {
+  list(client: SupabaseClient): Promise<StoryRow[]> {
+    return client.select<StoryRow>('stories', { select: '*', order: 'created_at.desc', limit: '50' })
+  },
+  async get(client: SupabaseClient, id: string): Promise<StoryRow | null> {
+    return (await client.select<StoryRow>('stories', { select: '*', id: `eq.${id}` }))[0] ?? null
+  },
+  /** Asks the AI for a new story around these words; takes 10–30 seconds. */
+  create(client: SupabaseClient, words: string[], level: string): Promise<StoryRow> {
+    return client.invoke<StoryRow>('story', { words, level }, { timeoutMs: 120_000 })
+  },
+  async markRead(client: SupabaseClient, id: string): Promise<void> {
+    await client.update('stories', { id: `eq.${id}` }, { read_at: new Date().toISOString() }).catch(() => undefined)
+  },
+}
+
+// --- friends ------------------------------------------------------------------------------
+
+export interface FriendRow {
+  friendship_id: string | null
+  user_id: string
+  display_name: string | null
+  is_me: boolean
+  status: 'pending' | 'accepted'
+  incoming: boolean
+  streak: number
+  week_reviews: number
+  learned: number
+}
+
+export type FriendRequestResult = 'sent' | 'accepted' | 'not_found' | 'self' | 'exists' | 'too_many'
+
+export const friends = {
+  async myCode(client: SupabaseClient, userId: string): Promise<string | null> {
+    return (await client.select<{ friend_code: string | null }>('profiles', { select: 'friend_code', id: `eq.${userId}` }))[0]?.friend_code ?? null
+  },
+  async board(client: SupabaseClient, timeZone: string): Promise<FriendRow[]> {
+    const rows = (await client.rpc<FriendRow[]>('friend_board', { p_tz: timeZone })) ?? []
+    return rows.map((r) => ({ ...r, streak: Number(r.streak) || 0, week_reviews: Number(r.week_reviews) || 0, learned: Number(r.learned) || 0 }))
+  },
+  request(client: SupabaseClient, code: string): Promise<FriendRequestResult> {
+    return client.rpc<FriendRequestResult>('friend_request', { p_code: code.replace(/[\s-]/g, '').toUpperCase() })
+  },
+  respond(client: SupabaseClient, id: string, accept: boolean): Promise<void> {
+    return client.rpc('friend_respond', { p_id: id, p_accept: accept })
+  },
+  remove(client: SupabaseClient, id: string): Promise<void> {
+    return client.rpc('friend_remove', { p_id: id })
+  },
+}

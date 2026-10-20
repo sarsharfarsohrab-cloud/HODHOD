@@ -6,6 +6,8 @@ import {
   buildQuiz,
   DEFAULT_QUIZ_LENGTH,
   gradeChoice,
+  gradeDictation,
+  gradeSpoken,
   gradeTyped,
   QUIZ_LENGTHS,
   quizAvailability,
@@ -16,6 +18,7 @@ import {
   type QuizCandidate,
   type QuizKind,
 } from '../../core/quiz.ts'
+import { listenOnce, speechRecognitionSupported, type Listening } from '../../audio/recognition.ts'
 import type { Ctx, Screen } from '../context.ts'
 import { de, h, icon, replace } from '../dom.ts'
 import { faPercent } from '../format.ts'
@@ -23,7 +26,7 @@ import { burst, mascot, reactMascot, setMascotMood } from '../mascot.ts'
 import { t } from '../strings.ts'
 import { emptyState, iconButton, progressBar, segmented, speakButton, wordTitle } from '../widgets.ts'
 
-const KINDS: QuizKind[] = ['mixed', 'choice', 'typing', 'article']
+const KINDS: QuizKind[] = ['mixed', 'choice', 'typing', 'article', 'listening', 'speaking']
 const GREAT = 0.9
 const GOOD = 0.6
 
@@ -67,8 +70,12 @@ export function quizScreen(ctx: Ctx, params: Record<string, string>): Screen {
     running = false
     const words = [...ctx.data.words.values()]
     const available = quizAvailability(words)
+    // hearing and speaking need a German voice on this device (the AI voice or the phone's)
+    const sound = ctx.audio.canSpeak(ctx.data.profile.activeTargetLanguage)
+    available.listening &&= sound
+    available.speaking &&= sound
     if (!available[kind]) kind = KINDS.find((k) => available[k]) ?? 'mixed'
-    const reason: Partial<Record<QuizKind, string>> = { choice: t.quiz.needFour, article: t.quiz.needNouns }
+    const reason: Partial<Record<QuizKind, string>> = { choice: t.quiz.needFour, article: t.quiz.needNouns, ...(sound ? {} : { listening: t.quiz.needSound, speaking: t.quiz.needSound }) }
 
     if (words.length === 0) {
       return replace(
@@ -139,9 +146,106 @@ export function quizScreen(ctx: Ctx, params: Record<string, string>): Screen {
       question.promptLanguage === 'de' ? de(question.prompt, 'word-title') : h('div', { class: 'meaning-title', style: { fontSize: 'var(--text-xl)' } }, question.prompt),
     )
 
+  const say = (text: string, slow = false) =>
+    void ctx.audio.speak(text, ctx.data.profile.activeTargetLanguage, slow ? Math.max(0.5, ctx.data.settings.speechRate * 0.7) : ctx.data.settings.speechRate)
+
+  let listening: Listening | null = null
+
+  /** Listening: the text is only heard, then written down. */
+  function renderDictation(question: Question) {
+    const word = ctx.data.words.get(question.wordId)
+    const input = h('input', {
+      class: 'input create-input', type: 'text', lang: 'de', dir: 'ltr', placeholder: t.quiz.typePlaceholder, 'aria-label': t.quiz.typePlaceholder,
+      autocapitalize: 'off', autocomplete: 'off', autocorrect: 'off', spellcheck: false, enterKeyHint: 'done', maxLength: 240,
+    })
+    const submit = (value: string) => answer(value.trim(), word ? gradeDictation(value, word) : { correct: false, note: null })
+    const prompt = h(
+      'div',
+      { class: 'flashcard-front' },
+      h('p', { class: 'small muted' }, t.quiz.prompts.dictation),
+      h(
+        'div',
+        { class: 'row', style: { justifyContent: 'center' } },
+        h('button', { class: 'play-big', type: 'button', 'aria-label': t.quiz.listen, onclick: () => say(question.prompt) }, icon('speaker', { size: 40 })),
+        h('button', { class: 'btn small', type: 'button', onclick: () => say(question.prompt, true) }, t.quiz.listenSlow),
+      ),
+    )
+    replace(
+      el,
+      topBar(),
+      h('div', { class: 'companion' }, bird),
+      h('article', { class: 'flashcard quiz-card' }, prompt),
+      h(
+        'form',
+        { class: 'stack', onsubmit: (e: Event) => { e.preventDefault(); submit(input.value) } },
+        input,
+        h('p', { class: 'help' }, t.quiz.dictationHelp),
+        h('div', { class: 'row' }, h('button', { class: 'btn big', type: 'button', onclick: () => submit('') }, t.quiz.dontKnow), h('button', { class: 'btn accent big grow', type: 'submit' }, t.quiz.check)),
+      ),
+    )
+    setKeys(null)
+    say(question.prompt)
+    queueMicrotask(() => input.focus({ preventScroll: true }))
+  }
+
+  /** Speaking: say it out loud; the recogniser listens, or the learner judges themselves. */
+  function renderSpeaking(question: Question, selfCheck = !speechRecognitionSupported(), status: string | null = null) {
+    const word = ctx.data.words.get(question.wordId)
+    const prompt = h(
+      'div',
+      { class: 'flashcard-front' },
+      h('p', { class: 'small muted' }, t.quiz.prompts.speaking),
+      word ? wordTitle(word.content, 'div') : de(question.prompt, 'word-title'),
+      word ? h('p', { class: 'muted' }, word.primaryMeaning) : null,
+      h('button', { class: 'btn small', type: 'button', onclick: () => say(question.prompt) }, icon('speaker', { size: 16 }), t.quiz.listen),
+    )
+    let controls: HTMLElement
+    if (selfCheck) {
+      controls = h(
+        'div',
+        { class: 'stack' },
+        h('p', { class: 'help' }, status ?? t.quiz.selfCheckHelp),
+        h(
+          'div',
+          { class: 'row' },
+          h('button', { class: 'btn big grow', type: 'button', onclick: () => answer('', { correct: false, note: null }) }, t.quiz.selfNo),
+          h('button', { class: 'btn accent big grow', type: 'button', onclick: () => answer('', { correct: true, note: null }) }, icon('check'), t.quiz.selfYes),
+        ),
+      )
+    } else {
+      const mic = h('button', { class: 'mic-big', type: 'button', 'aria-label': t.quiz.speakNow }, icon('mic', { size: 40 }))
+      const line = h('p', { class: 'help center', role: 'status' }, status ?? t.quiz.speakingHelp)
+      mic.onclick = async () => {
+        if (listening) return
+        ctx.audio.stop()
+        mic.classList.add('on')
+        line.textContent = t.quiz.listening
+        listening = listenOnce(`${ctx.data.profile.activeTargetLanguage === 'de' ? 'de-DE' : ctx.data.profile.activeTargetLanguage}`)
+        const outcome = await listening.result
+        listening = null
+        mic.classList.remove('on')
+        if (!el.isConnected || questions[index] !== question) return
+        if (outcome.ok) return answer(outcome.heard[0]!, word ? gradeSpoken(outcome.heard, word) : { correct: false, note: null })
+        if (outcome.reason === 'nothing') line.textContent = t.quiz.heardNothing
+        else renderSpeaking(question, true, outcome.reason === 'denied' ? t.quiz.micDenied : t.quiz.selfCheckHelp)
+      }
+      controls = h(
+        'div',
+        { class: 'stack', style: { alignItems: 'center' } },
+        mic,
+        line,
+        h('button', { class: 'btn ghost small', type: 'button', onclick: () => answer('', { correct: false, note: null }) }, t.quiz.dontKnow),
+      )
+    }
+    replace(el, topBar(), h('div', { class: 'companion' }, bird), h('article', { class: 'flashcard quiz-card' }, prompt), controls)
+    setKeys(null)
+  }
+
   function renderQuestion() {
     const question = questions[index]!
     shownAt = Date.now()
+    if (question.type === 'dictation') return renderDictation(question)
+    if (question.type === 'speaking') return renderSpeaking(question)
     let body: HTMLElement
     if (question.options) {
       const options = question.options
@@ -185,6 +289,8 @@ export function quizScreen(ctx: Ctx, params: Record<string, string>): Screen {
   }
 
   function answer(given: string, grade: Grade) {
+    listening?.stop()
+    listening = null
     const question = questions[index]!
     if (answers.length > index) return // a double tap on an option
     answers.push({ question, answer: given, correct: grade.correct, note: grade.note, durationMs: Math.min(120_000, Date.now() - shownAt), answeredAt: ctx.now().toISOString() })
@@ -218,7 +324,7 @@ export function quizScreen(ctx: Ctx, params: Record<string, string>): Screen {
           }),
         )
       : given
-        ? h('p', { class: 'muted', style: { textAlign: 'center' } }, de(given))
+        ? h('p', { class: 'muted', style: { textAlign: 'center' } }, question.type === 'speaking' ? t.quiz.heard(given) : de(given))
         : null
 
     const message = grade.note ? t.quiz.notes[grade.note] : grade.correct ? t.quiz.correct : t.quiz.wrong
@@ -309,6 +415,7 @@ export function quizScreen(ctx: Ctx, params: Record<string, string>): Screen {
     el,
     destroy() {
       setKeys(null)
+      listening?.stop()
       ctx.audio.stop()
       if (running) void save()
     },

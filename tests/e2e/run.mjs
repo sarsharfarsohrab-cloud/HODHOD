@@ -1152,6 +1152,108 @@ await test('an Anki deck comes in as cards, and the bank goes out for Anki', asy
   return page
 })
 
+await test('a short story is written around the words being learned', async () => {
+  const page = await newPage()
+  await signUp(page)
+  await page.goto(`${BASE}/#/stories`)
+  await page.getByText('برای داستان دست‌کم ۳ واژه لازم است').waitFor()
+  for (const w of ['die Lampe', 'der Tisch', 'Bescheid sagen']) await createWord(page, w)
+  await page.goto(`${BASE}/#/study`)
+  for (let i = 0; i < 3; i++) {
+    await page.getByRole('button', { name: 'نمایش جواب' }).click()
+    await page.getByRole('button', { name: /خوب/ }).first().click()
+  }
+  await page.goto(`${BASE}/#/home`)
+  await page.getByRole('link', { name: /داستان کوتاه/ }).click()
+  await page.getByText('Bescheid sagen', { exact: true }).waitFor()
+  await snap(page, 'story-maker')
+  await page.getByRole('button', { name: 'نوشتن داستان' }).click()
+  await page.waitForURL(/#\/stories\/[^/]+$/)
+  await page.getByRole('heading', { name: 'Ein Abend zu Hause' }).waitFor()
+  assert((await page.locator('.story-de mark').count()) >= 3, 'the learner\'s own words are marked')
+  await page.locator('.story-de', { hasText: 'Dann ruft sie' }).click()
+  await page.getByText('بعد به مادرش زنگ می‌زند.').waitFor()
+  await noHorizontalScroll(page, 'story')
+  await snap(page, 'story')
+  await page.goto(`${BASE}/#/stories`)
+  await page.getByText('یک شب در خانه').waitFor()
+  return page
+})
+
+await test('friends add each other by code and share a weekly board', async () => {
+  const sohrab = await newPage()
+  await signUp(sohrab)
+  await sohrab.getByRole('link', { name: /با دوستان/ }).click()
+  const code = (await sohrab.locator('.friend-code').innerText()).replace(/\s/g, '')
+  assert(/^[A-Z2-9]{8}$/.test(code), `a friend code is shown (${code})`)
+
+  const nahid = await newPage()
+  await signUp(nahid, { email: 'nahid@example.test', name: 'ناهید' })
+  await nahid.goto(`${BASE}/#/friends`)
+  await nahid.getByLabel('کد دوستی').fill(code.toLowerCase())
+  await nahid.getByRole('button', { name: 'افزودن' }).click()
+  await nahid.getByText('درخواست فرستاده شد').waitFor()
+  await nahid.getByText('منتظر جواب: سهراب').waitFor()
+  await nahid.context().close()
+
+  lastPage = sohrab
+  await sohrab.reload()
+  await sohrab.getByText('درخواست‌های دوستی').waitFor()
+  await sohrab.getByRole('button', { name: 'قبول' }).click()
+  await sohrab.getByText('درخواست‌های دوستی').waitFor({ state: 'detached' })
+  await sohrab.locator('.board-row', { hasText: 'ناهید' }).waitFor()
+  assert((await sohrab.locator('.board-row').count()) === 2, 'both are on the board')
+  await noHorizontalScroll(sohrab, 'friends')
+  await snap(sohrab, 'friends')
+  return sohrab
+})
+
+await test('listening and speaking practice', async () => {
+  const page = await newPage()
+  // a stand-in for the browser's speech recogniser that "hears" a fixed sentence
+  await page.addInitScript(() => {
+    class FakeRecognition {
+      start() {
+        setTimeout(() => {
+          this.onresult?.({ results: [[{ transcript: window.__heard ?? 'wie geht es dir' }]] })
+          this.onend?.()
+        }, 200)
+      }
+      stop() {}
+      abort() {}
+    }
+    window.webkitSpeechRecognition = FakeRecognition
+    window.SpeechRecognition = FakeRecognition
+  })
+  await signUp(page)
+  await createWord(page, "wie geht's dir?")
+  await page.goto(`${BASE}/#/quiz`)
+  await page.getByRole('radio', { name: /شنیداری/ }).click()
+  await page.getByRole('button', { name: /۵ سؤال/ }).click()
+  await page.getByRole('button', { name: 'شروع آزمون' }).click()
+  await page.getByText('گوش بده و بنویس').waitFor()
+  assert(!(await page.locator('.quiz-card').innerText()).includes('geht'), 'the text is not shown before answering')
+  await snap(page, 'quiz-dictation')
+  await page.getByLabel('به آلمانی بنویس').fill("wie geht's dir")
+  await page.getByRole('button', { name: 'بررسی' }).click()
+  await page.locator('.bubble.ok').waitFor()
+  await page.getByRole('button', { name: 'دیدن نتیجه' }).click()
+
+  await page.getByRole('button', { name: 'یک آزمون دیگر' }).click()
+  await page.getByRole('radio', { name: /گفتاری/ }).click()
+  await page.getByRole('button', { name: 'شروع آزمون' }).click()
+  await page.getByText('بلند بگو', { exact: true }).waitFor()
+  await snap(page, 'quiz-speaking')
+  await page.evaluate(() => (window.__heard = "wie geht's dir"))
+  await page.getByRole('button', { name: 'بزن و بگو' }).click()
+  await page.locator('.bubble.ok').waitFor()
+  await page.getByText("شنیدم: «wie geht's dir»").waitFor()
+  await noHorizontalScroll(page, 'speaking feedback')
+  const s = await state()
+  assert(s.quizAnswers.some((a) => a.question_type === 'dictation' && a.is_correct), 'the dictation answer is saved')
+  return page
+})
+
 // ---------------------------------------------------------------------------------------------
 
 await browser.close()
