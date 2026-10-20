@@ -78,6 +78,10 @@ Bun.serve({
           aiMode = 'ok'
           configure()
           break
+        case '/__test/forget-welcome':
+          // as after migration 0003: existing accounts have not seen the tour yet
+          for (const row of backend.tables.user_settings!) row.onboarded_at = null
+          break
         case '/__test/captcha':
           backend.requireCaptcha = body.on === true
           break

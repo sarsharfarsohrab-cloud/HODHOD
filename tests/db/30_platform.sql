@@ -7,7 +7,7 @@ insert into auth.users (id, email, created_at) values
   ('00000000-0000-0000-0000-0000000000d2', 'learner@example.test', now() - interval '1 hour'),
   ('00000000-0000-0000-0000-0000000000d3', 'friend@example.test', now() - interval '10 days');
 
--- ---- existing accounts skip the welcome tour; new ones get it ---------------
+-- ---- every account (new or existing) sees the welcome tour once ---------------
 do $$
 begin
   assert (select onboarded_at from public.user_settings where user_id = '00000000-0000-0000-0000-0000000000d2') is null,

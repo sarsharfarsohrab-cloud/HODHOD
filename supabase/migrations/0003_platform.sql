@@ -37,8 +37,8 @@ alter table public.user_settings
   add column notify_updates boolean not null default true,
   add column celebrated_streaks integer[] not null default '{}' check (cardinality(celebrated_streaks) <= 50);
 
--- Accounts that exist already have chosen their settings: no welcome tour for them.
-update public.user_settings set onboarded_at = now() where onboarded_at is null;
+-- Existing accounts also see the tour once after this update (owner's wish): it shows
+-- what is new and asks again how much time there is. Nothing to do here: onboarded_at is null.
 
 -- ---------------------------------------------------------------------------
 -- administrators

@@ -3853,3 +3853,26 @@ button.quiz-option:hover {
   pointer-events: none;
   opacity: 0.9;
 }
+
+.whats-new {
+  list-style: none;
+  margin: 0;
+  padding: var(--s3) var(--s4);
+  width: 100%;
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  text-align: start;
+}
+.whats-new li {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  font-size: var(--text-sm);
+}
+.whats-new li span {
+  font-size: var(--text-lg);
+}

@@ -292,10 +292,21 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
   window.addEventListener('hashchange', onHash)
   cleanups.push(() => window.removeEventListener('hashchange', onHash), () => screen?.destroy?.(), () => audio.stop())
 
+  // the tour after an update: the phone's saved settings say "done" until the first sync
+  // brings the server's answer, so look again whenever data arrives (only from the home screen)
+  let welcomeSent = false
+  const maybeWelcome = () => {
+    if (welcomeSent || data.settings.onboarded || location.hash.startsWith('#/welcome')) return
+    if (!['', '#', '#/', '#/home'].includes(location.hash)) return
+    welcomeSent = true
+    ctx.go('/welcome', { replace: true })
+  }
+
   cleanups.push(
     data.subscribe(() => {
       renderChrome()
       screen?.onData?.()
+      maybeWelcome()
     }),
   )
 

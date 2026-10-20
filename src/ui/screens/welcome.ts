@@ -8,6 +8,7 @@ import { h, icon, replace } from '../dom.ts'
 import { fa } from '../format.ts'
 import { mascot, type MascotMood } from '../mascot.ts'
 import { t } from '../strings.ts'
+import { enablePush, pushState } from '../../data/push.ts'
 
 type Level = 'beginner' | 'some' | 'intermediate'
 const MINUTES = [5, 10, 20, 30] as const
@@ -24,7 +25,9 @@ export function welcomeScreen(ctx: Ctx): Screen {
   let step = 0
   let minutes: number = ctx.data.settings.dailyGoalMinutes && MINUTES.includes(ctx.data.settings.dailyGoalMinutes as (typeof MINUTES)[number]) ? ctx.data.settings.dailyGoalMinutes : 10
   let level: Level = 'beginner'
-  let perDay = suggestNewPerDay(minutes, level)
+  // someone who already uses the app sees this once after an update: their numbers stay the start
+  const returning = ctx.data.words.size > 0
+  let perDay = returning ? ctx.data.settings.newPerDay || suggestNewPerDay(minutes, level) : suggestNewPerDay(minutes, level)
   let perDayTouched = false
 
   const finish = async (go: string) => {
@@ -73,6 +76,10 @@ export function welcomeScreen(ctx: Ctx): Screen {
   function render() {
     const name = ctx.data.profile.displayName
     if (step === 0) {
+      if (returning) {
+        const news = h('ul', { class: 'whats-new' }, w.whatsNew.map(([emoji, text]) => h('li', null, h('span', { 'aria-hidden': 'true' }, emoji), text)))
+        return page('excited', w.helloAgain(name), w.helloAgainBody, news, next(w.next), 'fly')
+      }
       return page('morning', w.hello(name), w.helloBody, null, next(w.start), 'fly')
     }
     if (step === 1) {
@@ -128,16 +135,39 @@ export function welcomeScreen(ctx: Ctx): Screen {
         next(),
       )
     }
+    // reminders can only be switched on from a tap, so the offer sits here
+    const reminder = h('div', { class: 'stack welcome-reminder', hidden: true })
+    void pushState().then((state) => {
+      if (state !== 'off') return
+      const on = h('button', { class: 'btn block', type: 'button' }, icon('bell', { size: 18 }), w.reminderOn)
+      on.onclick = async () => {
+        on.disabled = true
+        try {
+          if ((await enablePush(ctx.client)) === 'on') {
+            await ctx.data.updateSettings({ notifyDaily: true, timeZone: localTimeZone() })
+            replace(reminder, h('p', { class: 'notice ok' }, icon('check', { size: 18 }), h('span', null, w.reminderDone)))
+            return
+          }
+        } catch {
+          // permission refused or no connection: it can be done later in the settings
+        }
+        on.disabled = false
+      }
+      replace(reminder, h('b', null, w.reminderTitle), h('p', { class: 'help' }, t.reminders.dailyHelp), on)
+      reminder.hidden = false
+    })
     return page(
       'celebrating',
       w.readyTitle,
       w.readyBody(minutes, perDay),
-      h('p', { class: 'notice' }, icon('settings', { size: 18 }), h('span', null, w.changeLater)),
+      h('div', { class: 'stack', style: { width: '100%' } }, reminder, h('p', { class: 'notice' }, icon('settings', { size: 18 }), h('span', null, w.changeLater))),
       h(
         'div',
         { class: 'stack', style: { width: '100%' } },
-        h('button', { class: 'btn primary big block', type: 'button', 'data-autofocus': '', onclick: () => void finish('/create') }, icon('plus'), w.firstWord),
-        h('button', { class: 'btn big block', type: 'button', onclick: () => void finish('/home') }, w.toHome),
+        returning
+          ? h('button', { class: 'btn primary big block', type: 'button', 'data-autofocus': '', onclick: () => void finish('/home') }, w.toHome)
+          : h('button', { class: 'btn primary big block', type: 'button', 'data-autofocus': '', onclick: () => void finish('/create') }, icon('plus'), w.firstWord),
+        returning ? null : h('button', { class: 'btn big block', type: 'button', onclick: () => void finish('/home') }, w.toHome),
       ),
     )
   }

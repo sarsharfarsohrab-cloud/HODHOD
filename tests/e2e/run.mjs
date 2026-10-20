@@ -1290,6 +1290,29 @@ await test('the test version under /staging/ is marked and keeps its own sign-in
   return page
 })
 
+await test('after the update, an existing learner sees what is new and sets the daily plan again', async () => {
+  const page = await newPage()
+  await signUp(page)
+  await createWord(page, 'der Tisch')
+  await control('forget-welcome')
+  await page.goto(`${BASE}/#/home`)
+  await page.reload()
+  await page.getByRole('heading', { name: 'سهراب، هدهد تازه شد!' }).waitFor()
+  await page.getByText('داستان کوتاه با واژه‌های خودت').waitFor()
+  await noHorizontalScroll(page, 'whats new')
+  await snap(page, 'welcome-back')
+  await page.getByRole('button', { name: 'ادامه' }).click()
+  await page.getByRole('radio', { name: /۳۰ دقیقه/ }).click()
+  await page.getByRole('button', { name: 'ادامه' }).click()
+  await page.getByRole('button', { name: 'ادامه' }).click()
+  await page.getByRole('button', { name: 'برو به صفحهٔ اصلی' }).click()
+  await page.getByRole('heading', { name: /سهراب/ }).waitFor()
+  const s = await state()
+  assert(s.settings[0].daily_goal_minutes === 30 && s.settings[0].onboarded_at, 'the new plan is saved and the tour is done')
+  assert(s.words.length === 1, 'the words are untouched')
+  return page
+})
+
 // ---------------------------------------------------------------------------------------------
 
 await browser.close()
