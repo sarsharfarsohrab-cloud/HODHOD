@@ -254,7 +254,7 @@ describe('statistics', () => {
     expect(empty.byCefr).toEqual([])
   })
   test('daily series ends today and covers 30 days', () => {
-    expect(stats.daily.length).toBe(30)
+    expect(stats.daily.length).toBe(35)
     expect(stats.daily.at(-1)).toEqual({ key: today, reviews: 20, minutes: 5 })
     expect(stats.daily.at(-2)!.reviews).toBe(10)
     expect(stats.daily.reduce((sum, d) => sum + d.reviews, 0)).toBe(60)

@@ -19,7 +19,7 @@ import {
 import type { Ctx, Screen } from '../context.ts'
 import { de, h, icon, replace } from '../dom.ts'
 import { faPercent } from '../format.ts'
-import { mascot, reactMascot, setMascotMood } from '../mascot.ts'
+import { burst, mascot, reactMascot, setMascotMood } from '../mascot.ts'
 import { t } from '../strings.ts'
 import { emptyState, iconButton, progressBar, segmented, speakButton, wordTitle } from '../widgets.ts'
 
@@ -32,7 +32,7 @@ let lastSetup: { kind: QuizKind; length: number } = { kind: 'mixed', length: DEF
 
 export function quizScreen(ctx: Ctx, params: Record<string, string>): Screen {
   const el = h('main', { class: 'screen' })
-  const bird = mascot('idle', { size: 52 })
+  const bird = mascot('idle', { size: 76, enter: 'hop' })
   let kind: QuizKind = KINDS.includes(params.kind as QuizKind) ? (params.kind as QuizKind) : lastSetup.kind
   let length = lastSetup.length
   let questions: Question[] = []
@@ -81,7 +81,7 @@ export function quizScreen(ctx: Ctx, params: Record<string, string>): Screen {
     replace(
       el,
       h('header', { class: 'topbar' }, h('h1', null, t.quiz.title)),
-      h('div', { class: 'hello' }, mascot('encouraging', { size: 84 }), h('p', { class: 'bubble' }, t.quiz.intro)),
+      h('div', { class: 'hello' }, mascot('teacher', { size: 128, enter: 'fly' }), h('p', { class: 'bubble' }, t.quiz.intro)),
       h(
         'section',
         { class: 'card stack' },
@@ -190,6 +190,7 @@ export function quizScreen(ctx: Ctx, params: Record<string, string>): Screen {
     answers.push({ question, answer: given, correct: grade.correct, note: grade.note, durationMs: Math.min(120_000, Date.now() - shownAt), answeredAt: ctx.now().toISOString() })
     renderFeedback(question, given, grade)
     reactMascot(bird, grade.correct ? (grade.note ? 'encouraging' : 'happy') : 'supportive', 'idle', 2200)
+    if (grade.correct) burst(bird, grade.note ? 'sparks' : 'hearts', 7)
   }
 
   function renderFeedback(question: Question, given: string, grade: Grade) {

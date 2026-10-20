@@ -39,6 +39,23 @@ sw.addEventListener('fetch', (event) => {
     return
   }
 
+  // Pictures of the bird and icons: from the cache at once, refreshed in the background.
+  if (url.pathname.includes('/mascot/') || url.pathname.includes('/icons/')) {
+    event.respondWith(
+      caches.open(CACHE).then(async (cache) => {
+        const hit = await cache.match(request)
+        const fresh = fetch(request)
+          .then((response) => {
+            if (response.ok) void cache.put(request, response.clone())
+            return response
+          })
+          .catch(() => hit ?? Response.error())
+        return hit ?? fresh
+      }),
+    )
+    return
+  }
+
   // The page itself and its settings: fresh when online (so updates arrive), cached copy when not.
   event.respondWith(
     fetch(request)

@@ -95,11 +95,6 @@ export function statsScreen(ctx: Ctx): Screen {
     const total = Math.max(1, stats.totalWords)
     const tilesHost = h('div', null, periodTiles(stats[period]))
 
-    const activityColumns: Column[] = stats.daily.map((day, i) => ({
-      label: t.stats.perDay(dayLabel.format(dateOfKey(day.key)), day.reviews),
-      tick: i === stats.daily.length - 1 ? t.stats.today : i % 7 === (stats.daily.length - 1) % 7 ? shortDay.format(dateOfKey(day.key)) : undefined,
-      value: day.reviews,
-    }))
     const today = ctx.now()
     const forecastColumns: Column[] = stats.forecast.map((count, i) => {
       const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i, 12)
@@ -110,37 +105,37 @@ export function statsScreen(ctx: Ctx): Screen {
       }
     })
     const levelPeak = Math.max(1, ...stats.byCefr.map((l) => l.count))
+    const week = stats.week
+
+    // the last five weeks as a calendar, today last; deeper saffron for busier days
+    const heat = stats.daily.slice(-35)
+    const heatLevel = (n: number) => (n === 0 ? 0 : n < 10 ? 1 : n < 30 ? 2 : n < 60 ? 3 : 4)
 
     replace(
       el,
       h('header', { class: 'topbar' }, back, h('h1', null, t.stats.title)),
-      h('div', { class: 'hello' }, mascot(say.mood, { size: 84 }), h('p', { class: 'bubble' }, say.line)),
+      h('section', { class: 'perch slim' }, h('div', { class: 'perch-bird' }, mascot(say.mood, { size: 120 }), h('p', { class: 'bubble cream' }, say.line)), h('span', { class: 'perch-stripes', 'aria-hidden': 'true' })),
       h(
         'div',
         { class: 'cols' },
         h(
           'div',
           { class: 'col' },
+          // this week, said in words
           h(
             'section',
             { class: 'card stack' },
-            h('div', { class: 'row spread' }, h('h2', null, t.stats.words), h('span', { class: 'small muted' }, t.stats.wordsTotal(stats.totalWords))),
-            // one bar, four parts: the parts are separated by a gap in the surface colour, never by outlines
-            h(
-              'div',
-              { class: 'stack-bar', role: 'img', 'aria-label': STATUSES.map((s) => `${t.status[s]}: ${fa(stats.byStatus[s])}`).join('، ') },
-              STATUSES.filter((s) => stats.byStatus[s] > 0).map((s) => h('span', { class: `seg seg-${s}`, style: { flexGrow: String(stats.byStatus[s] / total) } })),
-            ),
-            h(
-              'ul',
-              { class: 'legend' },
-              STATUSES.map((s) => h('li', null, h('span', { class: `swatch seg-${s}`, 'aria-hidden': 'true' }), h('span', { class: 'grow' }, t.status[s]), h('b', null, fa(stats.byStatus[s])))),
-            ),
-          ),
-          h(
-            'section',
-            { class: 'card stack' },
-            h('h2', null, t.stats.periodTitle),
+            h('h2', null, t.stats.weekTitle),
+            week.reviews === 0
+              ? h('p', { class: 'muted' }, t.stats.weekNone)
+              : h(
+                  'ul',
+                  { class: 'said' },
+                  h('li', null, h('b', null, fa(week.reviews)), h('span', null, t.stats.saidReviews(week.minutes))),
+                  h('li', null, h('b', null, fa(week.newCards)), h('span', null, t.stats.saidNew)),
+                  week.retention !== null ? h('li', null, h('b', null, faPercent(week.retention)), h('span', null, t.stats.saidRetention)) : null,
+                  h('li', null, h('b', null, fa(week.activeDays)), h('span', null, t.stats.saidDays)),
+                ),
             segmented<Period>(
               [{ value: 'today', label: t.stats.today }, { value: 'week', label: t.stats.week }, { value: 'month', label: t.stats.month }],
               period,
@@ -151,8 +146,25 @@ export function statsScreen(ctx: Ctx): Screen {
               t.stats.periodTitle,
             ),
             tilesHost,
-            h('p', { class: 'help' }, t.stats.retentionHelp),
-            h('div', { class: 'summary-grid' }, tile(fa(stats.streak.current), t.stats.streakNow), tile(fa(stats.streak.longest), t.stats.streakBest)),
+          ),
+          // where the words are on their way into long-term memory
+          h(
+            'section',
+            { class: 'card stack' },
+            h('div', { class: 'row spread' }, h('h2', null, t.stats.journey), h('span', { class: 'small muted' }, t.stats.wordsTotal(stats.totalWords))),
+            h(
+              'ol',
+              { class: 'journey', 'aria-label': STATUSES.map((st) => `${t.status[st]}: ${fa(stats.byStatus[st])}`).join('، ') },
+              STATUSES.map((st) =>
+                h(
+                  'li',
+                  { class: `station st-${st}` },
+                  h('span', { class: 'station-dot', style: { '--size': `${28 + Math.round((stats.byStatus[st] / total) * 26)}px` } }, fa(stats.byStatus[st])),
+                  h('span', { class: 'station-name' }, t.status[st]),
+                ),
+              ),
+            ),
+            h('p', { class: 'help' }, t.stats.journeyHelp),
           ),
           h(
             'section',
@@ -175,10 +187,18 @@ export function statsScreen(ctx: Ctx): Screen {
           h(
             'section',
             { class: 'card stack' },
-            h('h2', null, t.stats.activity),
-            stats.month.reviews > 0
-              ? columnChart(activityColumns, { summary: t.stats.activity, idle: `${fa(stats.month.reviews)} ${t.stats.reviews}، ${fa(stats.month.activeDays)} ${t.stats.activeDays}` })
-              : h('p', { class: 'muted' }, t.stats.activityNone),
+            h('div', { class: 'row spread' }, h('h2', null, t.stats.calendar), h('span', { class: 'small muted' }, t.stats.streakLine(stats.streak.current, stats.streak.longest))),
+            h(
+              'ol',
+              { class: 'heat', 'aria-label': t.stats.calendar },
+              heat.map((day, i) =>
+                h('li', {
+                  class: `heat-${heatLevel(day.reviews)} ${i === heat.length - 1 ? 'today' : ''}`,
+                  title: t.stats.perDay(dayLabel.format(dateOfKey(day.key)), day.reviews),
+                }),
+              ),
+            ),
+            h('div', { class: 'heat-legend small muted' }, h('span', null, t.stats.less), [0, 1, 2, 3, 4].map((n) => h('i', { class: `heat-${n}` })), h('span', null, t.stats.more)),
           ),
           h(
             'section',

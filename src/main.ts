@@ -12,7 +12,7 @@ import { SupabaseClient, type KeyValueStore, type Session, type SupabaseConfig }
 import type { Ctx, Screen, ScreenFactory } from './ui/context.ts'
 import { h, icon, replace, type IconName } from './ui/dom.ts'
 import { fa } from './ui/format.ts'
-import { mascot } from './ui/mascot.ts'
+import { mascot, preloadMascot } from './ui/mascot.ts'
 import { authScreen } from './ui/screens/auth.ts'
 import { createScreen } from './ui/screens/create.ts'
 import { homeScreen } from './ui/screens/home.ts'
@@ -22,6 +22,7 @@ import { settingsScreen } from './ui/screens/settings.ts'
 import { statsScreen } from './ui/screens/stats.ts'
 import { studyScreen } from './ui/screens/study.ts'
 import { wordDetailScreen, wordEditScreen } from './ui/screens/wordDetail.ts'
+import { welcomeScreen } from './ui/screens/welcome.ts'
 import { wordsScreen } from './ui/screens/words.ts'
 import { APP_NAME, describeError, t } from './ui/strings.ts'
 import { confirmSheet, emptyState, toast } from './ui/widgets.ts'
@@ -91,6 +92,7 @@ const ROUTES: { pattern: RegExp; keys: string[]; screen: ScreenFactory; tab: str
   { pattern: /^\/quiz$/, keys: [], screen: quizScreen, tab: 'quiz' },
   { pattern: /^\/stats$/, keys: [], screen: statsScreen, tab: 'home' },
   { pattern: /^\/settings$/, keys: [], screen: settingsScreen, tab: null },
+  { pattern: /^\/welcome$/, keys: [], screen: welcomeScreen, tab: null },
 ]
 
 const TABS: { id: string; path: string; label: string; icon: IconName }[] = [
@@ -194,7 +196,7 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
     const counts = queueCounts(data.activeCards(), { settings: data.settings, now: ctx.now() })
     replace(
       nav,
-      h('div', { class: 'nav-brand' }, mascot('idle', { size: 40 }), APP_NAME),
+      h('div', { class: 'nav-brand' }, mascot('idle', { size: 44, enter: 'none' }), APP_NAME),
       TABS.map((tab) =>
         h(
           'a',
@@ -282,7 +284,10 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
   )
 
   renderChrome()
+  // a brand-new account starts with the welcome tour
+  if (!data.settings.onboarded && !location.hash.startsWith('#/welcome')) history.replaceState(null, '', `${location.pathname}${location.search}#/welcome`)
   await route()
+  preloadMascot()
   void data.syncNow()
   return { stop }
 }

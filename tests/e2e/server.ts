@@ -61,7 +61,7 @@ Bun.serve({
       const body = req.method === 'POST' ? ((await req.json().catch(() => ({}))) as Record<string, unknown>) : {}
       switch (path) {
         case '/__test/reset':
-          backend = new FakeSupabase({ confirmEmail: body.confirmEmail === true })
+          backend = new FakeSupabase({ confirmEmail: body.confirmEmail === true, welcome: body.welcome === true })
           aiMode = 'ok'
           configure()
           break

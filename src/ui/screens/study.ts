@@ -7,7 +7,8 @@ import { RATINGS, type Card, type Rating, type ReviewEvent, type Word } from '..
 import type { Ctx, Screen } from '../context.ts'
 import { de, h, icon, replace } from '../dom.ts'
 import { fa, faDuration, faPercent, faRelative } from '../format.ts'
-import { mascot, reactMascot, setMascotMood, type MascotMood } from '../mascot.ts'
+import { celebrateStreak, pendingMilestone } from '../celebrate.ts'
+import { burst, mascot, reactMascot, setMascotMood, type MascotMood } from '../mascot.ts'
 import { t } from '../strings.ts'
 import { emptyState, iconButton, progressBar, speakButton, wordTitle } from '../widgets.ts'
 
@@ -47,7 +48,7 @@ export function studyScreen(ctx: Ctx): Screen {
   let busy = false
   let waitTimer: ReturnType<typeof setTimeout> | undefined
   // One bird for the whole session, so its reactions animate instead of popping in.
-  const bird = mascot('idle', { size: 52 })
+  const bird = mascot('idle', { size: 76 })
 
   const exit = () => ctx.go('/home')
   const spoken = (word: Word) => (word.content.noun?.article ? `${word.content.noun.article} ${word.lemma}` : word.lemma)
@@ -254,6 +255,9 @@ export function studyScreen(ctx: Ctx): Screen {
     busy = false
     advance()
     reactMascot(bird, mood, 'idle', coach ? 2600 : 1400)
+    // a visible "well done": hearts for a remembered word, stars for a run of them
+    if (mood === 'celebrating') burst(bird, 'stars', 12)
+    else if (rating >= 3) burst(bird, 'hearts', rating === 4 ? 9 : 6)
   }
 
   async function undoLast() {
@@ -310,6 +314,8 @@ export function studyScreen(ctx: Ctx): Screen {
       )
     }
     const goalDone = minutesStudied(ctx.data.today()) >= ctx.data.settings.dailyGoalMinutes
+    const milestone = pendingMilestone(ctx)
+    if (milestone) void celebrateStreak(milestone)
     const stat = (value: string, label: string) => h('div', { class: 'plan-number' }, h('b', null, value), h('span', null, label))
     replace(
       el,

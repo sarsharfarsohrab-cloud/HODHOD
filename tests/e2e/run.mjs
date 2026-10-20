@@ -80,6 +80,7 @@ async function createWord(page, word, { confirm = true } = {}) {
   if (confirm) {
     await page.getByRole('button', { name: 'تأیید و ذخیره' }).click()
     await page.waitForURL(/#\/words\/[0-9a-f-]+$/) // saved: the app moves on to the word's page
+    await page.getByText('وضعیت یادگیری').waitFor() // …and has shown it
   }
 }
 
@@ -126,9 +127,9 @@ await test('complete flow: account → word → bank → study → home → sett
   await page.getByRole('link', { name: 'کلمهٔ تازه' }).click()
   await page.getByRole('button', { name: 'ساخت کارت' }).click()
   await page.getByText('یک کلمه بنویس.', { exact: true }).waitFor()
-  await page.getByLabel('کلمه یا عبارت آلمانی').fill('ich gehe heute Abend nach Hause')
+  await page.getByLabel('کلمه یا عبارت آلمانی').fill('ich gehe heute Abend nach Hause und dann sofort ins Bett, weil ich morgen sehr früh aufstehen muss und den ganzen Tag arbeite')
   await page.getByRole('button', { name: 'ساخت کارت' }).click()
-  await page.getByText('این یک جمله است.', { exact: false }).waitFor()
+  await page.getByText('خیلی بلند است', { exact: false }).waitFor()
   await page.getByLabel('کلمه یا عبارت آلمانی').fill('میز')
   await page.getByRole('button', { name: 'ساخت کارت' }).click()
   await page.getByText('کلمه را به آلمانی بنویس، نه فارسی.').waitFor()
@@ -213,7 +214,7 @@ await test('complete flow: account → word → bank → study → home → sett
 
   // --- home with a plan
   await page.getByRole('link', { name: 'خانه' }).click()
-  await page.getByText('برنامهٔ امروز').waitFor()
+  await page.locator('.perch-plan .count-new', { hasText: '۳' }).waitFor()
   await snap(page, 'home-with-plan')
 
   // --- study: recall first, then the answer and the four ratings with their intervals
@@ -247,7 +248,7 @@ await test('complete flow: account → word → bank → study → home → sett
   assert(s.cards.every((c) => c.state === 'review' && c.introduced_at), 'cards moved to review')
 
   await page.getByRole('button', { name: 'برگشت به خانه' }).click()
-  await page.getByText('۱ روز پیاپی').waitFor()
+  await page.locator('.streak-card .big-number', { hasText: '۱' }).waitFor()
   await page.getByText('کار امروز', { exact: false }).first().waitFor({ timeout: 2000 }).catch(() => {})
   await snap(page, 'home-after-study')
 
@@ -256,7 +257,7 @@ await test('complete flow: account → word → bank → study → home → sett
   await page.goto(`${BASE}/#/settings`)
   await page.getByRole('button', { name: 'همگام‌سازی' }).click()
   await page.goto(`${BASE}/#/home`)
-  await page.locator('.plan-number .count-review', { hasText: '۳' }).waitFor()
+  await page.locator('.perch-plan .count-review', { hasText: '۳' }).waitFor()
   await snap(page, 'home-reviews-due')
 
   // --- word detail now shows learning data
@@ -277,7 +278,7 @@ await test('complete flow: account → word → bank → study → home → sett
   s = await state()
   assert(s.settings[0].new_per_day === 11 && s.settings[0].daily_goal_minutes === 30 && s.settings[0].theme === 'dark', 'settings reach the server')
   await page.goto(`${BASE}/#/home`)
-  await page.getByText(/از ۳۰ دقیقه/).waitFor()
+  await page.getByText(/[۰-۹]+ دقیقهٔ دیگر تا هدف امروز/).waitFor()
   await snap(page, 'home-dark')
 
   // --- sign out, sign in: everything is still there
@@ -306,7 +307,7 @@ await test('new words per day limits the queue, not the bank', async () => {
     await createWord(page, `Wort${letter}`)
   }
   await page.goto(`${BASE}/#/home`)
-  await page.locator('.plan-number .count-new', { hasText: '۱۰' }).waitFor()
+  await page.locator('.perch-plan .count-new', { hasText: '۱۰' }).waitFor()
   await page.getByText('۲ کلمهٔ ذخیره‌شده در صف روزهای بعد است.').waitFor()
   await page.getByText('۱۲ کلمه').waitFor()
   await snap(page, 'home-queue-limit')
@@ -513,7 +514,7 @@ await test('batch import: list → drafts → confirm, skip, groups', async () =
   await createWord(page, 'schnell')
   await page.goto(`${BASE}/#/create`)
   await page.getByRole('link', { name: 'وارد کردن گروهی از روی لیست' }).click()
-  await page.getByLabel('لیست لغت‌ها').fill('1. der Tisch - میز\n2. Lampe\nBescheid sagen\nqwrtzx\nschnell\ntisch\nein ganzer Satz mit zu vielen Wörtern')
+  await page.getByLabel('لیست لغت‌ها').fill('1. der Tisch - میز\n2. Lampe\nBescheid sagen\nqwrtzx\nschnell\ntisch\nein ganzer Satz mit viel zu vielen Wörtern, die niemand auf eine Karte schreiben würde, weil er einfach viel zu lang ist')
   await page.getByRole('button', { name: 'افزودن به دسته' }).click()
   await page.getByLabel('دستهٔ تازه').fill('درس ۱')
   await page.getByRole('dialog').getByRole('button', { name: 'افزودن', exact: true }).click()
@@ -522,7 +523,7 @@ await test('batch import: list → drafts → confirm, skip, groups', async () =
   await page.getByRole('button', { name: 'بررسی لیست' }).click()
   await page.getByRole('heading', { name: '۴ لغت برای ساختن' }).waitFor()
   await page.getByText('از قبل در بانک هست').waitFor() // schnell
-  await page.getByText('این یک جمله است.', { exact: false }).waitFor() // the sentence
+  await page.getByText('خیلی بلند است', { exact: false }).waitFor() // the overlong sentence
   assert((await page.getByRole('listitem').count()) === 6, 'the repeated "tisch" was merged')
   assert((await state()).aiCalls === before, 'checking the list costs nothing')
   await noHorizontalScroll(page, 'import list')
@@ -611,7 +612,7 @@ await test('undo takes back the last answer, also from the summary', async () =>
   s = await state()
   assert(s.reviews.filter((r) => !r.undone_at).length === 1, 'one answer counts, two were undone')
   await page.goto(`${BASE}/#/home`)
-  await page.locator('.plan-number .count-new', { hasText: '۱' }).waitFor()
+  await page.locator('.perch-plan .count-new', { hasText: '۱' }).waitFor()
   return page
 })
 
@@ -628,7 +629,7 @@ await test('reverse cards: optional, start after the word is learned, ask Persia
   await snap(page, 'settings-reverse')
 
   await page.goto(`${BASE}/#/home`)
-  await page.locator('.plan-number .count-new', { hasText: '۱' }).waitFor() // not two: the reverse card waits
+  await page.locator('.perch-plan .count-new', { hasText: '۱' }).waitFor() // not two: the reverse card waits
 
   await page.goto(`${BASE}/#/study`)
   await page.getByRole('button', { name: 'نمایش جواب' }).click()
@@ -762,12 +763,12 @@ await test('statistics show progress on phone and desktop', async () => {
   await page.getByRole('link', { name: /آمار/ }).click()
   await page.getByRole('heading', { name: 'آمار' }).waitFor()
   await page.getByText('۴ لغت در بانک').waitFor()
-  await page.getByText('مرور در ۳۰ روز گذشته').waitFor()
-  assert((await page.locator('.stack-bar .seg').count()) >= 2, 'the status bar has a part per learning stage in use')
-  assert((await page.locator('.chart-col').count()) === 30 + 14, 'thirty days of activity and a fourteen-day forecast')
-  // tapping a column tells its value in words
-  await page.locator('.chart-col').nth(29).click()
-  await page.locator('.chart-caption', { hasText: '۳ مرور' }).waitFor()
+  await page.getByText('پنج هفتهٔ اخیر').waitFor()
+  assert((await page.locator('.journey .station').count()) === 4, 'the word journey has four stations')
+  assert((await page.locator('.heat li').count()) === 35, 'five weeks of days')
+  assert((await page.locator('.heat li.heat-1').count()) === 1, 'today is coloured')
+  await page.locator('.said li', { hasText: 'کارت مرور کردی' }).locator('b', { hasText: '۳' }).waitFor()
+  assert((await page.locator('.chart-col').count()) === 14, 'a fourteen-day forecast')
   await page.getByRole('button', { name: 'امروز', exact: true }).click()
   await page.locator('.summary-grid.four .plan-number b', { hasText: '۳' }).first().waitFor()
   await noHorizontalScroll(page, 'stats')
@@ -796,18 +797,94 @@ await test('the bird is on every main screen and reacts', async () => {
   await page.goto(`${BASE}/#/study`)
   await page.getByRole('button', { name: 'نمایش جواب' }).click()
   await page.locator('.rating-1').click()
-  await page.locator('.companion .mascot-supportive').waitFor()
+  await page.locator('.companion .mood-supportive').waitFor()
+  await page.locator('.burst').count() // hearts come only for remembered words
   await page.getByText('اشکال نداره، دوباره امتحانش می‌کنیم.').waitFor()
   await snap(page, 'study-companion')
   await page.goto(`${BASE}/#/home`)
   await page.getByRole('button', { name: 'هدهد' }).click()
-  await page.locator('.mascot-excited').waitFor()
+  await page.locator('.perch .mood-happy').waitFor()
+  await page.locator('.burst-piece').first().waitFor({ state: 'attached' })
   await snap(page, 'home-bird')
   // five tabs fit on the smallest phone without wrapping
   await page.setViewportSize({ width: 320, height: 568 })
   const heights = await page.locator('.nav-item').evaluateAll((items) => items.map((i) => i.getBoundingClientRect().height))
   assert(heights.length === 5 && Math.max(...heights) - Math.min(...heights) < 2, `nav labels stay on one line: ${heights}`)
   await noHorizontalScroll(page, 'home with five tabs at 320px')
+  return page
+})
+
+await test('welcome tour for a new account; its answers become the settings', async () => {
+  await control('reset', { welcome: true })
+  const page = await newPage()
+  await signUp(page, { name: 'مریم' }).catch(() => undefined)
+  await page.getByRole('heading', { name: 'سلام مریم، خوش آمدی!' }).waitFor()
+  await page.locator('.welcome-bird .mascot').waitFor()
+  await page.waitForTimeout(1400) // the bird has flown in
+  await snap(page, 'welcome-hello')
+  await page.getByRole('button', { name: 'شروع کنیم' }).click()
+  await page.getByRole('radio', { name: /۲۰ دقیقه/ }).click()
+  await snap(page, 'welcome-time')
+  await page.getByRole('button', { name: 'ادامه' }).click()
+  await page.getByRole('radio', { name: /کمی بلدم/ }).click()
+  await page.locator('.welcome-perday .big-number', { hasText: '۱۰' }).waitFor() // 20 minutes, some German
+  await page.getByRole('button', { name: 'بیشتر' }).click()
+  await snap(page, 'welcome-level')
+  await page.getByRole('button', { name: 'ادامه' }).click()
+  await page.getByRole('heading', { name: 'برنامه‌ات آماده است!' }).waitFor()
+  await page.getByText('هر روز ۲۰ دقیقه، با ۱۱ کلمهٔ تازه', { exact: false }).waitFor()
+  await noHorizontalScroll(page, 'welcome')
+  await snap(page, 'welcome-ready')
+  await page.getByRole('button', { name: 'برو به صفحهٔ اصلی' }).click()
+  await page.locator('.perch').waitFor()
+  await page.waitForTimeout(300)
+  const s = await state()
+  assert(s.settings[0].daily_goal_minutes === 20 && s.settings[0].new_per_day === 11, 'the answers are saved')
+  assert(s.settings[0].onboarded_at && s.settings[0].time_zone === 'Europe/Berlin', 'the tour is marked as done, with the time zone')
+  // the tour does not come back
+  await page.reload()
+  await page.locator('.perch').waitFor()
+  assert(!page.url().includes('welcome'), 'no second tour')
+  await control('reset', {})
+  return page
+})
+
+await test('a three-day streak gets a big celebration, once', async () => {
+  const page = await newPage()
+  await signUp(page)
+  for (let day = 0; day < 3; day++) {
+    await createWord(page, ['Tisch', 'Lampe', 'Stuhl'][day])
+    await page.goto(`${BASE}/#/study`)
+    await page.getByRole('button', { name: 'نمایش جواب' }).click()
+    await page.locator('.rating-4').click()
+    if (day < 2) {
+      await page.getByText('این دور تمام شد').waitFor()
+      await control('shift-due', { days: 1 })
+      await page.goto(`${BASE}/#/settings`)
+      await page.getByRole('button', { name: 'همگام‌سازی' }).click()
+      await page.waitForTimeout(300)
+    }
+  }
+  await page.getByRole('dialog', { name: '۳ روز پشت سر هم!' }).waitFor()
+  await page.locator('.celebration-number', { hasText: '۳' }).waitFor()
+  await page.waitForTimeout(1300)
+  await snap(page, 'celebration')
+  await page.getByRole('button', { name: 'ادامه' }).click()
+  await page.goto(`${BASE}/#/home`)
+  await page.locator('.streak-card .big-number', { hasText: '۳' }).waitFor()
+  await page.waitForTimeout(500)
+  assert((await page.locator('.celebration').count()) === 0, 'celebrated only once')
+  await snap(page, 'home-streak')
+  await page.goto(`${BASE}/#/stats`)
+  await page.locator('.heat li.heat-1').nth(2).waitFor()
+  await snap(page, 'stats-new-top')
+  await page.evaluate(() => window.scrollTo(0, 700))
+  await snap(page, 'stats-new-middle')
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await page.goto(`${BASE}/#/home`)
+  await page.locator('.perch').waitFor()
+  await page.waitForTimeout(400)
+  await snap(page, 'home-new-dark')
   return page
 })
 

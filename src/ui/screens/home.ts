@@ -2,20 +2,30 @@ import { computeStreak, minutesStudied } from '../../core/activity.ts'
 import { averageSecondsPerAnswer, estimateMinutes, nextCard, queueCounts } from '../../core/queue.ts'
 import { dayKey, shiftDayKey } from '../../core/time.ts'
 import type { Ctx, Screen } from '../context.ts'
-import { h, icon, replace } from '../dom.ts'
+import { h, icon, replace, svg } from '../dom.ts'
 import { fa, faRelative, faWeekday } from '../format.ts'
-import { mascot, reactMascot, type MascotMood } from '../mascot.ts'
+import { celebrateStreak, pendingMilestone } from '../celebrate.ts'
+import { burst, mascot, reactMascot, type MascotMood } from '../mascot.ts'
 import { t } from '../strings.ts'
-import { iconButton, progressBar } from '../widgets.ts'
+import { iconButton } from '../widgets.ts'
+
+/** The bird flies in the first time the home screen is shown in a session, not on every visit. */
+let arrived = false
+
+/** A ring that fills up with today's minutes. */
+function goalRing(ratio: number, done: boolean): SVGSVGElement {
+  const r = 46
+  const c = 2 * Math.PI * r
+  const filled = Math.max(0, Math.min(1, ratio))
+  return svg(
+    `<circle cx="60" cy="60" r="${r}" class="ring-track"/>` +
+      `<circle cx="60" cy="60" r="${r}" class="ring-fill ${done ? 'done' : ''}" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - filled)}" transform="rotate(-90 60 60)"/>`,
+    { viewBox: '0 0 120 120', class: 'ring', 'aria-hidden': 'true' },
+  )
+}
 
 export function homeScreen(ctx: Ctx): Screen {
-  const el = h('main', { class: 'screen wide' })
-
-  /** The bird greets back when tapped — a small thing, but it makes the home screen feel alive. */
-  const bird = (mood: MascotMood) => {
-    const art = mascot(mood, { size: 96 })
-    return h('button', { class: 'mascot-button', type: 'button', 'aria-label': 'هدهد', onclick: () => reactMascot(art, 'excited', mood, 1500) }, art)
-  }
+  const el = h('main', { class: 'screen wide home' })
 
   const render = () => {
     const { data } = ctx
@@ -32,30 +42,56 @@ export function homeScreen(ctx: Ctx): Screen {
     const estimate = estimateMinutes(counts, averageSecondsPerAnswer(data.activity.values()))
     const hasWords = data.words.size > 0
     const m = t.home.mascot
+    const hour = now.getHours()
 
     // What is most useful right now decides the main button and what Hodhod says.
     let mood: MascotMood = 'idle'
     let line = m.idle
     let action: HTMLElement
+    let plan: HTMLElement | null = null
     const study = (label: string) => h('a', { class: 'btn primary big block', href: '#/study' }, icon('cards'), label)
     if (!hasWords) {
-      mood = 'happy'
+      mood = 'morning'
       line = m.first
       action = h('a', { class: 'btn primary big block', href: '#/create' }, icon('plus'), t.home.addFirst)
     } else if (next.kind === 'card') {
-      mood = goalDone ? 'proud' : 'encouraging'
-      line = goalDone ? m.goalDone : today ? m.back : m.due
+      const morning = hour >= 4 && hour < 11 && !today
+      mood = goalDone ? 'proud' : morning ? 'morning' : today ? 'encouraging' : 'card'
+      line = goalDone ? m.goalDone : morning ? m.morning : today ? m.back : m.due
       const label = counts.reviews + counts.learning > 0 ? (today ? t.home.startReview : t.home.startMixed) : t.home.startNew
       action = study(label)
+      plan = h(
+        'p',
+        { class: 'perch-plan' },
+        counts.newCards > 0 ? [h('b', { class: 'count-new' }, fa(counts.newCards)), ` ${t.home.newCards}، `] : null,
+        counts.reviews + counts.learning > 0 ? [h('b', { class: 'count-review' }, fa(counts.reviews + counts.learning)), ` ${t.home.reviews}، `] : null,
+        t.home.planMinutes(estimate),
+      )
     } else if (next.kind === 'wait') {
-      mood = 'sleepy'
+      mood = 'waiting'
       line = t.home.waitingLater(faRelative(next.until.toISOString(), now))
-      action = h('a', { class: 'btn big block', href: '#/study' }, icon('clock'), t.study.waitNow)
+      action = h('a', { class: 'btn big block on-dark', href: '#/study' }, icon('clock'), t.study.waitNow)
     } else {
-      mood = today ? 'celebrating' : 'idle'
+      mood = today ? (goalDone ? 'trophy' : 'celebrating') : hour >= 21 || hour < 4 ? 'sleepy' : 'idle'
       line = today ? (goalDone ? m.goalDone : m.allDone) : m.idle
-      action = h('a', { class: 'btn big block', href: '#/create' }, icon('plus'), t.home.addWord)
+      action = h('a', { class: 'btn big block on-dark', href: '#/create' }, icon('plus'), t.home.addWord)
     }
+
+    const art = mascot(mood, { size: 150, enter: arrived ? 'none' : 'fly' })
+    arrived = true
+    const bird = h(
+      'button',
+      {
+        class: 'mascot-button',
+        type: 'button',
+        'aria-label': 'هدهد',
+        onclick: () => {
+          reactMascot(art, 'happy', mood, 1500)
+          burst(art, 'hearts', 7)
+        },
+      },
+      art,
+    )
 
     const todayKey = dayKey(now)
     const week = Array.from({ length: 7 }, (_, i) => {
@@ -63,95 +99,78 @@ export function homeScreen(ctx: Ctx): Screen {
       const [y, mo, d] = key.split('-').map(Number) as [number, number, number]
       return { key, reviews: data.activity.get(key)?.reviews ?? 0, date: new Date(y, mo - 1, d, 12) }
     })
-    const peak = Math.max(1, ...week.map((d) => d.reviews))
+    const activeDays = week.filter((d) => d.reviews > 0).length
 
     replace(
       el,
+      // the perch: the bird sits on an ink-blue panel striped like its own wing
       h(
-        'header',
-        { class: 'topbar' },
-        h('h1', null, t.home.greeting(now.getHours(), data.profile.displayName)),
-        iconButton('settings', t.nav.settings, () => ctx.go('/settings')),
-      ),
-      h('div', { class: 'hello' }, bird(mood), h('p', { class: 'bubble' }, line)),
-      h(
-        'div',
-        { class: 'cols' },
+        'section',
+        { class: 'perch' },
         h(
           'div',
-          { class: 'col' },
+          { class: 'perch-top' },
+          h('h1', null, t.home.greeting(hour, data.profile.displayName)),
+          iconButton('settings', t.nav.settings, () => ctx.go('/settings'), 'on-dark'),
+        ),
+        h('div', { class: 'perch-bird' }, bird, h('p', { class: 'bubble cream' }, line)),
+        h(
+          'div',
+          { class: 'perch-action' },
+          action,
+          plan,
+          hasWords && next.kind === 'done' ? h('p', { class: 'perch-plan' }, today ? t.home.allDoneBody : t.home.nothingDue) : null,
+          counts.newWaiting > 0 ? h('p', { class: 'perch-plan soft' }, t.home.newWaiting(counts.newWaiting)) : null,
+        ),
+        h('span', { class: 'perch-stripes', 'aria-hidden': 'true' }),
+      ),
+      h(
+        'div',
+        { class: 'home-grid' },
+        h(
+          'section',
+          { class: 'card goal-card', 'aria-label': t.home.goal },
+          h('div', { class: 'ring-holder' }, goalRing(minutes / goal, goalDone), h('div', { class: 'ring-center' }, h('b', null, fa(minutes)), h('span', null, t.home.minutesLabel))),
+          h('div', { class: 'stack', style: { gap: 'var(--s1)' } }, h('h2', null, t.home.goal), h('p', { class: 'small muted' }, goalDone ? t.home.goalDone : t.home.goalLeft(goal - minutes))),
+        ),
+        h(
+          'section',
+          { class: `card streak-card ${streak.current > 0 ? 'hot' : ''}`, 'aria-label': t.home.streakDays },
+          h('span', { class: 'flame', 'aria-hidden': 'true' }, icon('flame', { size: 34, filled: streak.current > 0 })),
+          h('div', { class: 'stack', style: { gap: '0' } }, h('b', { class: 'big-number' }, fa(streak.current)), h('span', { class: 'small' }, t.home.streakDays)),
+          h('p', { class: 'small muted streak-note' }, streak.activeToday ? t.home.streakTodayDone : streak.current > 0 ? t.home.streakKeep : t.home.streakNone),
+        ),
+        h(
+          'section',
+          { class: 'card week-card' },
+          h('div', { class: 'row spread' }, h('h2', null, t.home.weekTitle), h('span', { class: 'small muted' }, t.home.weekDone(activeDays))),
           h(
-            'section',
-            { class: 'card' },
-            h(
-              'div',
-              { class: 'row spread', style: { marginBottom: 'var(--s3)' } },
-              h('h2', { style: { margin: '0' } }, t.home.today),
+            'ol',
+            { class: 'week-dots' },
+            week.map((d) =>
               h(
-                'span',
-                { class: `streak ${streak.current > 0 ? '' : 'cold'}`, title: streak.activeToday || streak.current === 0 ? '' : t.home.streakKeep },
-                icon('flame', { size: 18, filled: streak.activeToday }),
-                streak.current > 0 ? t.home.streak(streak.current) : t.home.streakNone,
+                'li',
+                { class: `${d.reviews > 0 ? 'on' : ''} ${d.key === todayKey ? 'today' : ''}`, title: t.home.weekReviews(d.reviews) },
+                h('span', { class: 'wd' }, d.reviews > 0 ? icon('check', { size: 16 }) : null),
+                h('span', { class: 'wd-label' }, faWeekday(d.date)),
               ),
             ),
-            hasWords
-              ? h(
-                  'div',
-                  { class: 'plan-numbers' },
-                  h('div', { class: 'plan-number' }, h('b', { class: 'count-new' }, fa(counts.newCards)), h('span', null, t.home.newCards)),
-                  h('div', { class: 'plan-number' }, h('b', { class: 'count-review' }, fa(counts.reviews + counts.learning)), h('span', null, t.home.reviews)),
-                  h('div', { class: 'plan-number' }, h('b', null, counts.total > 0 ? `≈ ${fa(estimate)}` : '—'), h('span', null, t.home.minutesLabel)),
-                )
-              : h('p', { class: 'muted', style: { margin: '0 0 var(--s4)' } }, t.words.emptyBody),
-            action,
-            hasWords && next.kind === 'done' ? h('p', { class: 'small muted', style: { marginTop: 'var(--s3)' } }, today ? t.home.allDoneBody : t.home.nothingDue) : null,
-            counts.newWaiting > 0 ? h('p', { class: 'small muted', style: { marginTop: 'var(--s3)' } }, t.home.newWaiting(counts.newWaiting)) : null,
-          ),
-          h(
-            'section',
-            { class: 'card stack' },
-            h('div', { class: 'row spread' }, h('h2', null, t.home.goal), h('span', { class: 'small muted' }, goalDone ? t.home.goalDone : t.home.goalProgress(minutes, goal))),
-            progressBar(minutes / goal, t.home.goal),
           ),
         ),
         h(
-          'div',
-          { class: 'col' },
-          h(
-            'section',
-            { class: 'card stack' },
-            h('div', { class: 'row spread' }, h('h2', null, t.home.week), h('span', { class: 'small muted' }, t.home.weekReviews(week.reduce((sum, d) => sum + d.reviews, 0)))),
-            h(
-              'div',
-              { class: 'week' },
-              week.map((d) =>
-                h(
-                  'div',
-                  { class: `week-day ${d.reviews > 0 ? 'active' : ''} ${d.key === todayKey ? 'today' : ''}`, title: t.home.weekReviews(d.reviews) },
-                  h('div', { class: 'week-bar', style: { height: `${d.reviews > 0 ? Math.max(14, (d.reviews / peak) * 100) : 0}%` } }),
-                  faWeekday(d.date),
-                ),
-              ),
-            ),
-          ),
-          h(
-            'a',
-            { class: 'card tile', href: '#/stats' },
-            h('div', { class: 'row' }, icon('chart'), h('div', null, h('h2', null, t.nav.stats), h('span', { class: 'small muted' }, t.home.statsHint))),
-            h('span', { style: { transform: 'scaleX(-1)', display: 'grid' } }, icon('back', { size: 20 })),
-          ),
-          h(
-            'a',
-            { class: 'card tile', href: '#/words' },
-            h('div', { class: 'row' }, icon('book'), h('div', null, h('h2', null, t.home.bank), h('span', { class: 'small muted' }, t.home.bankCount(data.words.size)))),
-            h('span', { style: { transform: 'scaleX(-1)', display: 'grid' } }, icon('back', { size: 20 })),
-          ),
+          'nav',
+          { class: 'home-tiles', 'aria-label': t.home.bank },
+          h('a', { class: 'tile-link', href: '#/stats' }, h('span', { class: 'tile-icon' }, icon('chart')), h('span', null, h('b', null, t.nav.stats), h('small', null, t.home.statsHint))),
+          h('a', { class: 'tile-link', href: '#/words' }, h('span', { class: 'tile-icon' }, icon('book')), h('span', null, h('b', null, t.home.bank), h('small', null, t.home.bankCount(data.words.size)))),
         ),
       ),
     )
   }
 
   render()
+  // a milestone reached on another device (or before the summary was seen) is celebrated here
+  const milestone = pendingMilestone(ctx)
+  if (milestone) void celebrateStreak(milestone)
   // counts depend on the clock (cards come due, the day rolls over): refresh when the app is looked at again
   const onVisible = () => document.visibilityState === 'visible' && render()
   document.addEventListener('visibilitychange', onVisible)

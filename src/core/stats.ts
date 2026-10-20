@@ -35,7 +35,7 @@ export interface Stats {
   quiz: { attempts: number; accuracy: number | null }
 }
 
-export const STATS_DAYS = 30
+export const STATS_DAYS = 35
 export const FORECAST_DAYS = 14
 const DIFFICULT_LIMIT = 8
 

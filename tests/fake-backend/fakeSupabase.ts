@@ -21,6 +21,8 @@ const json = (body: unknown, status = 200, headers: Record<string, string> = {})
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', ...headers } })
 
 export interface FakeOptions {
+  /** New accounts start with the welcome tour (as with migration 0003). */
+  welcome?: boolean
   /** e-mail confirmation required before the first sign-in */
   confirmEmail?: boolean
   accessTokenSeconds?: number
@@ -153,6 +155,8 @@ export class FakeSupabase {
     this.tables.user_settings!.push({
       user_id: user.id, new_per_day: 10, daily_goal_minutes: 20, max_reviews_per_day: null, desired_retention: 0.9,
       theme: 'system', speech_rate: 1, autoplay_audio: false, reverse_cards: false, updated_at: this.stamp(),
+      // a database with migration 0003 welcomes new accounts; without it, the column does not exist
+      ...(this.options.welcome ? { onboarded_at: null, time_zone: null } : {}),
     })
     return user
   }

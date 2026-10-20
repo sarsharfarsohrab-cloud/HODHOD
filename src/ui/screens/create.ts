@@ -218,7 +218,7 @@ export function createScreen(ctx: Ctx, params: Record<string, string>): Screen {
 
   function renderInput(current: Extract<State, { step: 'input' }>) {
     const input = h('input', {
-      class: 'input create-input', type: 'text', value: current.value, lang: 'de', dir: 'ltr', placeholder: 'aufgeben', maxLength: 80,
+      class: 'input create-input', type: 'text', value: current.value, lang: 'de', dir: 'ltr', placeholder: 'aufgeben', maxLength: 240,
       autocapitalize: 'off', autocomplete: 'off', autocorrect: 'off', spellcheck: false, enterKeyHint: 'go',
       'aria-label': t.create.label, 'aria-describedby': 'create-help', 'aria-invalid': current.error ? 'true' : undefined,
     })
