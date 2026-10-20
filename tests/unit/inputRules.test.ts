@@ -8,7 +8,7 @@ const code = (raw: unknown) => {
 
 describe('word input', () => {
   test('accepts a single German word and trims it', () => {
-    expect(validateWordInput('  aufgeben \n')).toEqual({ ok: true, value: 'aufgeben', cacheKey: 'aufgeben' })
+    expect(validateWordInput('  aufgeben \n')).toEqual({ ok: true, value: 'aufgeben', cacheKey: 'aufgeben', kind: 'word' })
   })
   test('accepts umlauts, ß, hyphens and loanword accents', () => {
     for (const w of ['Straße', 'Äpfel', 'über', 'E-Mail', 'Café', "geht's"]) expect(code(w)).toBe('ok')
@@ -24,8 +24,17 @@ describe('word input', () => {
   test('accepts short fixed expressions', () => {
     for (const w of ['Bescheid sagen', 'auf jeden Fall', 'sich Sorgen machen', 'zum Beispiel', 'es geht um']) expect(code(w)).toBe('ok')
   })
-  test('refuses whole sentences (more than five words)', () => {
-    expect(code('ich gehe heute Abend nach Hause')).toBe('multiple_words')
+  test('accepts everyday sentences up to twenty words and keeps their punctuation', () => {
+    expect(validateWordInput('  „Kannst du mir kurz helfen?“ ')).toEqual({ ok: true, value: 'Kannst du mir kurz helfen?', cacheKey: 'kannst du mir kurz helfen', kind: 'word' })
+    expect(validateWordInput('Ich habe seit drei Tagen Fieber.')).toEqual({ ok: true, value: 'Ich habe seit drei Tagen Fieber.', cacheKey: 'ich habe seit drei tagen fieber', kind: 'sentence' })
+    expect(validateWordInput('Na, und?')).toMatchObject({ ok: true, value: 'Na, und?' })
+    expect(validateWordInput('Es ist 5 Uhr.')).toMatchObject({ ok: true, value: 'Es ist 5 Uhr.' })
+    expect(code(Array.from({ length: 21 }, () => 'Wort').join(' '))).toBe('multiple_words')
+    expect(code('Das ist ' + 'sehr '.repeat(40) + 'gut.')).toBe('too_long')
+  })
+  test('accepts dictionary placeholders in expressions', () => {
+    expect(validateWordInput('jdm. auf die Nerven gehen')).toMatchObject({ ok: true, value: 'jdm. auf die Nerven gehen', kind: 'word' })
+    expect(validateWordInput('etw. auf die lange Bank schieben')).toMatchObject({ ok: true, kind: 'sentence' })
     expect(code('eins zwei drei vier fünf')).toBe('ok')
   })
   test('rejects Persian and mixed-script input', () => {
@@ -42,7 +51,7 @@ describe('word input', () => {
     expect(code('a'.repeat(60))).toBe('ok')
   })
   test('strips quotes and trailing punctuation', () => {
-    expect(validateWordInput('„Tisch“.')).toEqual({ ok: true, value: 'Tisch', cacheKey: 'tisch' })
+    expect(validateWordInput('„Tisch“.')).toEqual({ ok: true, value: 'Tisch', cacheKey: 'tisch', kind: 'word' })
   })
   test('normalises composed characters so ä typed two ways is one word', () => {
     const decomposed = 'äpfel'

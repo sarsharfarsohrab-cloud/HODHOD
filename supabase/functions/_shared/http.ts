@@ -145,6 +145,26 @@ export function adminRest(env: FunctionEnv, fetchImpl: FetchLike) {
       if (!Number.isFinite(n)) throw new Error('count: missing content-range')
       return n
     },
+    /** Calls a database function. A function that does not exist (yet) gives `undefined`. */
+    async rpc<T>(name: string, args: Record<string, unknown>): Promise<T | undefined> {
+      const res = await fetchImpl(`${base}/rpc/${name}`, { method: 'POST', headers, body: JSON.stringify(args) })
+      if (res.status === 404) return undefined
+      if (!res.ok) throw new Error(`rpc ${name} failed: ${res.status}`)
+      const text = await res.text()
+      return (text ? JSON.parse(text) : null) as T
+    },
+    async update(path: string, patch: Record<string, unknown>): Promise<void> {
+      const res = await fetchImpl(`${base}/${path}`, {
+        method: 'PATCH',
+        headers: { ...headers, Prefer: 'return=minimal' },
+        body: JSON.stringify(patch),
+      })
+      if (!res.ok) throw new Error(`update ${path.split('?')[0]} failed: ${res.status}`)
+    },
+    async remove(path: string): Promise<void> {
+      const res = await fetchImpl(`${base}/${path}`, { method: 'DELETE', headers: { ...headers, Prefer: 'return=minimal' } })
+      if (!res.ok) throw new Error(`delete ${path.split('?')[0]} failed: ${res.status}`)
+    },
     async insert(table: string, row: Record<string, unknown>, upsertOn?: string): Promise<void> {
       const url = upsertOn ? `${base}/${table}?on_conflict=${upsertOn}` : `${base}/${table}`
       const res = await fetchImpl(url, {

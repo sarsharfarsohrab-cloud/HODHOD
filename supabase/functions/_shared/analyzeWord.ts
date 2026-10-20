@@ -16,6 +16,7 @@ import {
   type FetchLike,
   type FunctionEnv,
 } from './http.ts'
+import { checkAllowance } from './budget.ts'
 import { validateWordInput } from './inputRules.ts'
 import {
   AI_OUTPUT_SCHEMA,
@@ -23,6 +24,7 @@ import {
   aiOutputToContentInput,
   buildMessages,
   buildRepairMessage,
+  COMPATIBLE_PROMPT_VERSIONS,
   isSupportedPair,
   PROMPT_VERSION,
   type AiStatus,
@@ -94,6 +96,9 @@ export async function handleAnalyzeWord(
     }
     if (!isSupportedPair(pair)) throw new HttpError(400, 'unsupported_language', 'This language pair is not available yet')
     const force = body.force === true
+    // the meaning wanted, when a word pack is prepared from a list with translations
+    const hint = typeof body.hint === 'string' ? body.hint.normalize('NFC').replace(/\s+/g, ' ').trim().slice(0, 200) || null : null
+    const inputKey = hint ? `${input.cacheKey}|${hint.toLocaleLowerCase('de')}` : input.cacheKey
 
     const db = adminRest(env, fetchImpl)
     const started = Date.now()
@@ -111,28 +116,32 @@ export async function handleAnalyzeWord(
         })
         .catch((e) => console.error('log failed', e instanceof Error ? e.message : e))
 
-    const cacheFilter =
+    const cacheFilter = (version: string) =>
       `target_language=eq.${pair.target}&native_language=eq.${pair.native}` +
-      `&input_key=eq.${encodeURIComponent(input.cacheKey)}&prompt_version=eq.${PROMPT_VERSION}`
+      `&input_key=eq.${encodeURIComponent(inputKey)}&prompt_version=eq.${version}`
 
     if (!force) {
-      const rows = await db
-        .select<{ result: AnalyzeResult }>(`ai_word_cache?${cacheFilter}&select=result&limit=1`)
-        .catch(() => [])
-      const hit = rows[0]?.result
-      if (hit && isUsableCachedResult(hit, input.cacheKey)) {
-        await log('cache_hit')
-        return json({ ...hit, cached: true }, 200, cors)
+      // the current prompt first, then analyses made by earlier compatible prompts
+      for (const version of [PROMPT_VERSION, ...COMPATIBLE_PROMPT_VERSIONS]) {
+        const rows = await db
+          .select<{ result: AnalyzeResult }>(`ai_word_cache?${cacheFilter(version)}&select=result&limit=1`)
+          .catch(() => [])
+        const hit = rows[0]?.result
+        if (hit && (version === PROMPT_VERSION || hit.status === 'ok') && isUsableCachedResult(hit, input.cacheKey)) {
+          await log('cache_hit')
+          return json({ ...upgradeCached(hit), cached: true }, 200, cors)
+        }
       }
     }
 
-    await enforceRateLimits(db, user.id, env)
+    const allowance = await checkAllowance(db, user.id, 'analyze_word', env.perDayLimit ?? DEFAULTS.perDay)
+    if (!allowance.admin) await enforceRateLimits(db, user.id, env)
 
     if (!env.aiApiKey || !env.aiModel || !env.aiBaseUrl) throw new HttpError(500, 'not_configured', 'The AI service is not configured')
 
     let outcome: { result: AnalyzeResult; usage: Usage }
     try {
-      outcome = await generate(input.value, pair, env, fetchImpl, sleep)
+      outcome = await generate(input.value, pair, env, fetchImpl, sleep, hint)
     } catch (err) {
       const code = err instanceof HttpError ? err.code : 'internal'
       await log('error', { error_code: code })
@@ -143,7 +152,7 @@ export async function handleAnalyzeWord(
     // the same cache key. Analyse the suggested spelling straight away instead.
     if (outcome.result.status === 'misspelled' && sameKey(outcome.result.suggestion, input.cacheKey)) {
       try {
-        const again = await generate(outcome.result.suggestion, pair, env, fetchImpl, sleep)
+        const again = await generate(outcome.result.suggestion, pair, env, fetchImpl, sleep, hint)
         outcome = {
           result: again.result,
           usage: {
@@ -172,7 +181,7 @@ export async function handleAnalyzeWord(
         {
           target_language: pair.target,
           native_language: pair.native,
-          input_key: input.cacheKey,
+          input_key: inputKey,
           prompt_version: PROMPT_VERSION,
           model: env.aiModel,
           result,
@@ -191,6 +200,13 @@ export async function handleAnalyzeWord(
 function sameKey(word: string, cacheKey: string): boolean {
   const checked = validateWordInput(word)
   return checked.ok && checked.cacheKey === cacheKey
+}
+
+/** Older cached analyses get the fields added since (content version 2). */
+function upgradeCached(hit: AnalyzeResult): AnalyzeResult {
+  if (hit.status !== 'ok') return hit
+  const checked = validateWordContent(hit.content, { mode: 'ai' })
+  return checked.ok ? { ...hit, content: checked.value } : hit
 }
 
 function isUsableCachedResult(hit: AnalyzeResult, cacheKey: string): boolean {
@@ -243,8 +259,9 @@ async function generate(
   env: AnalyzeEnv,
   fetchImpl: FetchLike,
   sleep: (ms: number) => Promise<void>,
+  hint: string | null = null,
 ): Promise<{ result: AnalyzeResult; usage: Usage }> {
-  const { system, user } = buildMessages(pair, word)
+  const { system, user } = buildMessages(pair, word, hint)
   const messages: ChatMessage[] = [
     { role: 'system', content: system },
     { role: 'user', content: user },

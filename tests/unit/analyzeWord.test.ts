@@ -30,6 +30,9 @@ interface World {
   aiAuth: string[]
   cache: Map<string, unknown>
   logs: Record<string, unknown>[]
+  /** Row returned by ai_budget_status; null = database not migrated yet (function missing). */
+  budget: Record<string, unknown> | null
+  admins: Set<string>
   counts: { minute: number; day: number; global: number }
   countFails: boolean
   deletedUsers: string[]
@@ -54,6 +57,8 @@ function world(): World {
     aiAuth: [],
     cache: new Map(),
     logs: [],
+    budget: { spent_today_usd: 0, daily_usd: 1.5, user_today: 0, user_limit: null, blocked: false, account_age_hours: 500, new_user_days: 3, new_user_per_day: 30, kind_per_day: null },
+    admins: new Set(),
     counts: { minute: 0, day: 0, global: 0 },
     countFails: false,
     deletedUsers: [],
@@ -84,6 +89,14 @@ function world(): World {
         return Response.json({})
       }
       if (headers.get('apikey') !== ENV.serviceRoleKey) return new Response(null, { status: 401 })
+      if (url.pathname === '/rest/v1/rpc/ai_budget_status') {
+        if (!w.budget) return Response.json({ code: 'PGRST202' }, { status: 404 })
+        return Response.json([w.budget])
+      }
+      if (url.pathname === '/rest/v1/admins') {
+        const id = (url.searchParams.get('user_id') ?? '').replace('eq.', '')
+        return Response.json(w.admins.has(id) ? [{ user_id: id }] : [])
+      }
       if (url.pathname === '/rest/v1/ai_word_cache') {
         if ((init.method ?? 'GET') === 'GET') {
           const key = `${url.searchParams.get('input_key')}|${url.searchParams.get('prompt_version')}`
@@ -160,7 +173,7 @@ describe('analyze-word: input', () => {
   test('rejects bad input before spending anything', async () => {
     const cases: [unknown, string][] = [
       [{ word: '' }, 'empty'],
-      [{ word: 'ich gehe heute Abend nach Hause' }, 'multiple_words'],
+      [{ word: 'ich gehe heute Abend nach Hause und dann sofort ins Bett, weil ich morgen sehr früh aufstehen muss und den ganzen Tag arbeite' }, 'multiple_words'],
       [{ word: 'میز' }, 'wrong_script'],
       [{ word: 'Tisch;--' }, 'invalid_characters'],
       [{ word: 'x'.repeat(61) }, 'too_long'],
@@ -385,6 +398,77 @@ describe('analyze-word: cost control', () => {
     w.aiReplies.push(aiJson(asAiOutput(TISCH)))
     await call({ word: 'Tisch' })
     expect(w.logs[0]).toMatchObject({ user_id: USER, kind: 'analyze_word', input: 'Tisch', status: 'ok', prompt_version: PROMPT_VERSION, input_tokens: 900, output_tokens: 1400 })
+  })
+})
+
+describe('analyze-word: spending guard (migration 0003)', () => {
+  test('a blocked account cannot start a generation, but cached words still work', async () => {
+    w.budget!.blocked = true
+    const res = await call({ word: 'Tisch' })
+    expect(res.status).toBe(403)
+    expect(await errorCode(res)).toBe('account_blocked')
+    w.cache.set(`eq.tisch|eq.${PROMPT_VERSION}`, { status: 'ok', content: TISCH, inputNote: null, promptVersion: PROMPT_VERSION, model: 'm', cached: false })
+    expect((await call({ word: 'Tisch' })).status).toBe(200)
+    expect(w.aiRequests.length).toBe(0)
+  })
+  test('the daily budget in dollars stops fresh generations for everyone', async () => {
+    w.budget!.spent_today_usd = '1.51'
+    const res = await call({ word: 'Tisch' })
+    expect(res.status).toBe(429)
+    expect(((await res.json()) as { error: { scope: string } }).error.scope).toBe('budget')
+  })
+  test('brand-new accounts get a smaller daily allowance; an override from the admin wins', async () => {
+    Object.assign(w.budget!, { account_age_hours: 5, user_today: 30 })
+    expect((await call({ word: 'Tisch' })).status).toBe(429)
+    w.budget!.user_limit = 100
+    w.aiReplies.push(aiJson(asAiOutput(TISCH)))
+    expect((await call({ word: 'Tisch' })).status).toBe(200)
+  })
+  test('administrators preparing packs are not limited by budget or counters', async () => {
+    w.admins.add(USER)
+    Object.assign(w.budget!, { spent_today_usd: 99, user_today: 9999 })
+    w.counts.day = 9999
+    w.aiReplies.push(aiJson(asAiOutput(TISCH)))
+    expect((await call({ word: 'Tisch' })).status).toBe(200)
+  })
+  test('before the database is migrated the older limits still apply', async () => {
+    w.budget = null
+    w.aiReplies.push(aiJson(asAiOutput(TISCH)))
+    expect((await call({ word: 'Tisch' })).status).toBe(200)
+    w.counts.day = 200
+    expect((await call({ word: 'Lampe' })).status).toBe(429)
+  })
+})
+
+describe('analyze-word: sentences, hints and older analyses', () => {
+  test('a sentence is accepted and sent with its punctuation', async () => {
+    const sentence = { ...asAiOutput(TISCH), lemma: 'Kannst du mir kurz helfen?', pos: 'sentence', noun: null, ipa: null, synonyms: [], antonyms: [], collocations: [],
+      meanings: [{ translation: 'می‌توانی یک لحظه کمکم کنی؟', note: 'خودمانی، به دوست یا همکار', examples: [] }],
+      register: 'informal', frequency: 3, literal: null, alternatives: ['Hilfst du mir mal kurz?'], reply: { de: 'Klar, gern!', fa: 'حتماً، با کمال میل!' } }
+    w.aiReplies.push(aiJson(sentence))
+    const res = await call({ word: 'kannst du mir kurz helfen?' })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { content: { pos: string; reply: unknown; register: string; alternatives: string[] } }
+    expect(body.content).toMatchObject({ pos: 'sentence', register: 'informal', reply: { de: 'Klar, gern!' }, alternatives: ['Hilfst du mir mal kurz?'] })
+    expect(JSON.stringify(w.aiRequests[0]!.input)).toContain('kurz helfen?')
+  })
+  test('a meaning hint reaches the model and gets its own cache entry', async () => {
+    w.aiReplies.push(aiJson(asAiOutput(TISCH)), aiJson(asAiOutput(TISCH)))
+    await call({ word: 'Tisch', hint: 'میز ناهارخوری' })
+    expect(JSON.stringify(w.aiRequests[0]!.input)).toContain('میز ناهارخوری')
+    await call({ word: 'Tisch' })
+    expect(w.aiRequests.length).toBe(2)
+    expect([...w.cache.keys()].sort()).toEqual([`eq.tisch|eq.${PROMPT_VERSION}`, `eq.tisch|میز ناهارخوری|eq.${PROMPT_VERSION}`].sort())
+  })
+  test('analyses cached by the previous prompt are still served, upgraded to the current content version', async () => {
+    const old = structuredClone(TISCH) as Record<string, unknown>
+    for (const key of ['literal', 'register', 'frequency', 'alternatives', 'reply']) delete old[key]
+    old.version = 1
+    w.cache.set('eq.tisch|eq.word_analysis_v2', { status: 'ok', content: old, inputNote: null, promptVersion: 'word_analysis_v2', model: 'm', cached: false })
+    const body = (await (await call({ word: 'Tisch' })).json()) as { cached: boolean; content: Record<string, unknown> }
+    expect(body.cached).toBe(true)
+    expect(body.content).toEqual(TISCH)
+    expect(w.aiRequests.length).toBe(0)
   })
 })
 

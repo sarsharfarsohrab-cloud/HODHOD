@@ -10,10 +10,13 @@ import {
   CEFR_VALUES,
   EXAMPLE_LEVELS,
   POS_VALUES,
+  REGISTER_VALUES,
   type ValidationIssue,
 } from './wordSchema.ts'
 
-export const PROMPT_VERSION = 'word_analysis_v2'
+export const PROMPT_VERSION = 'word_analysis_v3'
+/** Earlier versions whose cached word analyses are still valid (they never contained sentences). */
+export const COMPATIBLE_PROMPT_VERSIONS = ['word_analysis_v2'] as const
 
 export interface LanguagePair {
   target: string
@@ -32,26 +35,32 @@ export type AiStatus = (typeof AI_STATUS)[number]
 
 const SYSTEM_DE_FA = `You are a careful German lexicographer and teacher writing vocabulary cards for native Persian (Farsi) speakers who are learning German.
 
-You receive ONE entry typed by a learner: a single German word, or a short fixed expression (idiom, set phrase, common collocation, verb with a fixed preposition or noun such as "Bescheid sagen", "auf jeden Fall", "sich Sorgen machen"). Return a single JSON object that follows the provided schema exactly.
+You receive ONE entry typed by a learner: a single German word, a fixed expression (idiom, set phrase, common collocation, verb with a fixed preposition or noun such as "Bescheid sagen", "auf jeden Fall", "sich Sorgen machen", "jdm. auf die Nerven gehen"), or a short everyday sentence ("Kannst du mir kurz helfen?", "Das ist mir egal."). Return a single JSON object that follows the provided schema exactly.
 
 STEP 1 — decide "status":
-- "ok": the input is a real German word (any inflected form counts) or an established fixed expression that a dictionary or textbook would list as one unit.
+- "ok": the input is a real German word (any inflected form counts), an established fixed expression that a dictionary or textbook would list as one unit, or a natural everyday German sentence (up to about 20 words) that is useful to learn as a whole. Small mistakes in a sentence (missing comma, wrong capitalisation, a wrong ending) are corrected silently in "lemma" and mentioned in "input_note".
 - "misspelled": it is clearly a typo of a German word or expression (missing umlaut, swapped letters). Put the corrected form in "suggestion". Do not analyse it.
   Capitalisation alone is NEVER a misspelling: "erfolg", "TISCH" or "Aufgeben" are "ok" and are analysed (the lemma gets the correct capitalisation). "ss" written for "ß" is not a misspelling either.
 - "wrong_language": it is from another language and not used in German.
-- "not_a_word": random letters, a name with no dictionary meaning, several unrelated words, or a free sentence that is not a fixed expression.
-For every status except "ok": lemma = "", meanings = [], noun/verb/adjective = null, lists = [], other text fields null, pos = "other", cefr = "A1".
+- "not_a_word": random letters, a name with no dictionary meaning, several unrelated words, or text that is not natural German at all.
+For every status except "ok": lemma = "", meanings = [], noun/verb/adjective/reply = null, lists = [], other text fields null, pos = "other", cefr = "A1", register = null, frequency = null.
 
 STEP 2 — when status is "ok":
 - "lemma": the dictionary form. Nouns: nominative singular WITHOUT article, capitalised ("Tisch"). Verbs: infinitive ("aufgeben"); truly reflexive verbs as "sich freuen". Adjectives: base form. Fixed expressions: the citation form with the verb in the infinitive at the end ("Bescheid sagen", "sich Sorgen machen", "auf jeden Fall"), correct capitalisation, no final punctuation.
 - If the learner typed an inflected form ("ging", "Häuser", "besser"), analyse the lemma and explain the relation in one short Persian sentence in "input_note". Otherwise "input_note" is null.
-- "pos": the most common part of speech of this word. For every fixed expression of two or more words use "phrase" (the only exception: a single reflexive verb such as "sich freuen" is a "verb"). For "phrase": noun, verb and adjective are null, "ipa" may be null, and "collocations" may be empty.
+- "pos": the most common part of speech of this word. For every fixed expression of two or more words use "phrase" (the only exception: a single reflexive verb such as "sich freuen" is a "verb"). For a complete sentence or a set conversational formula that works as a whole utterance ("Wie geht's?", "Das kannst du vergessen!", "Ich hätte gern einen Termin.") use "sentence". For "phrase" and "sentence": noun, verb and adjective are null, "ipa" may be null, and "collocations" may be empty.
+- For "sentence": "lemma" is the corrected sentence with its final punctuation; exactly ONE meaning whose "translation" is a natural, idiomatic Persian rendering of the whole sentence (what a Persian speaker would really say in that situation, not word for word); "note" says in Persian when and to whom it is said, if useful; "examples": 0 to 2 short related lines (e.g. a typical previous or next line in the same conversation) with levels "easy"/"medium", or an empty list; "synonyms"/"antonyms" are empty.
+- "register": who says it — "neutral", "informal" (friends, family), "formal" (offices, strangers, Sie), "slang" (youth/very casual) or "vulgar" (rude, offensive). Give it for phrases and sentences, and for single words whose register is not neutral; otherwise "neutral".
+- "frequency": how common this is in everyday spoken German today: 3 = very common, 2 = common, 1 = rare or old-fashioned.
+- "literal": ONLY for idioms and expressions whose meaning is not the sum of their words: a word-for-word Persian rendering in Persian script inside «» (e.g. "die Nase voll haben" → «دماغ را پُر داشتن»). null for everything else.
+- "alternatives": 0 to 3 other common German ways to say the same thing (phrases and sentences only; for single words use synonyms instead), else empty.
+- "reply": when the entry is a question, greeting, thanks or apology that typically gets an answer, one natural typical answer {"de", "fa"}; else null.
 - "cefr": the level at which a learner typically meets this word (your best estimate).
 - "ipa": IPA transcription of the lemma in standard German, without slashes or brackets.
 - "meanings": the 1 to 3 most common, practically useful meanings, most important first. Add a second or third meaning ONLY when it is genuinely common in everyday German. This is not a dictionary dump.
   - "translation": natural Persian equivalent(s), short (a few words, comma-separated synonyms allowed).
   - "note": optional short Persian hint that tells this meaning apart (register, context). null if not needed.
-  - "examples": EXACTLY three, one of each level:
+  - "examples": for words and phrases EXACTLY three, one of each level (for sentences see above):
       "easy"   — A1/A2, short main clause, present tense.
       "medium" — B1, a longer sentence, e.g. perfect tense or a subordinate clause.
       "hard"   — B2+, natural idiomatic usage.
@@ -77,9 +86,11 @@ LANGUAGE RULES:
 - All German text follows current standard orthography (ß, umlauts, noun capitalisation).
 - Never invent words, forms or meanings. If you are unsure whether a form exists, choose the standard form found in Duden.`
 
-export function buildMessages(pair: LanguagePair, word: string): { system: string; user: string } {
+export function buildMessages(pair: LanguagePair, word: string, hint?: string | null): { system: string; user: string } {
   if (!isSupportedPair(pair)) throw new Error(`unsupported language pair ${pair.target}/${pair.native}`)
-  return { system: SYSTEM_DE_FA, user: `German word: ${JSON.stringify(word)}` }
+  let user = `German entry: ${JSON.stringify(word)}`
+  if (hint) user += `\nThe meaning the learner wants (Persian or German, use it to pick the right sense; do not copy it blindly): ${JSON.stringify(hint)}`
+  return { system: SYSTEM_DE_FA, user }
 }
 
 export function buildRepairMessage(issues: ValidationIssue[]): string {
@@ -149,6 +160,11 @@ export const AI_OUTPUT_SCHEMA = obj({
   antonyms: strList,
   collocations: { type: 'array', items: obj({ de: str, fa: str }) },
   learner_note: strOrNull,
+  register: nullable({ type: 'string', enum: [...REGISTER_VALUES] }),
+  frequency: nullable({ type: 'integer', enum: [1, 2, 3] }),
+  literal: strOrNull,
+  alternatives: strList,
+  reply: nullable(obj({ de: str, fa: str })),
 })
 
 /** Maps the model's snake_case answer onto the shape `validateWordContent` expects. */
@@ -167,5 +183,10 @@ export function aiOutputToContentInput(raw: Record<string, unknown>): Record<str
     antonyms: raw.antonyms,
     collocations: raw.collocations,
     notes: raw.learner_note,
+    register: raw.register ?? null,
+    frequency: raw.frequency ?? null,
+    literal: raw.literal ?? null,
+    alternatives: raw.alternatives ?? [],
+    reply: raw.reply ?? null,
   }
 }

@@ -3,7 +3,7 @@
  * Adding another interface language means adding another object of this shape.
  */
 import type { InputErrorCode } from '../../supabase/functions/_shared/inputRules.ts'
-import type { Cefr, ExampleLevel, PartOfSpeech, ValidationIssue } from '../../supabase/functions/_shared/wordSchema.ts'
+import type { Cefr, ExampleLevel, PartOfSpeech, Register, ValidationIssue } from '../../supabase/functions/_shared/wordSchema.ts'
 import type { WordStatus } from '../core/cards.ts'
 import type { GradeNote, QuestionType, QuizKind } from '../core/quiz.ts'
 import type { Rating } from '../core/types.ts'
@@ -543,8 +543,19 @@ export const t = {
     interjection: 'صوت',
     particle: 'ادات',
     phrase: 'عبارت',
+    sentence: 'جمله',
     other: 'سایر',
   } satisfies Record<PartOfSpeech, string>,
+
+  register: {
+    neutral: 'معمولی',
+    informal: 'خودمانی',
+    formal: 'رسمی',
+    slang: 'عامیانه',
+    vulgar: 'بی‌ادبانه',
+  } satisfies Record<Register, string>,
+
+  frequency: { 1: 'کم‌کاربرد', 2: 'رایج', 3: 'خیلی رایج' } as Record<1 | 2 | 3, string>,
 
   status: {
     new: 'تازه',

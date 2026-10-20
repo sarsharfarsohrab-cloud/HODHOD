@@ -6,7 +6,7 @@
  * every user edit). Nothing that fails `validateWordContent` is ever stored.
  */
 
-export const CONTENT_VERSION = 1
+export const CONTENT_VERSION = 2
 
 export const POS_VALUES = [
   'noun',
@@ -21,6 +21,7 @@ export const POS_VALUES = [
   'interjection',
   'particle',
   'phrase',
+  'sentence',
   'other',
 ] as const
 export type PartOfSpeech = (typeof POS_VALUES)[number]
@@ -78,6 +79,15 @@ export interface AdjectiveInfo {
   superlative: string | null
 }
 
+/** How a word or expression sounds: who says it, where. */
+export const REGISTER_VALUES = ['neutral', 'informal', 'formal', 'slang', 'vulgar'] as const
+export type Register = (typeof REGISTER_VALUES)[number]
+
+export interface Reply {
+  de: string
+  fa: string
+}
+
 export interface Collocation {
   de: string
   fa: string
@@ -97,10 +107,25 @@ export interface WordContent {
   antonyms: string[]
   collocations: Collocation[]
   notes: string | null
+  // --- since content version 2 (absent in older saved words) -------------------
+  /** Word-for-word Persian rendering of an idiom ("die Nase voll haben" → «دماغ را پُر داشتن»). */
+  literal?: string | null
+  register?: Register | null
+  /** 3 very common in everyday speech, 2 common, 1 rare. */
+  frequency?: 1 | 2 | 3 | null
+  /** Other ways to say the same thing (German). */
+  alternatives?: string[]
+  /** A typical answer when the entry is a question or a greeting. */
+  reply?: Reply | null
 }
 
 export const LIMITS = {
   lemma: 60,
+  /** fixed expressions and sentences may be longer */
+  lemmaPhrase: 120,
+  lemmaSentence: 200,
+  translationSentence: 300,
+  alternatives: 5,
   meanings: 3,
   examplesPerMeaning: 6,
   listItems: 8,
@@ -168,13 +193,15 @@ export function validateWordContent(input: unknown, options: ValidateOptions): V
   const add = (path: string, code: ValidationIssue['code']) => issues.push({ path, code })
   if (!isRec(input)) return { ok: false, issues: [{ path: '', code: 'required' }] }
 
-  const lemma = text(input.lemma)
-  if (!lemma) add('lemma', 'required')
-  else if (lemma.length > LIMITS.lemma) add('lemma', 'too_long')
-  else if (!LATIN.test(lemma) || PERSIAN.test(lemma)) add('lemma', 'wrong_script')
-
   const pos = input.pos as PartOfSpeech
   if (!POS_VALUES.includes(pos)) add('pos', 'invalid_value')
+  const isSentence = pos === 'sentence'
+
+  const lemma = text(input.lemma)
+  const lemmaMax = isSentence ? LIMITS.lemmaSentence : pos === 'phrase' ? LIMITS.lemmaPhrase : LIMITS.lemma
+  if (!lemma) add('lemma', 'required')
+  else if (lemma.length > lemmaMax) add('lemma', 'too_long')
+  else if (!LATIN.test(lemma) || PERSIAN.test(lemma)) add('lemma', 'wrong_script')
 
   let cefr: Cefr | null = null
   if (input.cefr !== null && input.cefr !== undefined && input.cefr !== '') {
@@ -197,7 +224,7 @@ export function validateWordContent(input: unknown, options: ValidateOptions): V
     if (!isRec(raw)) return add(p, 'invalid_value')
     const translation = text(raw.translation)
     if (!translation) add(`${p}.translation`, 'required')
-    else if (translation.length > LIMITS.shortText) add(`${p}.translation`, 'too_long')
+    else if (translation.length > (isSentence ? LIMITS.translationSentence : LIMITS.shortText)) add(`${p}.translation`, 'too_long')
     else if (!PERSIAN.test(translation)) add(`${p}.translation`, 'wrong_script')
 
     const note = optionalText(raw.note)
@@ -221,7 +248,8 @@ export function validateWordContent(input: unknown, options: ValidateOptions): V
       else if (!PERSIAN.test(fa)) add(`${q}.fa`, 'wrong_script')
       examples.push({ level, de, fa })
     })
-    if (options.mode === 'ai') {
+    // a sentence is its own example: further examples are optional
+    if (options.mode === 'ai' && !isSentence) {
       const levels = new Set(examples.map((e) => e.level))
       if (examples.length !== EXAMPLE_LEVELS.length || levels.size !== EXAMPLE_LEVELS.length) {
         add(`${p}.examples`, 'missing_levels')
@@ -326,6 +354,40 @@ export function validateWordContent(input: unknown, options: ValidateOptions): V
   const notes = optionalText(input.notes)
   if (notes && notes.length > LIMITS.note) add('notes', 'too_long')
 
+  // --- expression details (content version 2) ----------------------------------
+  const literal = optionalText(input.literal)
+  if (literal && literal.length > LIMITS.translationSentence) add('literal', 'too_long')
+  else if (literal && !PERSIAN.test(literal)) add('literal', 'wrong_script')
+
+  let register: Register | null = null
+  if (input.register !== null && input.register !== undefined && input.register !== '') {
+    if (REGISTER_VALUES.includes(input.register as Register)) register = input.register as Register
+    else add('register', 'invalid_value')
+  }
+
+  let frequency: 1 | 2 | 3 | null = null
+  if (input.frequency !== null && input.frequency !== undefined) {
+    if (input.frequency === 1 || input.frequency === 2 || input.frequency === 3) frequency = input.frequency
+    else add('frequency', 'invalid_value')
+  }
+
+  // extra alternatives are dropped rather than refused
+  const alternatives = uniqueList(input.alternatives).filter((a) => a !== lemma)
+  if (alternatives.some((a) => a.length > LIMITS.lemmaSentence || PERSIAN.test(a) || !LATIN.test(a))) add('alternatives', 'invalid_value')
+
+  let reply: Reply | null = null
+  if (isRec(input.reply)) {
+    const de = text(input.reply.de)
+    const fa = text(input.reply.fa)
+    if (de || fa) {
+      if (!de) add('reply.de', 'required')
+      else if (de.length > LIMITS.sentence || PERSIAN.test(de)) add('reply.de', 'invalid_value')
+      if (!fa) add('reply.fa', 'required')
+      else if (fa.length > LIMITS.sentence || !PERSIAN.test(fa)) add('reply.fa', 'invalid_value')
+      reply = { de, fa }
+    }
+  }
+
   if (issues.length > 0) return { ok: false, issues }
   return {
     ok: true,
@@ -343,6 +405,11 @@ export function validateWordContent(input: unknown, options: ValidateOptions): V
       antonyms,
       collocations,
       notes,
+      literal,
+      register,
+      frequency,
+      alternatives: alternatives.slice(0, LIMITS.alternatives),
+      reply,
     },
   }
 }

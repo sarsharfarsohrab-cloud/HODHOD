@@ -481,7 +481,8 @@ export class FakeSupabase {
     this.aiCalls++
     const body = (await req.json()) as { input: { role: string; content: string }[] }
     const user = body.input.find((m) => m.role === 'user')?.content ?? ''
-    const word = JSON.parse(user.replace(/^German word: /, '')) as string
+    const first = user.split('\n')[0] ?? ''
+    const word = JSON.parse(first.replace(/^German (?:word|entry): /, '')) as string
     return this.aiReply(word)
   }
 }

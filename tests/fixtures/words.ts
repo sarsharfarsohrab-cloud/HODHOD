@@ -5,7 +5,7 @@ const three = (de: [string, string, string], fa: [string, string, string]) =>
   (['easy', 'medium', 'hard'] as const).map((level, i) => ({ level, de: de[i]!, fa: fa[i]! }))
 
 export const AUFGEBEN: WordContent = {
-  version: 1,
+  version: 2,
   lemma: 'aufgeben',
   pos: 'verb',
   cefr: 'B1',
@@ -47,10 +47,15 @@ export const AUFGEBEN: WordContent = {
   antonyms: ['weitermachen'],
   collocations: [{ de: 'die Hoffnung aufgeben', fa: 'امید را از دست دادن' }],
   notes: 'فعل جداشدنی است: پیشوند auf در جملهٔ اصلی به آخر می‌رود.',
+  literal: null,
+  register: null,
+  frequency: null,
+  alternatives: [],
+  reply: null,
 }
 
 export const TISCH: WordContent = {
-  version: 1,
+  version: 2,
   lemma: 'Tisch',
   pos: 'noun',
   cefr: 'A1',
@@ -72,10 +77,15 @@ export const TISCH: WordContent = {
   antonyms: [],
   collocations: [{ de: 'den Tisch decken', fa: 'میز را چیدن' }],
   notes: null,
+  literal: null,
+  register: null,
+  frequency: null,
+  alternatives: [],
+  reply: null,
 }
 
 export const SCHNELL: WordContent = {
-  version: 1,
+  version: 2,
   lemma: 'schnell',
   pos: 'adjective',
   cefr: 'A1',
@@ -97,6 +107,11 @@ export const SCHNELL: WordContent = {
   antonyms: ['langsam'],
   collocations: [],
   notes: null,
+  literal: null,
+  register: null,
+  frequency: null,
+  alternatives: [],
+  reply: null,
 }
 
 /** The same word in the snake_case shape the model is asked to return. */
@@ -120,6 +135,11 @@ export function asAiOutput(source: WordContent, extra: Record<string, unknown> =
     antonyms: content.antonyms,
     collocations: content.collocations,
     learner_note: content.notes,
+    register: content.register ?? null,
+    frequency: content.frequency ?? null,
+    literal: content.literal ?? null,
+    alternatives: content.alternatives ?? [],
+    reply: content.reply ?? null,
     ...extra,
   }
 }
