@@ -14,6 +14,8 @@ export function h<K extends keyof HTMLElementTagNameMap>(tag: K, props?: Props |
       if (key === 'class') el.className = String(value)
       else if (key === 'dataset') Object.assign(el.dataset, value)
       else if (key === 'style' && typeof value === 'object') Object.assign(el.style, value)
+      // a textarea has no value attribute; the property works for every form control
+      else if (key === 'value' && tag !== 'option' && tag !== 'select') (el as unknown as { value: string }).value = String(value)
       else if (key.startsWith('on') && typeof value === 'function') el.addEventListener(key.slice(2).toLowerCase(), value as EventListener)
       else if (key in el && key !== 'list' && key !== 'form' && typeof value !== 'string') (el as unknown as Record<string, unknown>)[key] = value
       else el.setAttribute(key, value === true ? '' : String(value))
@@ -78,6 +80,14 @@ const ICONS = {
   quiz: '<path d="M9.200 9a3 3 0 1 1 4.300 2.700c-.900.500-1.500 1.200-1.500 2.300"/><circle cx="12" cy="17.300" r=".600"/><rect x="3.500" y="3.500" width="17" height="17" rx="4"/>',
   chart: '<path d="M5 20V11M12 20V5M19 20v-6"/>',
   swap: '<path d="M7 8h12l-3-3M17 16H5l3 3"/>',
+  bag: '<path d="M5 8h14l-1.2 12H6.2L5 8Z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/>',
+  flag: '<path d="M6 21V4M6 4h11l-2 4 2 4H6"/>',
+  lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  shield: '<path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6l-7-3Z"/>',
+  message: '<path d="M4 5h16v11H9l-5 4V5Z"/>',
+  bell: '<path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15L6 16Z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>',
+  users: '<circle cx="9" cy="8" r="3.5"/><path d="M3 20a6 6 0 0 1 12 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3 6"/>',
+  play: '<path d="M8 5v14l11-7L8 5Z"/>',
 } as const
 
 export type IconName = keyof typeof ICONS

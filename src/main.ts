@@ -6,6 +6,7 @@ import { queueCounts } from './core/queue.ts'
 import type { Scheduler } from './core/scheduler.ts'
 import type { Settings } from './core/types.ts'
 import { AppData } from './data/appData.ts'
+import { logClientError } from './data/platform.ts'
 import { toAppError } from './data/errors.ts'
 import { openLocalDb } from './data/localDb.ts'
 import { SupabaseClient, type KeyValueStore, type Session, type SupabaseConfig } from './data/supabase.ts'
@@ -13,6 +14,7 @@ import type { Ctx, Screen, ScreenFactory } from './ui/context.ts'
 import { h, icon, replace, type IconName } from './ui/dom.ts'
 import { fa } from './ui/format.ts'
 import { mascot, preloadMascot } from './ui/mascot.ts'
+import { adminItemScreen, adminPackScreen, adminReportScreen, adminScreen } from './ui/screens/admin.ts'
 import { authScreen } from './ui/screens/auth.ts'
 import { createScreen } from './ui/screens/create.ts'
 import { homeScreen } from './ui/screens/home.ts'
@@ -20,6 +22,7 @@ import { importScreen } from './ui/screens/import.ts'
 import { quizScreen } from './ui/screens/quiz.ts'
 import { settingsScreen } from './ui/screens/settings.ts'
 import { statsScreen } from './ui/screens/stats.ts'
+import { packScreen, storeScreen } from './ui/screens/store.ts'
 import { studyScreen } from './ui/screens/study.ts'
 import { wordDetailScreen, wordEditScreen } from './ui/screens/wordDetail.ts'
 import { welcomeScreen } from './ui/screens/welcome.ts'
@@ -32,6 +35,8 @@ declare global {
     HODHOD_CONFIG?: { supabaseUrl?: string; supabaseAnonKey?: string }
   }
 }
+
+declare const __APP_VERSION__: string | undefined
 
 const root = document.getElementById('app')!
 const THEME_KEY = 'hodhod.theme'
@@ -93,6 +98,13 @@ const ROUTES: { pattern: RegExp; keys: string[]; screen: ScreenFactory; tab: str
   { pattern: /^\/stats$/, keys: [], screen: statsScreen, tab: 'home' },
   { pattern: /^\/settings$/, keys: [], screen: settingsScreen, tab: null },
   { pattern: /^\/welcome$/, keys: [], screen: welcomeScreen, tab: null },
+  { pattern: /^\/store$/, keys: [], screen: storeScreen, tab: 'home' },
+  { pattern: /^\/store\/([^/]+)$/, keys: ['id'], screen: packScreen, tab: 'home' },
+  { pattern: /^\/admin$/, keys: [], screen: adminScreen, tab: null },
+  { pattern: /^\/admin\/(overview|users|inbox|news|packs)$/, keys: ['tab'], screen: adminScreen, tab: null },
+  { pattern: /^\/admin\/packs\/([^/]+)$/, keys: ['id'], screen: adminPackScreen, tab: null },
+  { pattern: /^\/admin\/packs\/([^/]+)\/items\/([^/]+)$/, keys: ['id', 'item'], screen: adminItemScreen, tab: null },
+  { pattern: /^\/admin\/reports\/([^/]+)$/, keys: ['id'], screen: adminReportScreen, tab: null },
 ]
 
 const TABS: { id: string; path: string; label: string; icon: IconName }[] = [
@@ -282,6 +294,19 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
     () => document.removeEventListener('visibilitychange', onVisible),
     () => darkQuery.removeEventListener('change', onScheme),
   )
+
+  // unexpected errors are reported to the server log (no word data, only the message and place)
+  const appVersion = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev'
+  const onError = (event: ErrorEvent) => logClientError(client, event.error ?? event.message, appVersion)
+  const onRejection = (event: PromiseRejectionEvent) => {
+    const error = toAppError(event.reason)
+    // network trouble and expired sessions are expected, not bugs
+    if (['offline', 'timeout', 'auth', 'rate_limit'].includes(error.kind)) return
+    logClientError(client, event.reason, appVersion)
+  }
+  window.addEventListener('error', onError)
+  window.addEventListener('unhandledrejection', onRejection)
+  cleanups.push(() => window.removeEventListener('error', onError), () => window.removeEventListener('unhandledrejection', onRejection))
 
   renderChrome()
   // a brand-new account starts with the welcome tour

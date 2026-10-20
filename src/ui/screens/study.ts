@@ -9,6 +9,7 @@ import { de, h, icon, replace } from '../dom.ts'
 import { fa, faDuration, faPercent, faRelative } from '../format.ts'
 import { celebrateStreak, pendingMilestone } from '../celebrate.ts'
 import { burst, mascot, reactMascot, setMascotMood, type MascotMood } from '../mascot.ts'
+import { openReportSheet } from '../reportSheet.ts'
 import { t } from '../strings.ts'
 import { emptyState, iconButton, progressBar, speakButton, wordTitle } from '../widgets.ts'
 
@@ -39,7 +40,15 @@ interface LastAnswer {
   session: Session
 }
 
-export function studyScreen(ctx: Ctx): Screen {
+export function studyScreen(ctx: Ctx, params: Record<string, string> = {}): Screen {
+  // "review only this pack": the same schedule, limited to the cards of one store pack
+  const packId = params.pack || null
+  const pool = (): Card[] => {
+    const all = ctx.data.activeCards()
+    return packId ? all.filter((c) => ctx.data.words.get(c.wordId)?.packId === packId) : all
+  }
+  // a lesson is meant to be learned in one go, so the pack view allows a full lesson of new words
+  const queueSettings = () => (packId ? { ...ctx.data.settings, newPerDay: Math.max(ctx.data.settings.newPerDay, 20) } : ctx.data.settings)
   const el = h('main', { class: 'screen no-nav study' })
   let session: Session = { id: crypto.randomUUID(), answered: 0, recalled: 0, newSeen: 0, durationMs: 0, sinceNew: 0, run: 0, lastCardId: null, ahead: false }
   let current: { card: Card; word: Word; shownAt: number; revealed: boolean; preview: Record<Rating, SchedulingResult> | null } | null = null
@@ -50,7 +59,7 @@ export function studyScreen(ctx: Ctx): Screen {
   // One bird for the whole session, so its reactions animate instead of popping in.
   const bird = mascot('idle', { size: 76 })
 
-  const exit = () => ctx.go('/home')
+  const exit = () => ctx.go(packId ? `/store/${packId}` : '/home')
   const spoken = (word: Word) => (word.content.noun?.article ? `${word.content.noun.article} ${word.lemma}` : word.lemma)
   const speak = (word: Word) => void ctx.audio.speak(spoken(word), ctx.data.profile.activeTargetLanguage, ctx.data.settings.speechRate)
 
@@ -70,8 +79,8 @@ export function studyScreen(ctx: Ctx): Screen {
     clearTimeout(waitTimer)
     nothingYet = false
     const now = ctx.now()
-    const cards = ctx.data.activeCards()
-    let next = nextCard(cards, { settings: ctx.data.settings, now, lastCardId: session.lastCardId, sinceNew: session.sinceNew })
+    const cards = pool()
+    let next = nextCard(cards, { settings: queueSettings(), now, lastCardId: session.lastCardId, sinceNew: session.sinceNew })
     if (next.kind === 'wait' && session.ahead) {
       const learning = cards.filter((c) => c.state === 'learning' || c.state === 'relearning').sort((a, b) => a.due.localeCompare(b.due))
       const pick = learning.find((c) => c.id !== session.lastCardId) ?? learning[0]
@@ -87,7 +96,7 @@ export function studyScreen(ctx: Ctx): Screen {
     renderDone(next.counts)
   }
 
-  const countsNow = () => nextCard(ctx.data.activeCards(), { settings: ctx.data.settings, now: ctx.now() }).counts
+  const countsNow = () => nextCard(pool(), { settings: queueSettings(), now: ctx.now() }).counts
 
   function topBar(counts: QueueCounts): HTMLElement {
     const total = session.answered + counts.total
@@ -111,6 +120,14 @@ export function studyScreen(ctx: Ctx): Screen {
 
   /** The bird and, when there is something worth saying, one short line. Never covers the card. */
   const companion = () => h('div', { class: 'companion' }, bird, coach ? h('p', { class: 'bubble', role: 'status' }, coach) : null)
+
+  const backLinks = (word: Word) =>
+    h(
+      'div',
+      { class: 'row', style: { justifyContent: 'center' } },
+      h('a', { class: 'btn ghost small', href: `#/words/${word.id}` }, t.study.fullDetail),
+      h('button', { class: 'btn ghost small', type: 'button', title: t.report.button, 'aria-label': t.report.button, onclick: () => openReportSheet(ctx, { id: word.id, content: word.content }) }, icon('flag', { size: 16 })),
+    )
 
   function renderCard(counts: QueueCounts) {
     if (!current) return
@@ -160,7 +177,7 @@ export function studyScreen(ctx: Ctx): Screen {
             { class: 'flashcard-back' },
             h('div', { class: 'row', style: { justifyContent: 'center' } }, wordTitle(content, 'div'), speakButton(ctx, spoken(word))),
             example(content.meanings[0]!),
-            h('a', { class: 'btn ghost small', href: `#/words/${word.id}` }, t.study.fullDetail),
+            backLinks(word),
           )
         : h(
             'div',
@@ -168,7 +185,7 @@ export function studyScreen(ctx: Ctx): Screen {
             content.meanings.map((meaning, i) =>
               h('div', { class: 'meaning' }, meaningTitle(meaning.translation, i), meaning.note ? h('p', { class: 'small muted' }, meaning.note) : null, example(meaning)),
             ),
-            h('a', { class: 'btn ghost small', href: `#/words/${word.id}` }, t.study.fullDetail),
+            backLinks(word),
           )
       actions = h(
         'div',
@@ -307,9 +324,11 @@ export function studyScreen(ctx: Ctx): Screen {
         h('header', { class: 'study-top' }, iconButton('close', t.study.exit, exit), h('div', { class: 'grow' })),
         emptyState({
           art: mascot(hasWords ? 'happy' : 'idle', { size: 132 }),
-          title: hasWords ? t.study.emptyTitle : t.study.emptyNoWords,
-          body: counts.newWaiting > 0 ? t.home.newWaiting(counts.newWaiting) : t.study.emptyBody,
-          action: h('a', { class: 'btn primary', href: '#/create' }, icon('plus'), t.home.addWord),
+          title: packId ? t.store.nothingToStudy : hasWords ? t.study.emptyTitle : t.study.emptyNoWords,
+          body: packId ? undefined : counts.newWaiting > 0 ? t.home.newWaiting(counts.newWaiting) : t.study.emptyBody,
+          action: packId
+            ? h('a', { class: 'btn primary', href: `#/store/${packId}` }, icon('back'), t.common.back)
+            : h('a', { class: 'btn primary', href: '#/create' }, icon('plus'), t.home.addWord),
         }),
       )
     }

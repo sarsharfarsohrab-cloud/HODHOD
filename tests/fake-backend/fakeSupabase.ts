@@ -9,7 +9,9 @@
  * Nothing in /src imports this file, and it is not part of the build.
  */
 import { handleAnalyzeWord } from '../../supabase/functions/_shared/analyzeWord.ts'
+import { handleAdminActions } from '../../supabase/functions/_shared/adminActions.ts'
 import { handleDeleteAccount } from '../../supabase/functions/_shared/deleteAccount.ts'
+import { handlePlatform, PLATFORM_TABLES } from './fakePlatform.ts'
 
 type Row = Record<string, unknown>
 type User = { id: string; email: string; password: string; meta: Row }
@@ -34,6 +36,7 @@ export class FakeSupabase {
   tables: Record<string, Row[]> = {
     profiles: [], user_settings: [], words: [], cards: [], review_events: [], quiz_sessions: [], quiz_answers: [],
     ai_word_cache: [], ai_generation_logs: [],
+    ...PLATFORM_TABLES(),
   }
   /** access token → { userId, expires } */
   tokens = new Map<string, { userId: string; expires: number }>()
@@ -102,13 +105,13 @@ export class FakeSupabase {
 
   // --- helpers -------------------------------------------------------------------
 
-  private id(): string {
+  id(): string {
     this.seq++
     return `00000000-0000-4000-8000-${String(this.seq).padStart(12, '0')}`
   }
 
   /** Strictly increasing timestamps with microseconds, like Postgres. */
-  private stamp(): string {
+  stamp(): string {
     const ms = Math.max(this.now(), this.clock + 1)
     this.clock = ms
     return new Date(ms).toISOString().replace('Z', '000+00:00')
@@ -193,6 +196,7 @@ export class FakeSupabase {
         const user = this.users.find((u) => u.email === String(body.email ?? '').toLowerCase())
         if (!user || user.password !== body.password) return json({ code: 400, error_code: 'invalid_credentials', msg: 'Invalid login credentials' }, 400)
         if (user.meta.confirmed === false) return json({ code: 400, error_code: 'email_not_confirmed', msg: 'Email not confirmed' }, 400)
+        if (user.meta.banned === true) return json({ code: 400, error_code: 'user_banned', msg: 'User is banned' }, 400)
         return json(this.issue(user))
       }
       if (grant === 'refresh_token') {
@@ -218,6 +222,15 @@ export class FakeSupabase {
 
     if (path === '/logout') return new Response(null, { status: 204 })
     if (path === '/recover') return json({})
+
+    if (path.startsWith('/admin/users/') && req.method === 'PUT') {
+      if (this.userOf(req) !== 'service') return json({ msg: 'forbidden' }, 403)
+      const user = this.users.find((u) => u.id === path.split('/').pop())
+      if (!user) return json({ msg: 'not found' }, 404)
+      user.meta.banned = body.ban_duration !== 'none'
+      if (user.meta.banned) for (const [token, entry] of this.tokens) if (entry.userId === user.id) this.tokens.delete(token)
+      return json({ id: user.id })
+    }
 
     if (path.startsWith('/admin/users/') && req.method === 'DELETE') {
       if (this.userOf(req) !== 'service') return json({ msg: 'forbidden' }, 403)
@@ -247,6 +260,8 @@ export class FakeSupabase {
     if (name === 'rpc/ensure_reverse_cards') return this.ensureReverseCards(userId)
     if (name === 'rpc/save_quiz') return this.saveQuiz(userId, body ?? {})
     if (name === 'rpc/quiz_word_stats') return this.quizWordStats(userId, body ?? {})
+    const platform = await handlePlatform(this, userId, name, req, url, body)
+    if (platform) return platform
 
     const table = this.tables[name]
     if (!table) return json({ code: 'PGRST205', message: `table ${name} not found` }, 404)
@@ -314,7 +329,7 @@ export class FakeSupabase {
   }
 
   /** eq filters plus the keyset cursor `or=(updated_at.gt."X",and(updated_at.eq."X",id.gt.Y))`. */
-  private matches(row: Row, params: URLSearchParams): boolean {
+  matches(row: Row, params: URLSearchParams): boolean {
     for (const [key, value] of params) {
       if (['select', 'order', 'limit', 'offset', 'on_conflict'].includes(key)) continue
       if (key === 'or') {
@@ -338,7 +353,7 @@ export class FakeSupabase {
     return true
   }
 
-  private duplicateWord(candidate: Row, exceptId?: string): boolean {
+  duplicateWord(candidate: Row, exceptId?: string): boolean {
     return this.tables.words!.some(
       (w) => w.id !== exceptId && w.user_id === candidate.user_id && w.deleted_at === null && candidate.deleted_at == null &&
         w.target_language === candidate.target_language && w.normalized_lemma === candidate.normalized_lemma && w.pos === candidate.pos,
@@ -362,7 +377,7 @@ export class FakeSupabase {
     return json([row], 201)
   }
 
-  private createCard(userId: string, wordId: string, type: string): boolean {
+  createCard(userId: string, wordId: string, type: string): boolean {
     if (this.tables.cards!.some((c) => c.word_id === wordId && c.card_type === type)) return false
     const stamp = this.stamp()
     this.tables.cards!.push({
@@ -478,6 +493,7 @@ export class FakeSupabase {
       )
     }
     if (name === 'delete-account') return handleDeleteAccount(req, env, internal)
+    if (name === 'admin-actions') return handleAdminActions(req, env, internal)
     return json({ code: 'NOT_FOUND', message: 'Requested function was not found' }, 404)
   }
 

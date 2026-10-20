@@ -6,6 +6,8 @@ import { h, icon, replace } from '../dom.ts'
 import { fa, faDateTime, faPercent } from '../format.ts'
 import { APP_NAME, describeError, t } from '../strings.ts'
 import { openSheet, segmented } from '../widgets.ts'
+import { isAdmin } from '../../data/platform.ts'
+import { openFeedbackSheet } from '../reportSheet.ts'
 
 declare const __APP_VERSION__: string
 
@@ -28,6 +30,11 @@ export function settingsScreen(ctx: Ctx): Screen {
   // The sync card changes from outside (uploads finish, the connection drops), so it
   // refreshes on its own without rebuilding the form the learner may be typing in.
   const syncCard = h('section', { class: 'card stack' })
+  // shown only to the administrator, once the server confirms it
+  const adminLink = h('div')
+  void isAdmin(ctx.client).then((yes) => {
+    if (yes) adminLink.replaceChildren(h('a', { class: 'btn block', href: '#/admin' }, icon('shield', { size: 18 }), t.admin.entry))
+  })
   const renderSync = () => {
     const sync = ctx.data.sync
     replace(
@@ -215,6 +222,15 @@ export function settingsScreen(ctx: Ctx): Screen {
         h('h2', null, s.privacy),
         h('p', { class: 'small' }, s.privacyBody),
         h('button', { class: 'btn danger block', type: 'button', onclick: deleteAccount }, s.deleteAccount),
+      ),
+
+      h(
+        'section',
+        { class: 'card stack' },
+        h('h2', null, t.feedback.button),
+        h('p', { class: 'small' }, t.feedback.hint),
+        h('button', { class: 'btn block', type: 'button', onclick: () => openFeedbackSheet(ctx) }, icon('message', { size: 18 }), t.feedback.button),
+        adminLink,
       ),
 
       h(

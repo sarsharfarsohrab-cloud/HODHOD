@@ -6,6 +6,7 @@ import { h, icon, replace } from '../dom.ts'
 import { createEditor } from '../editor.ts'
 import { fa, faDate, faDuration, faPercent, faRelative } from '../format.ts'
 import { describeError, t } from '../strings.ts'
+import { openReportSheet } from '../reportSheet.ts'
 import { emptyState, iconButton, statusChip, tagEditor } from '../widgets.ts'
 import { conjugationCard, expressionCard, grammarCard, meaningsCard, relatedCards, wordHeader } from '../wordView.ts'
 
@@ -111,6 +112,7 @@ export function wordDetailScreen(ctx: Ctx, params: Record<string, string>): Scre
                 icon('sparkle', { size: 18 }),
                 d.regenerate,
               ),
+              h('button', { class: 'btn block', type: 'button', onclick: () => openReportSheet(ctx, { id, content: word.content }) }, icon('flag', { size: 18 }), t.report.button),
               h(
                 'button',
                 {

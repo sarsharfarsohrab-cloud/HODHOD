@@ -75,6 +75,16 @@ Bun.serve({
           aiMode = 'ok'
           configure()
           break
+        case '/__test/make-admin': {
+          const user = backend.users.find((u) => u.email === String(body.email).toLowerCase())
+          if (user) backend.tables.admins!.push({ user_id: user.id, created_at: new Date().toISOString() })
+          break
+        }
+        case '/__test/seed-user':
+          backend.seedUser(String(body.email), String(body.password), String(body.name ?? ''))
+          break
+        case '/__test/platform':
+          return Response.json(Object.fromEntries(['packs', 'pack_items', 'user_packs', 'feedback', 'card_reports', 'announcements', 'client_errors', 'user_limits', 'ai_credit_entries', 'ai_word_cache'].map((k) => [k, backend.tables[k]])))
         case '/__test/ai':
           aiMode = body.mode as typeof aiMode
           break

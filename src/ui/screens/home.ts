@@ -6,11 +6,38 @@ import { h, icon, replace, svg } from '../dom.ts'
 import { fa, faRelative, faWeekday } from '../format.ts'
 import { celebrateStreak, pendingMilestone } from '../celebrate.ts'
 import { burst, mascot, reactMascot, type MascotMood } from '../mascot.ts'
+import { announcements, type Announcement } from '../../data/platform.ts'
 import { t } from '../strings.ts'
 import { iconButton } from '../widgets.ts'
 
 /** The bird flies in the first time the home screen is shown in a session, not on every visit. */
 let arrived = false
+
+const NEWS_KEY = 'hodhod.news.seen'
+let newsRequest: Promise<Announcement[]> | null = null
+
+function seenNews(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(NEWS_KEY) ?? '[]') as string[]
+  } catch {
+    return []
+  }
+}
+
+function dismissNews(id: string): void {
+  try {
+    localStorage.setItem(NEWS_KEY, JSON.stringify([id, ...seenNews()].slice(0, 30)))
+  } catch {
+    // storage blocked: the card simply comes back next time
+  }
+}
+
+/** Asked once per app start; nothing is shown when the server has no announcements table yet. */
+async function latestNews(ctx: Ctx): Promise<Announcement | null> {
+  newsRequest ??= announcements(ctx.client).catch(() => [])
+  const seen = new Set(seenNews())
+  return (await newsRequest).find((a) => !seen.has(a.id)) ?? null
+}
 
 /** A ring that fills up with today's minutes. */
 function goalRing(ratio: number, done: boolean): SVGSVGElement {
@@ -103,6 +130,7 @@ export function homeScreen(ctx: Ctx): Screen {
 
     replace(
       el,
+      newsCard(),
       // the perch: the bird sits on an ink-blue panel striped like its own wing
       h(
         'section',
@@ -162,10 +190,28 @@ export function homeScreen(ctx: Ctx): Screen {
           { class: 'home-tiles', 'aria-label': t.home.bank },
           h('a', { class: 'tile-link', href: '#/stats' }, h('span', { class: 'tile-icon' }, icon('chart')), h('span', null, h('b', null, t.nav.stats), h('small', null, t.home.statsHint))),
           h('a', { class: 'tile-link', href: '#/words' }, h('span', { class: 'tile-icon' }, icon('book')), h('span', null, h('b', null, t.home.bank), h('small', null, t.home.bankCount(data.words.size)))),
+          h('a', { class: 'tile-link store-tile', href: '#/store' }, h('span', { class: 'tile-icon' }, icon('bag')), h('span', null, h('b', null, t.store.tile), h('small', null, t.store.tileHint))),
         ),
       ),
     )
   }
+
+  // the newest announcement from the team, shown until it is dismissed
+  let news: Announcement | null = null
+  const newsCard = () =>
+    news
+      ? h(
+          'section',
+          { class: 'card news-card', role: 'status' },
+          h('span', { class: 'tile-icon' }, icon('bell')),
+          h('div', { class: 'grow stack', style: { gap: 'var(--s1)' } }, h('b', null, news.title), news.body ? h('p', { class: 'small' }, news.body) : null),
+          h('button', { class: 'btn ghost small', type: 'button', onclick: () => { dismissNews(news!.id); news = null; render() } }, t.news.dismiss),
+        )
+      : null
+  void latestNews(ctx).then((item) => {
+    news = item
+    if (news) render()
+  })
 
   render()
   // a milestone reached on another device (or before the summary was seen) is celebrated here

@@ -925,6 +925,144 @@ await test('sentences and idioms get their own card details', async () => {
   return page
 })
 
+
+await test('admin builds a pack; a learner takes a lesson from the store', async () => {
+  const page = await newPage()
+  await signUp(page)
+  await control('make-admin', { email: 'sohrab@example.test' })
+  await page.reload()
+  await page.goto(`${BASE}/#/settings`)
+  await page.getByRole('link', { name: 'پنل مدیریت' }).click()
+
+  // money: a top-up makes the remaining credit known
+  await page.getByRole('heading', { name: 'اعتبار هوش مصنوعی' }).waitFor()
+  await page.getByLabel('مبلغ (دلار)').fill('5')
+  await page.getByRole('button', { name: 'ثبت شارژ' }).click()
+  await page.getByText('$5.00', { exact: true }).first().waitFor()
+  await noHorizontalScroll(page, 'admin overview')
+  await snap(page, 'admin-overview')
+
+  // a new pack
+  await page.getByRole('link', { name: 'بسته‌ها' }).click()
+  await page.getByLabel('عنوان', { exact: true }).fill('وسایل خانه')
+  await page.getByLabel('نشانی (حروف انگلیسی کوچک و خط تیره)').fill('home-things')
+  await page.getByRole('button', { name: 'بستهٔ تازه' }).click()
+  await page.waitForURL(/#\/admin\/packs\/[^/]+$/)
+  await page.getByText('ویرایش', { exact: true }).click()
+  await page.getByLabel('تعداد مورد در هر درس').fill('5')
+  await page.getByLabel('ایموجی').fill('🏠')
+  await page.getByRole('button', { name: 'ذخیرهٔ مشخصات' }).click()
+  await page.getByText('ذخیره شد').first().waitFor()
+
+  await page.getByLabel('افزودن فهرست').fill('die Lampe\nder Stuhl\ndas Haus | خانه\ndas Fenster\nder Tisch\nschnell\nder Stuhl')
+  await page.getByRole('button', { name: 'افزودن به فهرست' }).click()
+  await page.getByText('۶ مورد اضافه شد').waitFor()
+  let p = await control('platform')
+  assert(p.pack_items.length === 6 && p.pack_items.filter((i) => i.lesson === 2).length === 1, 'six items in lessons of five')
+  assert(p.pack_items.find((i) => i.input === 'das Haus').hint === 'خانه', 'the meaning hint is kept')
+  await page.getByRole('button', { name: /ساختن ۶ کارت/ }).click()
+  await page.getByText('۶ کارت ساخته شد').waitFor()
+  await noHorizontalScroll(page, 'pack builder')
+  await snap(page, 'admin-pack-builder')
+  await page.getByRole('button', { name: 'انتشار در فروشگاه' }).click()
+  await page.getByRole('button', { name: 'برگرداندن به پیش‌نویس' }).waitFor()
+
+  // the learner's side
+  await page.goto(`${BASE}/#/home`)
+  await page.getByRole('link', { name: /بسته‌های واژه/ }).click()
+  await page.getByText('وسایل خانه').waitFor()
+  await noHorizontalScroll(page, 'store')
+  await snap(page, 'store')
+  await page.getByText('وسایل خانه').click()
+  await page.getByRole('button', { name: 'شروع درس ۱' }).waitFor()
+  await page.getByText('این درس وقتی باز می‌شود').waitFor() // lesson 2 waits for lesson 1
+  await noHorizontalScroll(page, 'pack page')
+  await snap(page, 'pack-page')
+  await page.getByRole('button', { name: 'شروع درس ۱' }).click()
+  await page.waitForURL(/#\/study\?pack=/)
+  await page.getByRole('button', { name: 'نمایش جواب' }).waitFor()
+  const s = await state()
+  assert(s.words.length === 5 && s.words.every((w) => w.source === 'pack' && w.pack_id), 'the lesson words are in the bank, tagged with the pack')
+  await page.getByRole('button', { name: 'نمایش جواب' }).click()
+  await page.getByRole('button', { name: /خوب/ }).first().click()
+  await page.getByRole('button', { name: 'خروج' }).click()
+  await page.waitForURL(/#\/store\//)
+  await page.getByText('۰ از ۵ سبز').waitFor()
+  await page.getByRole('link', { name: 'مرور همین بسته' }).waitFor()
+  await snap(page, 'pack-progress')
+
+  // someone else cannot open the panel
+  const other = await newPage()
+  await signUp(other, { email: 'nahid@example.test', name: 'ناهید' })
+  await other.goto(`${BASE}/#/admin`)
+  await other.getByText('این بخش فقط برای مدیر است.').waitFor()
+  await other.goto(`${BASE}/#/store`)
+  await other.getByText('وسایل خانه').waitFor()
+  await other.context().close()
+  lastPage = page
+  return page
+})
+
+await test('a wrong card is reported and fixed for everyone from the admin inbox', async () => {
+  const page = await newPage()
+  await signUp(page)
+  await createWord(page, 'schnell')
+  await page.getByRole('button', { name: 'گزارش اشکال این کارت' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'مثال‌ها' }).click()
+  await page.getByLabel('توضیح (اختیاری)').fill('مثال اول ساده نیست')
+  await snap(page, 'report-sheet')
+  await page.getByRole('button', { name: 'فرستادن گزارش' }).click()
+  await page.getByText('ممنون! گزارشت رسید').waitFor()
+
+  await page.goto(`${BASE}/#/settings`)
+  await page.getByRole('button', { name: 'گزارش مشکل یا پیشنهاد' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'پیشنهاد' }).click()
+  await page.getByRole('dialog').locator('textarea').fill('حالت شب بیشتر')
+  await page.getByRole('button', { name: 'فرستادن', exact: true }).click()
+  await page.getByText('ممنون! پیامت رسید.').waitFor()
+  let p = await control('platform')
+  assert(p.card_reports[0].reason === 'example' && p.card_reports[0].lemma === 'schnell', 'the report is stored')
+  assert(p.feedback[0].kind === 'idea' && p.feedback[0].message === 'حالت شب بیشتر', 'the idea is stored')
+
+  await control('make-admin', { email: 'sohrab@example.test' })
+  await control('seed-user', { email: 'nahid@example.test', password: 'secret123', name: 'ناهید' })
+  await page.reload()
+  await page.goto(`${BASE}/#/admin/inbox`)
+  await page.getByText('حالت شب بیشتر').waitFor()
+  await noHorizontalScroll(page, 'admin inbox')
+  await snap(page, 'admin-inbox')
+  await page.getByRole('link', { name: 'درست کردن کارت' }).click()
+  await page.locator('[data-path="meanings.0.translation"]').fill('تند، چابک')
+  await page.getByRole('button', { name: 'ذخیره برای همه' }).click()
+  await page.getByText('کارت مشترک درست شد').waitFor()
+  p = await control('platform')
+  assert(p.card_reports[0].status === 'fixed', 'the report is closed')
+  assert(p.ai_word_cache.some((c) => c.result.content.meanings[0].translation === 'تند، چابک'), 'the shared card is corrected')
+
+  // users: block someone
+  await page.goto(`${BASE}/#/admin/users`)
+  await page.getByText('nahid@example.test').waitFor()
+  await snap(page, 'admin-users')
+  await page.locator('.user-card', { hasText: 'nahid@example.test' }).getByRole('button', { name: 'مسدود کردن' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'مسدود کردن' }).click()
+  await page.getByText('مسدود شد', { exact: true }).waitFor()
+  p = await control('platform')
+  assert(p.user_limits.some((l) => l.blocked === true), 'the account is blocked for the AI too')
+
+  // announcement: shown once on the home screen
+  await page.goto(`${BASE}/#/admin/news`)
+  await page.getByLabel('عنوان').fill('بسته‌های تازه آمد!')
+  await page.getByRole('button', { name: 'انتشار اطلاعیه' }).click()
+  await page.getByText('منتشر شد').waitFor()
+  await page.reload()
+  await page.goto(`${BASE}/#/home`)
+  await page.getByText('بسته‌های تازه آمد!').waitFor()
+  await snap(page, 'home-news')
+  await page.getByRole('button', { name: 'دیدم' }).click()
+  await page.getByText('بسته‌های تازه آمد!').waitFor({ state: 'detached' })
+  return page
+})
+
 // ---------------------------------------------------------------------------------------------
 
 await browser.close()
