@@ -55,6 +55,7 @@ export interface SettingsRow {
   reverse_cards?: boolean
   // since migration 0003
   ai_voice?: boolean
+  ai_voice_gender?: 'female' | 'male'
   time_zone?: string | null
   onboarded_at?: string | null
   notify_daily?: boolean
@@ -129,6 +130,7 @@ export const settingsFromRow = (r: SettingsRow): Settings => ({
   autoplayAudio: r.autoplay_audio,
   reverseCards: r.reverse_cards === true,
   aiVoice: r.ai_voice ?? DEFAULT_SETTINGS.aiVoice,
+  aiVoiceGender: r.ai_voice_gender === 'male' ? 'male' : 'female',
   timeZone: r.time_zone ?? null,
   // a database without the column (before migration 0003) never shows the welcome tour
   onboarded: !('onboarded_at' in r) || r.onboarded_at !== null,
@@ -150,6 +152,7 @@ export function settingsToRow(patch: Partial<Settings>): Record<string, unknown>
   if (patch.autoplayAudio !== undefined) row.autoplay_audio = patch.autoplayAudio
   if (patch.reverseCards !== undefined) row.reverse_cards = patch.reverseCards
   if (patch.aiVoice !== undefined) row.ai_voice = patch.aiVoice
+  if (patch.aiVoiceGender !== undefined) row.ai_voice_gender = patch.aiVoiceGender
   if (patch.timeZone !== undefined) row.time_zone = patch.timeZone
   if (patch.onboarded !== undefined) row.onboarded_at = patch.onboarded ? new Date().toISOString() : null
   if (patch.notifyDaily !== undefined) row.notify_daily = patch.notifyDaily

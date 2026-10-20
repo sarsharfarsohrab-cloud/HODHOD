@@ -1063,6 +1063,95 @@ await test('a wrong card is reported and fixed for everyone from the admin inbox
   return page
 })
 
+await test('natural voice: generated once, then played from the saved file; the phone voice when switched off', async () => {
+  const page = await newPage()
+  await signUp(page)
+  await createWord(page, 'der Tisch')
+  const played = () => page.evaluate(() => performance.getEntriesByType('resource').filter((e) => e.name.includes('/storage/v1/object/public/tts/')).length)
+  await page.getByRole('button', { name: /^پخش تلفظ/ }).first().click()
+  await page.waitForFunction(() => performance.getEntriesByType('resource').some((e) => e.name.includes('/storage/v1/object/public/tts/')))
+  let p = await control('platform')
+  assert(p.tts_cache.length === 1 && p.ttsCalls === 1, 'the recording is made once')
+  await page.waitForTimeout(600)
+  await page.getByRole('button', { name: /^پخش تلفظ/ }).first().click()
+  await page.waitForTimeout(600)
+  p = await control('platform')
+  assert(p.ttsCalls === 1, 'the second play needs no server call')
+
+  // a male voice is a different recording
+  await page.goto(`${BASE}/#/settings`)
+  await page.getByRole('heading', { name: 'یادآوری‌ها' }).waitFor()
+  await page.getByText('این مرورگر اعلان پشتیبانی نمی‌کند.').waitFor() // the test server is plain http
+  await page.getByRole('button', { name: 'صدای مرد' }).click()
+  await page.waitForFunction(() => performance.getEntriesByType('resource').filter((e) => e.name.includes('/storage/v1/object/public/tts/')).length >= 2)
+  p = await control('platform')
+  assert(p.tts_cache.length === 2, 'female and male recordings are kept apart')
+  await snap(page, 'settings-voice')
+
+  // switched off: no server call at all
+  await page.getByText('صدای طبیعی (هوش مصنوعی)').click()
+  await page.getByRole('button', { name: 'امتحان صدا' }).click()
+  await page.waitForTimeout(500)
+  assert((await control('platform')).ttsCalls === 2, 'with the natural voice off nothing is generated')
+  assert((await played()) >= 2, 'the saved recordings were played')
+  return page
+})
+
+await test('a newer version offers a reload', async () => {
+  const page = await newPage()
+  await signUp(page)
+  await page.evaluate(() => window.dispatchEvent(new Event('hodhod:update-ready')))
+  await page.getByText('نسخهٔ تازهٔ هدهد آمد!').waitFor()
+  await noHorizontalScroll(page, 'update banner')
+  await snap(page, 'update-banner')
+  await page.getByRole('button', { name: 'تازه کن' }).click()
+  await page.waitForLoadState('load')
+  await page.getByRole('heading', { name: /سهراب/ }).waitFor()
+  assert((await page.locator('.update-banner').count()) === 0, 'the banner is gone after reloading')
+  return page
+})
+
+await test('an Anki deck comes in as cards, and the bank goes out for Anki', async () => {
+  const page = await newPage()
+  await signUp(page)
+  await createWord(page, 'der Tisch') // already in the bank: not imported twice
+  await page.goto(`${BASE}/#/import`)
+  await page.getByRole('link', { name: 'وارد کردن از Anki یا Quizlet' }).click()
+  await page.locator('#deck-file').setInputFiles(join(here, '..', 'fixtures', 'anki-deck.txt'))
+  await page.getByText('۴ کارت پیدا شد').waitFor()
+  await page.getByText('از قبل در بانک واژه هست').waitFor()
+  await noHorizontalScroll(page, 'deck preview')
+  await snap(page, 'deck-preview')
+
+  // complete cards with the AI: the German side goes to the list import
+  await page.getByRole('button', { name: /کارت کامل با هوش مصنوعی/ }).click()
+  await page.waitForURL(/#\/import$/)
+  const list = await page.getByLabel('لیست لغت‌ها').inputValue()
+  assert(list.includes('die Lampe') && list.includes('Bescheid sagen') && !list.includes('der Tisch'), 'the new German entries are filled in')
+
+  // or as they are, without the AI
+  await page.goto(`${BASE}/#/import/deck`)
+  await page.getByLabel('یا متن را اینجا بچسبان').fill('die Lampe\tچراغ\nBescheid sagen\tخبر دادن\nKannst du mir helfen?\tمی‌توانی کمکم کنی؟')
+  await page.getByRole('button', { name: 'خواندن متن' }).click()
+  await page.getByRole('button', { name: 'وارد کردن ۳ کارت' }).click()
+  await page.getByText('۳ کارت به بانک واژه اضافه شد').waitFor()
+  await page.waitForURL(/#\/words$/)
+  await page.getByText('خبر دادن').waitFor()
+  const s = await state()
+  const lampe = s.words.find((w) => w.lemma === 'Lampe')
+  assert(lampe && lampe.pos === 'noun' && lampe.content.noun.article === 'die' && lampe.source === 'import' && lampe.tags.includes('Anki'), 'nouns keep their article')
+  assert(s.cards.length === 4, 'every imported word got its card')
+
+  // export for Anki
+  await page.goto(`${BASE}/#/settings`)
+  const download = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'خروجی برای Anki' }).click()
+  const file = await download
+  const text = await (await import('node:fs/promises')).readFile(await file.path(), 'utf8')
+  assert(text.startsWith('#separator:tab') && text.includes('die Lampe\tچراغ'), 'the export is an Anki text file')
+  return page
+})
+
 // ---------------------------------------------------------------------------------------------
 
 await browser.close()

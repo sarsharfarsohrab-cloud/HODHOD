@@ -73,4 +73,41 @@ sw.addEventListener('fetch', (event) => {
   )
 })
 
+// --- reminders (Web Push) ---------------------------------------------------------------
+
+sw.addEventListener('push', (event) => {
+  let message: { title?: string; body?: string; url?: string; tag?: string } = {}
+  try {
+    message = event.data?.json() ?? {}
+  } catch {
+    message = { body: event.data?.text() }
+  }
+  event.waitUntil(
+    sw.registration.showNotification(message.title || 'هدهد', {
+      body: message.body ?? '',
+      tag: message.tag,
+      icon: './icons/icon-192.png',
+      badge: './icons/icon-192.png',
+      lang: 'fa',
+      dir: 'rtl',
+      data: { url: message.url ?? './#/home' },
+    }),
+  )
+})
+
+sw.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const target = new URL((event.notification.data as { url?: string } | null)?.url ?? './#/home', sw.registration.scope).href
+  event.waitUntil(
+    sw.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (windows) => {
+      const open = windows.find((w) => w.url.startsWith(sw.registration.scope))
+      if (open) {
+        await open.focus()
+        return void (await open.navigate(target).catch(() => undefined))
+      }
+      await sw.clients.openWindow(target)
+    }),
+  )
+})
+
 export {}

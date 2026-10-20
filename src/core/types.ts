@@ -63,6 +63,7 @@ export interface Settings {
   reverseCards: boolean
   /** Natural (AI) voice instead of the phone's own voice. */
   aiVoice: boolean
+  aiVoiceGender: 'female' | 'male'
   /** IANA time zone of the device, used for reminders and streaks. */
   timeZone: string | null
   /** False until the welcome tour was finished or skipped. */
@@ -86,6 +87,7 @@ export const DEFAULT_SETTINGS: Settings = {
   autoplayAudio: false,
   reverseCards: false,
   aiVoice: true,
+  aiVoiceGender: 'female',
   timeZone: null,
   onboarded: true,
   notifyDaily: false,

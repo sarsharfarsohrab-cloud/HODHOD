@@ -10,12 +10,15 @@ import { asAiOutput, AUFGEBEN, SCHNELL, TISCH } from '../fixtures/words.ts'
 const dist = join(import.meta.dir, '..', '..', 'dist')
 const port = Number(process.env.PORT ?? 4174)
 
-let backend = new FakeSupabase()
+const ORIGIN = `http://localhost:${port}`
+const speech = new Uint8Array(await Bun.file(join(import.meta.dir, '..', 'fixtures', 'speech.mp3')).arrayBuffer())
+let backend = new FakeSupabase({ origin: ORIGIN })
 let aiMode: 'ok' | 'error' | 'invalid' | 'slow' = 'ok'
 
 const empty = { lemma: '', meanings: [], noun: null, verb: null, adjective: null, pos: 'other', cefr: 'A1' }
 
 function configure() {
+  backend.speechAudio = speech
   backend.aiReply = async (word) => {
     if (aiMode === 'slow') await new Promise((r) => setTimeout(r, 1500))
     if (aiMode === 'error') return new Response('upstream down', { status: 503 })
@@ -71,7 +74,7 @@ Bun.serve({
       const body = req.method === 'POST' ? ((await req.json().catch(() => ({}))) as Record<string, unknown>) : {}
       switch (path) {
         case '/__test/reset':
-          backend = new FakeSupabase({ confirmEmail: body.confirmEmail === true, welcome: body.welcome === true })
+          backend = new FakeSupabase({ origin: ORIGIN, confirmEmail: body.confirmEmail === true, welcome: body.welcome === true })
           aiMode = 'ok'
           configure()
           break
@@ -84,7 +87,7 @@ Bun.serve({
           backend.seedUser(String(body.email), String(body.password), String(body.name ?? ''))
           break
         case '/__test/platform':
-          return Response.json(Object.fromEntries(['packs', 'pack_items', 'user_packs', 'feedback', 'card_reports', 'announcements', 'client_errors', 'user_limits', 'ai_credit_entries', 'ai_word_cache'].map((k) => [k, backend.tables[k]])))
+          return Response.json({ ttsCalls: backend.requests.filter((r) => r === 'POST /functions/v1/tts').length, ...Object.fromEntries(['packs', 'pack_items', 'user_packs', 'feedback', 'card_reports', 'announcements', 'client_errors', 'user_limits', 'ai_credit_entries', 'ai_word_cache', 'tts_cache'].map((k) => [k, backend.tables[k]])) })
         case '/__test/ai':
           aiMode = body.mode as typeof aiMode
           break
@@ -125,7 +128,7 @@ Bun.serve({
       return Response.json({ ok: true })
     }
 
-    if (/^\/(auth|rest|functions|openai)\//.test(path)) {
+    if (/^\/(auth|rest|functions|openai|storage)\//.test(path)) {
       if (backend.offline) return new Response(null, { status: 503 }) // the browser is taken offline separately
       if (backend.latencyMs) await new Promise((r) => setTimeout(r, backend.latencyMs))
       return backend.handle(new Request(`${backend.origin}${path}${url.search}`, { method: req.method, headers: req.headers, body: req.method === 'GET' || req.method === 'HEAD' ? undefined : await req.arrayBuffer() }))

@@ -3508,3 +3508,67 @@ button.quiz-option:hover {
 .center {
   text-align: center;
 }
+
+/* a newer version is ready */
+.update-banner {
+  position: fixed;
+  z-index: 60;
+  inset-inline: var(--s3);
+  top: calc(var(--s3) + env(safe-area-inset-top));
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  max-width: 520px;
+  margin-inline: auto;
+  padding: var(--s2) var(--s3);
+  border-radius: var(--r-lg);
+  background: var(--perch);
+  color: var(--on-perch);
+  box-shadow: 0 12px 30px -12px rgb(19 17 39 / 60%);
+  animation: rise var(--base, 240ms) var(--ease, ease-out);
+}
+.update-banner b {
+  display: block;
+  font-size: var(--text-sm);
+}
+.update-banner small {
+  display: block;
+  color: var(--on-perch-2);
+  font-size: var(--text-xs);
+}
+.update-banner .icon-btn {
+  color: var(--on-perch-2);
+}
+
+/* import from Anki / Quizlet */
+.how-list {
+  margin: var(--s2) 0 0;
+  padding-inline-start: var(--s5);
+  line-height: 1.9;
+}
+.deck-counts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2) var(--s4);
+}
+.deck-counts b {
+  font-size: var(--text-lg);
+}
+.deck-preview {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.deck-preview li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s3);
+  padding: var(--s2) 0;
+  border-bottom: 1px solid var(--line);
+}
+.deck-preview li:last-child {
+  border-bottom: 0;
+}

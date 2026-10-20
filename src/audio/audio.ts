@@ -16,11 +16,13 @@ export interface AudioProvider {
   canSpeak(lang: string): boolean
   speak(request: SpeakRequest): Promise<void>
   stop(): void
+  /** Optional: get the sound ready before it is asked for. */
+  prefetch?(text: string): void
 }
 
 export const LANGUAGE_TAGS: Record<string, string> = { de: 'de-DE', en: 'en-US', fr: 'fr-FR', fa: 'fa-IR' }
 
-/** Tries providers in order and uses the first that can speak the language. */
+/** Tries providers in order; when one fails (offline, no credit), the next one speaks instead. */
 export class AudioPlayer {
   private active: AudioProvider | null = null
   constructor(private readonly providers: readonly AudioProvider[]) {}
@@ -30,23 +32,37 @@ export class AudioPlayer {
     return this.providers.some((p) => p.canSpeak(lang))
   }
 
+  private generation = 0
+
   async speak(text: string, languageCode: string, rate: number): Promise<boolean> {
     const lang = LANGUAGE_TAGS[languageCode] ?? languageCode
-    const provider = this.providers.find((p) => p.canSpeak(lang))
-    if (!provider || !text.trim()) return false
+    if (!text.trim()) return false
     this.stop()
-    this.active = provider
-    try {
-      await provider.speak({ text, lang, rate })
-      return true
-    } catch {
-      return false
-    } finally {
-      if (this.active === provider) this.active = null
+    const run = ++this.generation
+    for (const provider of this.providers) {
+      if (!provider.canSpeak(lang)) continue
+      this.active = provider
+      try {
+        await provider.speak({ text, lang, rate })
+        return true
+      } catch {
+        // try the next provider, unless something else started playing meanwhile
+        if (run !== this.generation) return false
+      } finally {
+        if (this.active === provider) this.active = null
+      }
     }
+    return false
+  }
+
+  /** Prepares the sound for a text that is likely to be played soon. */
+  prefetch(text: string, languageCode: string): void {
+    const lang = LANGUAGE_TAGS[languageCode] ?? languageCode
+    this.providers.find((p) => p.canSpeak(lang))?.prefetch?.(text)
   }
 
   stop(): void {
+    this.generation++
     this.active?.stop()
     this.active = null
   }

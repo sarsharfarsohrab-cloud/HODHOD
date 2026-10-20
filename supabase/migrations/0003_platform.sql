@@ -30,6 +30,7 @@ alter table public.user_settings
   add column time_zone text check (time_zone is null or char_length(time_zone) <= 64),
   add column onboarded_at timestamptz,
   add column ai_voice boolean not null default true,
+  add column ai_voice_gender text not null default 'female' check (ai_voice_gender in ('female', 'male')),
   add column notify_daily boolean not null default false,
   add column notify_time text not null default '20:00' check (notify_time ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'),
   add column notify_streak boolean not null default true,

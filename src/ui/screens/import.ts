@@ -55,6 +55,12 @@ interface ImportSession {
 
 let session: ImportSession | null = null
 
+/** Opens the list import with text already filled in (e.g. the German side of an Anki deck). */
+export function prefillImport(owner: AppData, text: string, tags: string[]): void {
+  if (session?.running) session.stop?.abort()
+  session = { ...freshSession(owner), text, tags }
+}
+
 function freshSession(owner: AppData): ImportSession {
   return { owner, step: 'input', text: '', tags: [], items: [], running: false, stoppedBecause: null, waitingForLimit: false, listeners: new Set(), stop: null }
 }
@@ -186,6 +192,7 @@ export function importScreen(ctx: Ctx): Screen {
         area,
         error ? h('p', { class: 'error-text', role: 'alert' }, error) : null,
         h('p', { class: 'notice' }, icon('info', { size: 18 }), h('span', null, t.import.scanTip)),
+        h('a', { class: 'btn block', href: '#/import/deck' }, icon('download', { size: 18 }), t.deck.entry),
         h('div', { class: 'stack' }, h('span', { class: 'label' }, t.import.tagLabel), tagEditor(ctx, s.tags, (tags) => (s.tags = tags))),
         h('button', { class: 'btn primary big block', type: 'submit' }, t.import.check),
       ),

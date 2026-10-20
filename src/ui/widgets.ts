@@ -232,3 +232,17 @@ export function tagEditor(ctx: Ctx, initial: readonly string[], onChange: (tags:
   render()
   return el
 }
+
+/** Hands a file to the learner: the share sheet where downloads are impossible (installed iPhone app), a download elsewhere. */
+export async function saveFile(file: File): Promise<void> {
+  if (navigator.canShare?.({ files: [file] })) {
+    await navigator.share({ files: [file] }).catch(() => undefined)
+    return
+  }
+  const url = URL.createObjectURL(file)
+  const link = h('a', { href: url, download: file.name })
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 10_000)
+}

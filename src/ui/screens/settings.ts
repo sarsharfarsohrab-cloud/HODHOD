@@ -5,9 +5,12 @@ import type { Ctx, Screen } from '../context.ts'
 import { h, icon, replace } from '../dom.ts'
 import { fa, faDateTime, faPercent } from '../format.ts'
 import { APP_NAME, describeError, t } from '../strings.ts'
-import { openSheet, segmented } from '../widgets.ts'
+import { openSheet, saveFile, segmented } from '../widgets.ts'
+import { exportDeck } from '../../core/deckImport.ts'
 import { isAdmin } from '../../data/platform.ts'
 import { openFeedbackSheet } from '../reportSheet.ts'
+import { disablePush, enablePush, pushState, sendTestPush } from '../../data/push.ts'
+import { localTimeZone } from '../../core/time.ts'
 
 declare const __APP_VERSION__: string
 
@@ -30,6 +33,72 @@ export function settingsScreen(ctx: Ctx): Screen {
   // The sync card changes from outside (uploads finish, the connection drops), so it
   // refreshes on its own without rebuilding the form the learner may be typing in.
   const syncCard = h('section', { class: 'card stack' })
+  // reminders depend on the device (permission, home-screen app), so the card renders itself
+  const remindersCard = h('section', { class: 'card stack reminders' })
+  const r = t.reminders
+  const renderReminders = async () => {
+    const state = await pushState()
+    const settings = ctx.data.settings
+    const toggle = (label: string, checked: boolean, onChange: (v: boolean) => void) =>
+      h('label', { class: 'switch' }, h('span', null, label), h('input', { type: 'checkbox', checked, onchange: (e: Event) => onChange((e.target as HTMLInputElement).checked) }))
+    const turnOn = h('button', { class: 'btn primary block', type: 'button' }, icon('bell', { size: 18 }), r.turnOn)
+    turnOn.onclick = async () => {
+      turnOn.disabled = true
+      try {
+        const next = await enablePush(ctx.client)
+        if (next === 'on') {
+          await ctx.data.updateSettings({ notifyDaily: true, timeZone: localTimeZone() })
+          ctx.toast(r.enabled)
+        } else if (next === 'denied') ctx.toast(r.denied, 'error')
+      } catch (err) {
+        ctx.toast(describeError(toAppError(err)), 'error')
+      }
+      void renderReminders()
+    }
+    const parts: (Node | null)[] = [h('h2', null, r.title)]
+    if (state === 'unsupported') parts.push(h('p', { class: 'small muted' }, r.unsupported))
+    else if (state === 'needs-install') parts.push(h('p', { class: 'notice' }, icon('info', { size: 18 }), h('span', null, r.needsInstall)))
+    else if (state === 'denied') parts.push(h('p', { class: 'notice warn' }, icon('info', { size: 18 }), h('span', null, r.deniedHelp)))
+    else if (state === 'off') parts.push(h('p', { class: 'small' }, r.offBody), turnOn)
+    else {
+      const time = h('input', {
+        class: 'input', type: 'time', value: settings.notifyTime, dir: 'ltr', step: '900', 'aria-label': r.dailyTime, disabled: !settings.notifyDaily,
+        onchange: (e: Event) => {
+          const value = (e.target as HTMLInputElement).value
+          if (/^\d{2}:\d{2}$/.test(value)) update({ notifyTime: value, timeZone: localTimeZone() }, false)
+        },
+      })
+      const test = h('button', { class: 'btn small', type: 'button' }, icon('bell', { size: 16 }), r.test)
+      test.onclick = async () => {
+        test.disabled = true
+        try {
+          const sent = await sendTestPush(ctx.client)
+          ctx.toast(sent > 0 ? r.testSent : r.testNone, sent > 0 ? 'info' : 'error')
+        } catch (err) {
+          ctx.toast(describeError(toAppError(err)), 'error')
+        }
+        test.disabled = false
+      }
+      const off = h('button', { class: 'btn small ghost', type: 'button' }, r.turnOff)
+      off.onclick = async () => {
+        off.disabled = true
+        await disablePush(ctx.client)
+        void renderReminders()
+      }
+      parts.push(
+        toggle(r.daily, settings.notifyDaily, (v) => { update({ notifyDaily: v, timeZone: localTimeZone() }, false); time.disabled = !v }),
+        h('label', { class: 'field' }, h('span', null, r.dailyTime), time),
+        h('p', { class: 'help' }, r.dailyHelp),
+        toggle(r.streak, settings.notifyStreak, (v) => update({ notifyStreak: v }, false)),
+        toggle(r.updates, settings.notifyUpdates, (v) => update({ notifyUpdates: v }, false)),
+        h('p', { class: 'help' }, r.limitHelp),
+        h('div', { class: 'row wrap' }, test, off),
+      )
+    }
+    replace(remindersCard, ...parts)
+  }
+  void renderReminders()
+
   // shown only to the administrator, once the server confirms it
   const adminLink = h('div')
   void isAdmin(ctx.client).then((yes) => {
@@ -50,6 +119,21 @@ export function settingsScreen(ctx: Ctx): Screen {
       h('button', { class: 'btn block', type: 'button', disabled: sync.syncing || !sync.online, onclick: () => void ctx.data.syncNow() }, icon('refresh', { size: 18 }), s.syncNow),
       h('button', { class: 'btn block', type: 'button', onclick: (e: Event) => void exportData(e.currentTarget as HTMLButtonElement) }, icon('download', { size: 18 }), s.export),
       h('p', { class: 'help' }, s.exportHelp),
+      h(
+        'button',
+        {
+          class: 'btn block',
+          type: 'button',
+          onclick: () => {
+            const words = [...ctx.data.words.values()].filter((w) => !w.deletedAt)
+            void saveFile(new File([exportDeck(words)], `hodhod-anki-${new Date().toISOString().slice(0, 10)}.txt`, { type: 'text/plain' }))
+          },
+        },
+        icon('download', { size: 18 }),
+        t.deck.export,
+      ),
+      h('a', { class: 'btn block', href: '#/import/deck' }, icon('download', { size: 18 }), t.deck.entry),
+      h('p', { class: 'help' }, t.deck.exportHelp),
     )
   }
 
@@ -188,10 +272,29 @@ export function settingsScreen(ctx: Ctx): Screen {
                 }),
                 h('button', { class: 'btn small', type: 'button', onclick: () => void ctx.audio.speak('Guten Tag! Wie geht es Ihnen?', data.profile.activeTargetLanguage, ctx.data.settings.speechRate) }, icon('speaker', { size: 18 }), s.audioTest),
               ),
+              h(
+                'div',
+                { class: 'setting' },
+                h('label', { class: 'switch' }, h('span', null, s.aiVoice), h('input', { type: 'checkbox', checked: settings.aiVoice, onchange: (e: Event) => update({ aiVoice: (e.target as HTMLInputElement).checked }) })),
+                h('p', { class: 'help' }, s.aiVoiceHelp),
+                settings.aiVoice
+                  ? segmented<'female' | 'male'>(
+                      [{ value: 'female', label: s.voiceFemale }, { value: 'male', label: s.voiceMale }],
+                      settings.aiVoiceGender,
+                      (aiVoiceGender) => {
+                        update({ aiVoiceGender }, false)
+                        void ctx.audio.speak('Guten Tag! Wie geht es Ihnen?', data.profile.activeTargetLanguage, ctx.data.settings.speechRate)
+                      },
+                      s.aiVoice,
+                    )
+                  : null,
+              ),
               h('div', { class: 'setting' }, h('label', { class: 'switch' }, h('span', null, s.autoplay), h('input', { type: 'checkbox', checked: settings.autoplayAudio, onchange: (e: Event) => update({ autoplayAudio: (e.target as HTMLInputElement).checked }, false) }))),
             ]
           : h('p', { class: 'muted' }, s.audioUnavailable),
       ),
+
+      remindersCard,
 
       h(
         'section',
@@ -257,18 +360,7 @@ export function settingsScreen(ctx: Ctx): Screen {
     button.disabled = true
     try {
       const dump = await ctx.data.exportData()
-      const file = new File([JSON.stringify(dump, null, 2)], `hodhod-${new Date().toISOString().slice(0, 10)}.json`, { type: 'application/json' })
-      // An installed iPhone app cannot "download"; the share sheet lets the learner save the file.
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file] }).catch(() => undefined)
-      } else {
-        const url = URL.createObjectURL(file)
-        const link = h('a', { href: url, download: file.name })
-        document.body.appendChild(link)
-        link.click()
-        link.remove()
-        setTimeout(() => URL.revokeObjectURL(url), 10_000)
-      }
+      await saveFile(new File([JSON.stringify(dump, null, 2)], `hodhod-${new Date().toISOString().slice(0, 10)}.json`, { type: 'application/json' }))
     } catch {
       ctx.toast(s.exportFailed, 'error')
     } finally {

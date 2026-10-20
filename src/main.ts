@@ -1,6 +1,7 @@
 /** Application entry: configuration → session → data → shell and routing. */
 import { AudioPlayer } from './audio/audio.ts'
 import { BrowserSpeechProvider } from './audio/browserSpeech.ts'
+import { CloudSpeechProvider } from './audio/cloudSpeech.ts'
 import { createFsrsScheduler } from './core/fsrsScheduler.ts'
 import { queueCounts } from './core/queue.ts'
 import type { Scheduler } from './core/scheduler.ts'
@@ -18,6 +19,7 @@ import { adminItemScreen, adminPackScreen, adminReportScreen, adminScreen } from
 import { authScreen } from './ui/screens/auth.ts'
 import { createScreen } from './ui/screens/create.ts'
 import { homeScreen } from './ui/screens/home.ts'
+import { deckImportScreen } from './ui/screens/deckImport.ts'
 import { importScreen } from './ui/screens/import.ts'
 import { quizScreen } from './ui/screens/quiz.ts'
 import { settingsScreen } from './ui/screens/settings.ts'
@@ -90,6 +92,7 @@ const ROUTES: { pattern: RegExp; keys: string[]; screen: ScreenFactory; tab: str
   { pattern: /^\/home$/, keys: [], screen: homeScreen, tab: 'home' },
   { pattern: /^\/create$/, keys: [], screen: createScreen, tab: 'create' },
   { pattern: /^\/import$/, keys: [], screen: importScreen, tab: 'create' },
+  { pattern: /^\/import\/deck$/, keys: [], screen: deckImportScreen, tab: 'create' },
   { pattern: /^\/words$/, keys: [], screen: wordsScreen, tab: 'words' },
   { pattern: /^\/words\/([^/]+)\/edit$/, keys: ['id'], screen: wordEditScreen, tab: 'words' },
   { pattern: /^\/words\/([^/]+)$/, keys: ['id'], screen: wordDetailScreen, tab: 'words' },
@@ -171,7 +174,15 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
   }
   if (stopped) return { stop }
 
-  const audio = new AudioPlayer([new BrowserSpeechProvider()])
+  // natural voice from the server first; the phone's own voice whenever that is not possible
+  const cloudSpeech = new CloudSpeechProvider({
+    fetchUrl: async (text, voice) => (await client.invoke<{ url: string }>('tts', { text, voice }, { timeoutMs: 15_000 })).url,
+    enabled: () => data.settings.aiVoice,
+    voice: () => data.settings.aiVoiceGender,
+    online: () => navigator.onLine !== false,
+    storage,
+  })
+  const audio = new AudioPlayer([cloudSpeech, new BrowserSpeechProvider()])
   let scheduler: { retention: number; instance: Scheduler } | null = null
 
   const ctx: Ctx = {
@@ -381,9 +392,50 @@ async function boot() {
   client.onSessionChange((session) => void show(session))
   await show(client.session)
 
-  if ('serviceWorker' in navigator && location.protocol === 'https:') {
-    navigator.serviceWorker.register('./sw.js').catch(() => undefined)
-  }
+  watchForUpdates()
+}
+
+// --- "a new version is ready" -------------------------------------------------------------
+
+function showUpdateBanner(): void {
+  if (document.querySelector('.update-banner')) return
+  const banner = h(
+    'div',
+    { class: 'update-banner', role: 'status' },
+    mascot('excited', { size: 44, enter: 'hop' }),
+    h('span', { class: 'grow' }, h('b', null, t.update.title), h('small', null, t.update.body)),
+    h('button', { class: 'btn primary small', type: 'button', onclick: () => location.reload() }, icon('refresh', { size: 16 }), t.update.reload),
+    h('button', { class: 'icon-btn compact', type: 'button', 'aria-label': t.common.close, onclick: () => banner.remove() }, icon('close', { size: 18 })),
+  )
+  document.body.append(banner)
+}
+
+/**
+ * The service worker of a newer build takes over in the background. When that happens
+ * while the app is open, the learner is offered a reload instead of running old code.
+ * The app also looks for a new build whenever it comes back to the foreground.
+ */
+function watchForUpdates(): void {
+  window.addEventListener('hodhod:update-ready', showUpdateBanner)
+  if (!('serviceWorker' in navigator) || location.protocol !== 'https:') return
+  const hadController = navigator.serviceWorker.controller !== null
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    // the very first install also "changes" the controller; that is not an update
+    if (hadController) showUpdateBanner()
+  })
+  navigator.serviceWorker
+    .register('./sw.js')
+    .then((registration) => {
+      let last = Date.now()
+      const check = () => {
+        if (document.visibilityState !== 'visible' || Date.now() - last < 30 * 60_000) return
+        last = Date.now()
+        void registration.update().catch(() => undefined)
+      }
+      document.addEventListener('visibilitychange', check)
+      setInterval(check, 60 * 60_000)
+    })
+    .catch(() => undefined)
 }
 
 void boot()

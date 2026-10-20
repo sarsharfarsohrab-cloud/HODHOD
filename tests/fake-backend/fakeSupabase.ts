@@ -10,6 +10,7 @@
  */
 import { handleAnalyzeWord } from '../../supabase/functions/_shared/analyzeWord.ts'
 import { handleAdminActions } from '../../supabase/functions/_shared/adminActions.ts'
+import { handleTts } from '../../supabase/functions/_shared/tts.ts'
 import { handleDeleteAccount } from '../../supabase/functions/_shared/deleteAccount.ts'
 import { handlePlatform, PLATFORM_TABLES } from './fakePlatform.ts'
 
@@ -28,10 +29,16 @@ export interface FakeOptions {
   /** e-mail confirmation required before the first sign-in */
   confirmEmail?: boolean
   accessTokenSeconds?: number
+  /** Address the fake answers on (public file URLs point here). */
+  origin?: string
 }
 
 export class FakeSupabase {
-  readonly origin = 'https://fake.supabase.test'
+  readonly origin: string
+  /** Files in storage buckets, by "bucket/path". */
+  storage = new Map<string, { type: string; body: Uint8Array }>()
+  /** What the stand-in for OpenAI speech returns. */
+  speechAudio: Uint8Array = new Uint8Array(200)
   users: User[] = []
   tables: Record<string, Row[]> = {
     profiles: [], user_settings: [], words: [], cards: [], review_events: [], quiz_sessions: [], quiz_answers: [],
@@ -56,7 +63,9 @@ export class FakeSupabase {
   private seq = 0
   private clock = 0
 
-  constructor(private readonly options: FakeOptions = {}) {}
+  constructor(private readonly options: FakeOptions = {}) {
+    this.origin = options.origin ?? 'https://fake.supabase.test'
+  }
 
   /** Usable directly as a `fetch` replacement. */
   fetch = async (input: string, init: RequestInit = {}): Promise<Response> => {
@@ -93,7 +102,11 @@ export class FakeSupabase {
       if (path.startsWith('/auth/v1/')) res = await this.auth(req, url)
       else if (path.startsWith('/rest/v1/')) res = await this.rest(req, url)
       else if (path.startsWith('/functions/v1/')) res = await this.functions(req, url)
-      else if (path.startsWith('/openai/')) res = await this.openai(req)
+      else if (path === '/openai/audio/speech') {
+        this.aiCalls++
+        res = new Response(this.speechAudio as Uint8Array<ArrayBuffer>, { headers: { 'content-type': 'audio/mpeg' } })
+      } else if (path.startsWith('/openai/')) res = await this.openai(req)
+      else if (path.startsWith('/storage/v1/object/')) res = await this.storageApi(req, path)
       else res = json({ message: 'not found' }, 404)
     } catch (err) {
       if (err instanceof Response) res = err
@@ -478,6 +491,20 @@ export class FakeSupabase {
     return json([...days.values()].sort((a, b) => (String(a.day) < String(b.day) ? -1 : 1)))
   }
 
+  // --- storage ----------------------------------------------------------------------
+
+  private async storageApi(req: Request, path: string): Promise<Response> {
+    if (path.startsWith('/storage/v1/object/public/')) {
+      const file = this.storage.get(path.replace('/storage/v1/object/public/', ''))
+      return file ? new Response(file.body as Uint8Array<ArrayBuffer>, { headers: { 'content-type': file.type, 'accept-ranges': 'bytes' } }) : json({ message: 'not found' }, 404)
+    }
+    if (req.method === 'POST' && this.userOf(req) === 'service') {
+      this.storage.set(path.replace('/storage/v1/object/', ''), { type: req.headers.get('content-type') ?? 'application/octet-stream', body: new Uint8Array(await req.arrayBuffer()) })
+      return json({ Key: path })
+    }
+    return json({ message: 'forbidden' }, 403)
+  }
+
   // --- functions ----------------------------------------------------------------------
 
   private async functions(req: Request, url: URL): Promise<Response> {
@@ -494,6 +521,9 @@ export class FakeSupabase {
     }
     if (name === 'delete-account') return handleDeleteAccount(req, env, internal)
     if (name === 'admin-actions') return handleAdminActions(req, env, internal)
+    if (name === 'tts') {
+      return handleTts(req, { ...env, ttsApiKey: 'fake-ai-key', ttsBaseUrl: `${this.origin}/openai`, ttsModel: 'fake-tts', voiceFemale: 'nova', voiceMale: 'onyx', timeoutMs: 2_000 }, internal)
+    }
     return json({ code: 'NOT_FOUND', message: 'Requested function was not found' }, 404)
   }
 

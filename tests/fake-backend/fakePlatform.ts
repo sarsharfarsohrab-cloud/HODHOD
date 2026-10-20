@@ -9,6 +9,7 @@ type Row = Record<string, unknown>
 
 export const PLATFORM_TABLES = (): Record<string, Row[]> => ({
   admins: [],
+  tts_cache: [],
   packs: [],
   pack_items: [],
   user_packs: [],
@@ -65,6 +66,21 @@ export async function handlePlatform(fake: FakeSupabase, userId: string, name: s
             cefr: item.cefr, primary_meaning: item.primary_meaning, content: item.content, content_version: 2, source: 'pack',
             tags: [String(pack.title).slice(0, 30)], pack_id: pack.id, pack_item_id: item.id, deleted_at: null, is_favorite: false,
           }
+          if (fake.duplicateWord(row)) continue
+          const stamp = fake.stamp()
+          const word = { id: fake.id(), ...row, created_at: stamp, updated_at: stamp }
+          t.words!.push(word)
+          fake.createCard(userId, String(word.id), 'recognition')
+          added++
+        }
+        return json(added)
+      }
+      case 'import_words': {
+        const list = args.p_words as Row[]
+        if (!Array.isArray(list) || list.length > 500) return json({ code: '22023', message: 'invalid import' }, 400)
+        let added = 0
+        for (const w of list) {
+          const row: Row = { user_id: userId, target_language: 'de', native_language: 'fa', cefr: null, content_version: 1, tags: [], ...w, source: 'import', deleted_at: null, is_favorite: false }
           if (fake.duplicateWord(row)) continue
           const stamp = fake.stamp()
           const word = { id: fake.id(), ...row, created_at: stamp, updated_at: stamp }
