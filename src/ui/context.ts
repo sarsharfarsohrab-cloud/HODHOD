@@ -19,6 +19,8 @@ export interface Ctx {
   /** The scheduler configured with the learner's current retention target. */
   scheduler(): Scheduler
   go(path: string, options?: { replace?: boolean }): void
+  /** Back to the screen the learner came from (e.g. the review), or to `fallback` when there is none. */
+  back(fallback: string): void
   toast(message: string, kind?: 'info' | 'error'): void
   confirm(options: ConfirmOptions): Promise<boolean>
   now(): Date

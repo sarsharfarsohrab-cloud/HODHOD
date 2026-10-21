@@ -107,13 +107,8 @@ export function studyScreen(ctx: Ctx, params: Record<string, string> = {}): Scre
       { class: 'study-top' },
       iconButton('close', t.study.exit, exit),
       h('div', { class: 'grow' }, progressBar(total === 0 ? 1 : session.answered / total, t.study.remaining(counts.total))),
-      h(
-        'div',
-        { class: 'study-counts', 'aria-label': t.study.remaining(counts.total) },
-        h('span', { class: 'count-new', title: t.home.newCards }, fa(counts.newCards)),
-        h('span', { class: 'count-learning', title: t.home.learning }, fa(counts.learning)),
-        h('span', { class: 'count-review', title: t.home.reviews }, fa(counts.reviews)),
-      ),
+      // plain words instead of three coloured numbers nobody could decode
+      h('span', { class: 'study-left small muted', title: `${t.home.newCards} ${fa(counts.newCards)}، ${t.home.learning} ${fa(counts.learning)}، ${t.home.reviews} ${fa(counts.reviews)}` }, t.study.remaining(counts.total)),
       undo,
     )
   }
@@ -214,6 +209,15 @@ export function studyScreen(ctx: Ctx, params: Record<string, string> = {}): Scre
     }
 
     replace(el, topBar(counts), companion(), h('article', { class: `flashcard ${current.revealed ? 'revealed' : ''} ${reverse ? 'reverse' : ''}` }, front, back), actions)
+    // the button that was tapped is gone now: give screen readers the new content to read
+    const lost = !document.activeElement || document.activeElement === document.body || !document.activeElement.isConnected
+    if (lost) {
+      const target = el.querySelector<HTMLElement>(current.revealed ? '.flashcard-back' : '.flashcard-front')
+      if (target) {
+        target.tabIndex = -1
+        target.focus({ preventScroll: true })
+      }
+    }
     if (current.revealed) window.scrollTo({ top: 0 })
   }
 
@@ -339,7 +343,7 @@ export function studyScreen(ctx: Ctx, params: Record<string, string> = {}): Scre
     replace(
       el,
       // the last answer can still be taken back from the summary
-      last ? h('header', { class: 'study-top' }, h('div', { class: 'grow' }), iconButton('undo', t.study.undo, () => void undoLast())) : null,
+      last ? h('header', { class: 'study-top' }, h('div', { class: 'grow' }), h('button', { class: 'btn ghost small', type: 'button', onclick: () => void undoLast() }, icon('undo', { size: 18 }), t.study.undoLast)) : null,
       emptyState({
         art: mascot('celebrating', { size: 148 }),
         title: t.study.doneTitle,
@@ -356,6 +360,15 @@ export function studyScreen(ctx: Ctx, params: Record<string, string> = {}): Scre
             stat(fa(session.newSeen), t.study.doneNew),
           ),
           h('button', { class: 'btn primary big block', type: 'button', 'data-autofocus': '', onclick: exit }, t.study.doneHome),
+          // what to do next with the same words
+          packId
+            ? null
+            : h(
+                'div',
+                { class: 'row' },
+                h('a', { class: 'btn grow', href: '#/quiz' }, icon('quiz', { size: 18 }), t.study.nextQuiz),
+                h('a', { class: 'btn grow', href: '#/stories' }, icon('sparkle', { size: 18 }), t.study.nextStory),
+              ),
         ),
       }),
     )

@@ -221,6 +221,11 @@ export function createScreen(ctx: Ctx, params: Record<string, string>): Screen {
       class: 'input create-input', type: 'text', value: current.value, lang: 'de', dir: 'ltr', placeholder: 'aufgeben', maxLength: 240,
       autocapitalize: 'off', autocomplete: 'off', autocorrect: 'off', spellcheck: false, enterKeyHint: 'go',
       'aria-label': t.create.label, 'aria-describedby': 'create-help', 'aria-invalid': current.error ? 'true' : undefined,
+      // an old error must not stay next to a corrected word
+      oninput: () => {
+        input.removeAttribute('aria-invalid')
+        form.querySelector('.error-text')?.remove()
+      },
     })
     const form = h(
       'form',

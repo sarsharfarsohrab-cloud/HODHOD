@@ -126,7 +126,14 @@ export function authScreen(client: SupabaseClient, options: { mode?: Mode; notic
   return h(
     'main',
     { class: 'screen no-nav auth' },
-    h('div', { class: 'auth-hero' }, mascot('happy', { size: 132 }), h('h1', null, APP_NAME), h('p', { class: 'muted' }, t.auth.tagline)),
+    h(
+      'div',
+      { class: 'auth-hero' },
+      // the bird on its own ink-blue perch, as in the app icon and the welcome tour
+      h('div', { class: 'auth-bird' }, mascot('happy', { size: 128, enter: 'hop' }), h('p', { class: 'auth-bubble' }, t.auth.hello)),
+      h('h1', null, APP_NAME),
+      h('p', { class: 'muted' }, t.auth.tagline),
+    ),
     form,
   )
 }

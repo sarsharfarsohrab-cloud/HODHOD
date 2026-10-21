@@ -17,7 +17,7 @@ function order<T extends HTMLElement | null>(position: number, el: T): T {
 }
 
 const backButton = (ctx: Ctx, to: string) =>
-  h('button', { class: 'icon-btn', type: 'button', 'aria-label': t.common.back, title: t.common.back, onclick: () => ctx.go(to) }, icon('back'))
+  h('button', { class: 'icon-btn', type: 'button', 'aria-label': t.common.back, title: t.common.back, onclick: () => (to === '/words' ? ctx.back(to) : ctx.go(to)) }, icon('back'))
 
 export function wordDetailScreen(ctx: Ctx, params: Record<string, string>): Screen {
   const el = h('main', { class: 'screen wide' })

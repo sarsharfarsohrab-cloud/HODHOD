@@ -39,6 +39,9 @@ async function latestNews(ctx: Ctx): Promise<Announcement | null> {
   return (await newsRequest).find((a) => !seen.has(a.id)) ?? null
 }
 
+const feature = (href: string, name: Parameters<typeof icon>[0], label: string, extra = '') =>
+  h('a', { class: `feature ${extra}`, href }, h('span', { class: 'feature-icon' }, icon(name, { size: 24 })), h('span', null, label))
+
 /** A ring that fills up with today's minutes. */
 function goalRing(ratio: number, done: boolean): SVGSVGElement {
   const r = 46
@@ -65,7 +68,11 @@ export function homeScreen(ctx: Ctx): Screen {
     const streak = computeStreak(data.activity, now)
     const minutes = minutesStudied(today)
     const goal = data.settings.dailyGoalMinutes
-    const goalDone = minutes >= goal
+    // the goal also counts as reached once every card of the day is done
+    const finishedToday = Boolean(today?.reviews) && next.kind === 'done'
+    const goalDone = minutes >= goal || finishedToday
+    const minutesShown = today?.reviews ? Math.max(1, minutes) : minutes
+    const goalText = minutes >= goal ? t.home.goalDone : finishedToday ? t.home.dayDone : t.home.goalLeft(goal - minutes)
     const estimate = estimateMinutes(counts, averageSecondsPerAnswer(data.activity.values()))
     const hasWords = data.words.size > 0
     const m = t.home.mascot
@@ -104,7 +111,7 @@ export function homeScreen(ctx: Ctx): Screen {
       action = h('a', { class: 'btn big block on-dark', href: '#/create' }, icon('plus'), t.home.addWord)
     }
 
-    const art = mascot(mood, { size: 150, enter: arrived ? 'none' : 'fly' })
+    const art = mascot(mood, { size: 124, enter: arrived ? 'none' : 'fly' })
     arrived = true
     const bird = h(
       'button',
@@ -152,48 +159,44 @@ export function homeScreen(ctx: Ctx): Screen {
         ),
         h('span', { class: 'perch-stripes', 'aria-hidden': 'true' }),
       ),
+      // the new things right under the bird, before anything needs scrolling
       h(
-        'div',
-        { class: 'home-grid' },
+        'nav',
+        { class: 'feature-row', 'aria-label': t.home.more },
+        feature('#/store', 'bag', t.store.tile, 'store'),
+        feature('#/stories', 'sparkle', t.stories.tile),
+        feature('#/friends', 'users', t.friends.tile),
+      ),
+      // today in one card: goal, streak and the last seven days; tapping it opens the statistics
+      h(
+        'a',
+        { class: 'card today-card', href: '#/stats', 'aria-label': t.home.todayCard },
         h(
-          'section',
-          { class: 'card goal-card', 'aria-label': t.home.goal },
-          h('div', { class: 'ring-holder' }, goalRing(minutes / goal, goalDone), h('div', { class: 'ring-center' }, h('b', null, fa(minutes)), h('span', null, t.home.minutesLabel))),
-          h('div', { class: 'stack', style: { gap: 'var(--s1)' } }, h('h2', null, t.home.goal), h('p', { class: 'small muted' }, goalDone ? t.home.goalDone : t.home.goalLeft(goal - minutes))),
-        ),
-        h(
-          'section',
-          { class: `card streak-card ${streak.current > 0 ? 'hot' : ''}`, 'aria-label': t.home.streakDays },
-          h('span', { class: 'flame', 'aria-hidden': 'true' }, icon('flame', { size: 34, filled: streak.current > 0 })),
-          h('div', { class: 'stack', style: { gap: '0' } }, h('b', { class: 'big-number' }, fa(streak.current)), h('span', { class: 'small' }, t.home.streakDays)),
-          h('p', { class: 'small muted streak-note' }, streak.activeToday ? t.home.streakTodayDone : streak.current > 0 ? t.home.streakKeep : t.home.streakNone),
-        ),
-        h(
-          'section',
-          { class: 'card week-card' },
-          h('div', { class: 'row spread' }, h('h2', null, t.home.weekTitle), h('span', { class: 'small muted' }, t.home.weekDone(activeDays))),
+          'div',
+          { class: 'today-top' },
+          h('div', { class: 'ring-holder' }, goalRing(goalDone ? 1 : minutes / goal, goalDone), h('div', { class: 'ring-center' }, goalDone ? icon('check', { size: 24 }) : h('b', null, fa(minutesShown)), goalDone ? null : h('span', null, t.home.minutesLabel))),
+          h('div', { class: 'today-goal' }, h('b', null, t.home.goal), h('span', { class: 'small muted' }, goalText)),
           h(
-            'ol',
-            { class: 'week-dots' },
-            week.map((d) =>
-              h(
-                'li',
-                { class: `${d.reviews > 0 ? 'on' : ''} ${d.key === todayKey ? 'today' : ''}`, title: t.home.weekReviews(d.reviews) },
-                h('span', { class: 'wd' }, d.reviews > 0 ? icon('check', { size: 16 }) : null),
-                h('span', { class: 'wd-label' }, faWeekday(d.date)),
-              ),
-            ),
+            'div',
+            { class: `streak-mini ${streak.current > 0 ? 'hot' : ''}`, title: t.home.streakDays },
+            icon('flame', { size: 22, filled: streak.current > 0 }),
+            h('b', { class: 'streak-number' }, streak.current > 0 ? fa(streak.current) : '–'),
+            h('small', null, t.home.streakDays),
           ),
         ),
         h(
-          'nav',
-          { class: 'home-tiles', 'aria-label': t.home.bank },
-          h('a', { class: 'tile-link', href: '#/stats' }, h('span', { class: 'tile-icon' }, icon('chart')), h('span', null, h('b', null, t.nav.stats), h('small', null, t.home.statsHint))),
-          h('a', { class: 'tile-link', href: '#/words' }, h('span', { class: 'tile-icon' }, icon('book')), h('span', null, h('b', null, t.home.bank), h('small', null, t.home.bankCount(data.words.size)))),
-          h('a', { class: 'tile-link', href: '#/stories' }, h('span', { class: 'tile-icon' }, icon('sparkle')), h('span', null, h('b', null, t.stories.tile), h('small', null, t.stories.tileHint))),
-          h('a', { class: 'tile-link', href: '#/friends' }, h('span', { class: 'tile-icon' }, icon('users')), h('span', null, h('b', null, t.friends.tile), h('small', null, t.friends.tileHint))),
-          h('a', { class: 'tile-link store-tile', href: '#/store' }, h('span', { class: 'tile-icon' }, icon('bag')), h('span', null, h('b', null, t.store.tile), h('small', null, t.store.tileHint))),
+          'ol',
+          { class: 'week-dots', 'aria-label': `${t.home.weekTitle}: ${t.home.weekDone(activeDays)}` },
+          week.map((d) =>
+            h(
+              'li',
+              { class: `${d.reviews > 0 ? 'on' : ''} ${d.key === todayKey ? 'today' : ''}`, title: t.home.weekReviews(d.reviews) },
+              h('span', { class: 'wd' }, d.reviews > 0 ? icon('check', { size: 16 }) : null),
+              h('span', { class: 'wd-label' }, faWeekday(d.date)),
+            ),
+          ),
         ),
+        h('span', { class: 'today-more' }, streak.activeToday ? t.home.streakTodayDone : streak.current > 0 ? t.home.streakKeep : t.home.streakNone, h('span', { class: 'today-link' }, t.home.statsLink, icon('back', { size: 16 }))),
       ),
     )
   }

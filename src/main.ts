@@ -210,6 +210,11 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
       if (options?.replace) location.replace(`#${path}`)
       else location.hash = path
     },
+    back(fallback) {
+      // after editing, the history entry before is this same page: go to the fallback instead
+      if (previousHash && !previousHash.startsWith(location.hash)) history.back()
+      else ctx.go(fallback)
+    },
     toast,
     confirm: confirmSheet,
     now: () => new Date(),
@@ -225,6 +230,7 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
   let screen: Screen | null = null
   let activeTab: string | null = null
   let currentHash = ''
+  let previousHash = ''
   let restoring = false
 
   const renderNav = () => {
@@ -272,8 +278,11 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
 
     screen?.destroy?.()
     audio.stop()
+    // a celebration belongs to the screen it happened on
+    document.querySelectorAll('.burst').forEach((n) => n.remove())
     const first = screen === null
     screen = found.screen(ctx, params)
+    previousHash = currentHash
     currentHash = location.hash
     activeTab = found.tab
     nav.hidden = screen.nav === false

@@ -190,6 +190,13 @@ export function packScreen(ctx: Ctx, params: Record<string, string>): Screen {
         canStart
           ? h('button', { class: `btn ${suggested ? 'primary' : ''} block`, type: 'button', disabled: busy, onclick: () => void start(l.lesson) }, icon('play', { size: 18 }), busy ? s.starting : s.start(l.lesson))
           : null,
+        // a lesson already in the bank goes on in the review of this pack
+        state === 'active' && !missing && pack
+          ? [
+              h('a', { class: `btn ${suggested ? 'primary' : ''} block`, href: `#/study?pack=${pack.id}` }, icon('cards', { size: 18 }), s.continueLesson(l.lesson)),
+              suggested ? h('p', { class: 'help' }, s.continueHint) : null,
+            ]
+          : null,
       ),
     )
   }

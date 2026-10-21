@@ -226,13 +226,13 @@ await test('complete flow: account → word → bank → study → home → sett
   await page.getByText('تسلیم شدن، منصرف شدن').waitFor()
   const ratings = await page.locator('.rating').allInnerTexts()
   assert(ratings.length === 4, 'four rating buttons')
-  assert(/دوباره[\s\S]*۱ دقیقه/.test(ratings[0]) && /خوب[\s\S]*۱۰ دقیقه/.test(ratings[2]), `intervals come from the scheduler: ${JSON.stringify(ratings)}`)
-  assert(/آسان[\s\S]*روز/.test(ratings[3]), 'easy graduates to days')
+  assert(/یادم نیامد[\s\S]*۱ دقیقه/.test(ratings[0]) && /یادم آمد[\s\S]*۱۰ دقیقه/.test(ratings[2]), `intervals come from the scheduler: ${JSON.stringify(ratings)}`)
+  assert(/خیلی راحت[\s\S]*روز/.test(ratings[3]), 'easy graduates to days')
   await noHorizontalScroll(page, 'study')
   await snap(page, 'study-back')
 
   await page.locator('.rating-1').click() // again on aufgeben
-  await page.getByText('اشکال نداره، دوباره امتحانش می‌کنیم.').waitFor()
+  await page.getByText('اشکالی ندارد، دوباره امتحانش می‌کنیم.').waitFor()
   await snap(page, 'study-after-again')
   for (let i = 0; i < 12; i++) {
     if (await page.getByText('این دور تمام شد').count()) break
@@ -248,7 +248,7 @@ await test('complete flow: account → word → bank → study → home → sett
   assert(s.cards.every((c) => c.state === 'review' && c.introduced_at), 'cards moved to review')
 
   await page.getByRole('button', { name: 'برگشت به خانه' }).click()
-  await page.locator('.streak-card .big-number', { hasText: '۱' }).waitFor()
+  await page.locator('.streak-mini .streak-number', { hasText: '۱' }).waitFor()
   await page.getByText('کار امروز', { exact: false }).first().waitFor({ timeout: 2000 }).catch(() => {})
   await snap(page, 'home-after-study')
 
@@ -293,7 +293,7 @@ await test('complete flow: account → word → bank → study → home → sett
   await page.getByLabel('رمز عبور').fill('correct horse battery')
   await page.getByRole('button', { name: 'وارد شو' }).click()
   await page.getByRole('heading', { name: /سهراب/ }).waitFor()
-  await page.getByText('۳ کلمه').waitFor()
+  await page.locator('.perch-plan b').waitFor() // the words came back with the account
   assert((await page.evaluate(() => document.documentElement.dataset.theme)) === 'dark', 'the theme setting came back with the account')
   return page
 })
@@ -309,7 +309,6 @@ await test('new words per day limits the queue, not the bank', async () => {
   await page.goto(`${BASE}/#/home`)
   await page.locator('.perch-plan .count-new', { hasText: '۱۰' }).waitFor()
   await page.getByText('۲ کلمهٔ ذخیره‌شده در صف روزهای بعد است.').waitFor()
-  await page.getByText('۱۲ کلمه').waitFor()
   await snap(page, 'home-queue-limit')
   await page.goto(`${BASE}/#/words`)
   await page.getByText('۱۲ کلمه').waitFor()
@@ -339,7 +338,7 @@ await test('AI problems: spelling suggestion, unknown word, outage, invalid answ
   await control('ai', { mode: 'error' })
   await input().fill('schnell')
   await go()
-  await page.getByText('فعلاً نتونستم این کلمه رو آماده کنم.').waitFor()
+  await page.getByText('فعلاً نتوانستم این کلمه را آماده کنم.').waitFor()
   await snap(page, 'ai-failed')
   await control('ai', { mode: 'ok' })
   await page.getByRole('button', { name: 'دوباره امتحان کن' }).click()
@@ -360,7 +359,7 @@ await test('AI problems: spelling suggestion, unknown word, outage, invalid answ
   await input().fill('Tisch')
   const before = (await state()).aiCalls
   await go()
-  await page.getByText('دارم اطلاعات این کلمه رو آماده می‌کنم…').waitFor()
+  await page.getByText('دارم کارت این کلمه را آماده می‌کنم…').waitFor()
   await snap(page, 'ai-loading')
   await page.goBack() // back navigation during generation
   await page.waitForTimeout(1800)
@@ -606,7 +605,7 @@ await test('undo takes back the last answer, also from the summary', async () =>
   await page.getByRole('button', { name: 'نمایش جواب' }).click()
   await page.locator('.rating-4').click()
   await page.getByText('این دور تمام شد').waitFor()
-  await page.getByRole('button', { name: 'برگرداندن جواب قبلی' }).click()
+  await page.getByRole('button', { name: 'برگرداندن آخرین جواب' }).click()
   await page.getByRole('button', { name: 'نمایش جواب' }).waitFor()
   await page.waitForTimeout(200)
   s = await state()
@@ -799,7 +798,7 @@ await test('the bird is on every main screen and reacts', async () => {
   await page.locator('.rating-1').click()
   await page.locator('.companion .mood-supportive').waitFor()
   await page.locator('.burst').count() // hearts come only for remembered words
-  await page.getByText('اشکال نداره، دوباره امتحانش می‌کنیم.').waitFor()
+  await page.getByText('اشکالی ندارد، دوباره امتحانش می‌کنیم.').waitFor()
   await snap(page, 'study-companion')
   await page.goto(`${BASE}/#/home`)
   await page.getByRole('button', { name: 'هدهد' }).click()
@@ -871,7 +870,7 @@ await test('a three-day streak gets a big celebration, once', async () => {
   await snap(page, 'celebration')
   await page.getByRole('button', { name: 'ادامه' }).click()
   await page.goto(`${BASE}/#/home`)
-  await page.locator('.streak-card .big-number', { hasText: '۳' }).waitFor()
+  await page.locator('.streak-mini .streak-number', { hasText: '۳' }).waitFor()
   await page.waitForTimeout(500)
   assert((await page.locator('.celebration').count()) === 0, 'celebrated only once')
   await snap(page, 'home-streak')
@@ -984,10 +983,10 @@ await test('admin builds a pack; a learner takes a lesson from the store', async
   const s = await state()
   assert(s.words.length === 5 && s.words.every((w) => w.source === 'pack' && w.pack_id), 'the lesson words are in the bank, tagged with the pack')
   await page.getByRole('button', { name: 'نمایش جواب' }).click()
-  await page.getByRole('button', { name: /خوب/ }).first().click()
+  await page.getByRole('button', { name: /^یادم آمد/ }).first().click()
   await page.getByRole('button', { name: 'خروج' }).click()
   await page.waitForURL(/#\/store\//)
-  await page.getByText('۰ از ۵ سبز').waitFor()
+  await page.getByText('۰ از ۵ یاد گرفته').waitFor()
   await page.getByRole('link', { name: 'مرور همین بسته' }).waitFor()
   await snap(page, 'pack-progress')
 
@@ -1161,7 +1160,7 @@ await test('a short story is written around the words being learned', async () =
   await page.goto(`${BASE}/#/study`)
   for (let i = 0; i < 3; i++) {
     await page.getByRole('button', { name: 'نمایش جواب' }).click()
-    await page.getByRole('button', { name: /خوب/ }).first().click()
+    await page.getByRole('button', { name: /^یادم آمد/ }).first().click()
   }
   await page.goto(`${BASE}/#/home`)
   await page.getByRole('link', { name: /^داستان/ }).click()

@@ -89,7 +89,7 @@ export function friendsScreen(ctx: Ctx): Screen {
       { class: `board-row ${row.is_me ? 'me' : ''}` },
       h('span', { class: 'board-rank', 'aria-label': f.rank(rank + 1) }, MEDALS[rank] && row.week_reviews > 0 ? MEDALS[rank] : fa(rank + 1)),
       h('span', { class: 'board-name' }, h('b', null, row.is_me ? f.me : row.display_name || f.noName), h('small', { class: 'muted' }, f.learned(row.learned))),
-      h('span', { class: `board-streak ${row.streak > 0 ? 'hot' : ''}`, title: f.streak }, icon('flame', { size: 16, filled: row.streak > 0 }), fa(row.streak)),
+      h('span', { class: `board-streak ${row.streak > 0 ? 'hot' : ''}`, title: f.streak }, h('b', null, icon('flame', { size: 16, filled: row.streak > 0 }), fa(row.streak)), h('small', null, f.days)),
       h('span', { class: 'board-week' }, h('b', null, fa(row.week_reviews)), h('small', null, f.answers)),
       remove,
     )
@@ -115,7 +115,7 @@ export function friendsScreen(ctx: Ctx): Screen {
           'div',
           { class: 'stack', style: { gap: 'var(--s2)' } },
           h('span', { class: 'small' }, f.myCode),
-          h('b', { class: 'friend-code', dir: 'ltr' }, code ? `${code.slice(0, 4)} ${code.slice(4)}` : '—'),
+          h('b', { class: 'friend-code', dir: 'ltr' }, code ?? '—'),
           h('button', { class: 'btn small on-dark', type: 'button', onclick: () => void share(), disabled: !code }, icon('share', { size: 16 }), f.share),
         ),
       ),
