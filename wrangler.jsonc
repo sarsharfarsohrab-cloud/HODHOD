@@ -1,0 +1,9 @@
+// Cloudflare: serves the built app (dist/) as static files on apphodhod.com.
+// Cloudflare runs `bun run scripts/build.ts`, then `npx wrangler deploy` with this file.
+{
+  "name": "hodhod",
+  "compatibility_date": "2025-10-01",
+  "assets": {
+    "directory": "./dist"
+  }
+}
