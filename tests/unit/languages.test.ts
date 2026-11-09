@@ -139,3 +139,22 @@ describe('cards in other languages', () => {
     expect(r.ok).toBe(false)
   })
 })
+
+import { contentFromRow, parseDeck } from '../../src/core/deckImport.ts'
+
+describe('importing decks in other languages', () => {
+  test('Ukrainian meanings are found by their script, in either column', () => {
+    const deck = parseDeck('la maison\tбудинок\nкнига\tle livre\n', 'uk')
+    expect(deck.rows.map((r) => [r.german, r.persian])).toEqual([['la maison', 'будинок'], ['le livre', 'книга']])
+  })
+  test('with two Latin-script languages the first column is the learned language', () => {
+    const deck = parseDeck('el perro\tthe dog\n', 'en')
+    expect(deck.rows[0]).toMatchObject({ german: 'el perro', persian: 'the dog' })
+  })
+  test('the learned language’s own articles make a noun', () => {
+    const c = contentFromRow({ german: 'het huis', persian: 'das Haus', tags: [] }, 'nl', 'de')
+    expect(c?.pos).toBe('noun')
+    expect(c?.noun).toMatchObject({ article: 'het', gender: 'n' })
+    expect(contentFromRow({ german: 'the house', persian: 'das Haus', tags: [] }, 'en', 'de')?.pos).toBe('phrase')
+  })
+})

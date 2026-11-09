@@ -35,14 +35,14 @@ export function deckImportScreen(ctx: Ctx): Screen {
   const header = () => h('header', { class: 'topbar' }, h('button', { class: 'icon-btn', type: 'button', 'aria-label': t.common.back, onclick: () => ctx.go(prepared ? '/import/deck' : '/import') }, icon('back')), h('h1', null, d.title))
 
   function prepare(text: string) {
-    const deck = parseDeck(text)
+    const deck = parseDeck(text, ctx.data.profile.nativeLanguage)
     deck.rows = deck.rows.slice(0, MAX_ROWS)
     const seen = new Set<string>()
     const fresh: Prepared['fresh'] = []
     let existing = 0
     let invalid = 0
     for (const row of deck.rows) {
-      const content = contentFromRow(row)
+      const content = contentFromRow(row, ctx.data.profile.activeTargetLanguage, ctx.data.profile.nativeLanguage)
       if (!content) {
         invalid++
         continue
