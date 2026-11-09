@@ -8,6 +8,7 @@ import type { AppError } from '../../data/errors.ts'
 import { num } from '../format.ts'
 import { describePath } from '../strings.ts'
 import { L, O } from './names.ts'
+import { learningInfo } from '../learning.ts'
 
 export const fa = {
   nav: { home: 'خانه', create: 'کلمهٔ تازه', words: 'واژه‌ها', study: 'مرور', quiz: 'آزمون', settings: 'تنظیمات', stats: 'آمار' },
@@ -36,6 +37,7 @@ export const fa = {
   },
 
   auth: {
+    language: 'زبان',
     get tagline() {
       return `واژه‌های ${L()}، هر روز کمی بیشتر`
     },
@@ -163,6 +165,20 @@ export const fa = {
       ['👥', 'یادگیری با دوستان'],
       ['🔔', 'یادآوری روی گوشی'],
     ] as [string, string][],
+    ownTitle: 'زبان خودت کدام است؟',
+    ownBody: 'هدهد با همین زبان با تو حرف می‌زند و معنی کلمه‌ها را به همین زبان می‌نویسد.',
+    learnTitle: 'کلمه‌های کدام زبان را می‌خواهی یاد بگیری؟',
+    learnBody: 'هر زبان رنگ و کارت‌های خودش را دارد.',
+    introTitle: 'هدهد چطور کار می‌کند؟',
+    get intro() {
+      return [
+        ['🗂️', 'هدهد یک لایتنر هوشمند است، نه کلاس زبان: کلمه‌هایی را که خودت لازم داری، درست به‌موقع مرور می‌کنی تا در ذهنت بمانند.'],
+        ['✨', `هر کلمهٔ ${L()} را بنویس؛ هوش مصنوعی در چند ثانیه کارتش را با معنی ${O()}، مثال و تلفظ می‌سازد. قبل از ذخیره یک بار نگاهش کن و اگر لازم بود ویرایشش کن.`],
+        ['📦', 'بسته‌های آمادهٔ کلمه، جمله و اصطلاح هم داریم، درس‌به‌درس. کارت‌های بسته‌ها را دو هوش مصنوعی جداگانه بررسی کرده‌اند.'],
+        ['🎨', 'هر زبان رنگ و کارت‌های خودش را دارد. با هدهد پلاس می‌توانی چند زبان را هم‌زمان یاد بگیری.'],
+      ] as [string, string][]
+    },
+    languageFailed: 'انتخاب زبان ذخیره نشد. اتصال اینترنت را نگاه کن و دوباره امتحان کن.',
     reminderTitle: 'یادآوری هم بخواهی؟',
     reminderOn: 'روشن کردن یادآوری',
     reminderDone: 'یادآوری روشن شد',
@@ -190,13 +206,31 @@ export const fa = {
     toHome: 'برو به صفحهٔ اصلی',
   },
 
+  decks: {
+    title: 'زبان‌های من',
+    choose: 'امروز کدام را مرور کنیم؟',
+    words: (n: number) => `${num(n)} کلمه`,
+    current: 'الان باز است',
+    add: 'افزودن زبان تازه',
+    addTitle: 'کلمه‌های کدام زبان را هم می‌خواهی یاد بگیری؟',
+    plusTitle: 'زبان دوم با هدهد پلاس',
+    plusBody: 'یاد گرفتن هم‌زمان چند زبان بخشی از هدهد پلاس است. پلاس به‌زودی می‌آید.',
+    failed: 'زبان عوض نشد. اتصال اینترنت را نگاه کن و دوباره امتحان کن.',
+    switchHint: 'زبان دیگر',
+  },
+
   create: {
     title: 'کلمهٔ تازه',
     get label() {
       return `کلمه یا عبارت ${L()}`
     },
-    placeholder: 'مثلاً aufgeben',
-    help: 'یک کلمه، یک عبارت یا یک جملهٔ کوتاه بنویس، مثل der Tisch، Bescheid sagen یا Wie geht\'s dir?',
+    get placeholder() {
+      return `مثلاً ${learningInfo().example}`
+    },
+    get help() {
+      const [noun, phrase, sentence] = learningInfo().examples
+      return `یک کلمه، یک عبارت یا یک جملهٔ کوتاه بنویس، مثل ${noun}، ${phrase} یا ${sentence}`
+    },
     importLink: 'وارد کردن گروهی از روی لیست',
     submit: 'ساخت کارت',
     loading: 'دارم کارت این کلمه را آماده می‌کنم…',

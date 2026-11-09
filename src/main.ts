@@ -30,6 +30,7 @@ import { storiesScreen, storyScreen } from './ui/screens/stories.ts'
 import { studyScreen } from './ui/screens/study.ts'
 import { wordDetailScreen, wordEditScreen } from './ui/screens/wordDetail.ts'
 import { welcomeScreen } from './ui/screens/welcome.ts'
+import { decksScreen } from './ui/screens/decks.ts'
 import { wordsScreen } from './ui/screens/words.ts'
 import { appName, currentLanguage, describeError, setLanguage, t } from './ui/strings.ts'
 import { setLearningPair } from './ui/learning.ts'
@@ -119,6 +120,7 @@ const ROUTES: { pattern: RegExp; keys: string[]; screen: ScreenFactory; tab: str
   { pattern: /^\/stats$/, keys: [], screen: statsScreen, tab: 'home' },
   { pattern: /^\/settings$/, keys: [], screen: settingsScreen, tab: null },
   { pattern: /^\/welcome$/, keys: [], screen: welcomeScreen, tab: null },
+  { pattern: /^\/decks$/, keys: [], screen: decksScreen, tab: 'home' },
   { pattern: /^\/store$/, keys: [], screen: storeScreen, tab: 'home' },
   { pattern: /^\/stories$/, keys: [], screen: storiesScreen, tab: 'home' },
   { pattern: /^\/friends$/, keys: [], screen: friendsScreen, tab: 'home' },
@@ -131,12 +133,13 @@ const ROUTES: { pattern: RegExp; keys: string[]; screen: ScreenFactory; tab: str
   { pattern: /^\/admin\/reports\/([^/]+)$/, keys: ['id'], screen: adminReportScreen, tab: null },
 ]
 
-const TABS: { id: string; path: string; label: string; icon: IconName }[] = [
-  { id: 'home', path: '/home', label: t.nav.home, icon: 'home' },
-  { id: 'create', path: '/create', label: t.nav.create, icon: 'plus' },
-  { id: 'words', path: '/words', label: t.nav.words, icon: 'book' },
-  { id: 'study', path: '/study', label: t.nav.study, icon: 'cards' },
-  { id: 'quiz', path: '/quiz', label: t.nav.quiz, icon: 'quiz' },
+// labels are read at render time: the interface language can change
+const TABS: { id: string; path: string; label: () => string; icon: IconName }[] = [
+  { id: 'home', path: '/home', label: () => t.nav.home, icon: 'home' },
+  { id: 'create', path: '/create', label: () => t.nav.create, icon: 'plus' },
+  { id: 'words', path: '/words', label: () => t.nav.words, icon: 'book' },
+  { id: 'study', path: '/study', label: () => t.nav.study, icon: 'cards' },
+  { id: 'quiz', path: '/quiz', label: () => t.nav.quiz, icon: 'quiz' },
 ]
 
 function parseHash(): { path: string; params: Record<string, string> } {
@@ -260,7 +263,7 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
           'a',
           { class: 'nav-item', href: `#${tab.path}`, 'aria-current': tab.id === activeTab ? 'page' : undefined },
           h('span', { class: 'nav-icon' }, icon(tab.icon)),
-          tab.label,
+          tab.label(),
           tab.id === 'study' && counts.total > 0 ? h('span', { class: 'nav-badge', 'aria-label': t.study.remaining(counts.total) }, num(Math.min(counts.total, 999))) : null,
         ),
       ),
@@ -274,13 +277,14 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
     renderNav()
   }
 
-  async function route() {
+  /** Shows the screen of the current address; `force` rebuilds it even when the address is unchanged (new language). */
+  async function route(force = false) {
     if (stopped) return
     if (restoring) {
       restoring = false
       return
     }
-    if (location.hash === currentHash && screen) return
+    if (!force && location.hash === currentHash && screen) return
     if (screen?.canLeave && !(await screen.canLeave())) {
       restoring = true
       location.hash = currentHash // stay where we are
@@ -332,7 +336,7 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
     data.subscribe(() => {
       if (syncLanguages()) {
         renderChrome()
-        void route()
+        void route(true)
         return
       }
       renderChrome()

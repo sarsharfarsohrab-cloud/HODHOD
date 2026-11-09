@@ -4101,3 +4101,206 @@ html[dir='ltr'] .icon-directional {
 html:not([lang='fa']):not([lang='ar']) {
   --font-fa: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
+
+/* Each language being learned has its own colour; German keeps the hoopoe's saffron. */
+html[data-deck='en'] {
+  --brand: #5b9cf6;
+  --brand-strong: #3f84ee;
+  --brand-soft: #e6efff;
+  --brand-text: #1d4fb8;
+}
+html[data-deck='en'][data-theme='dark'] {
+  --brand: #7fb0fa;
+  --brand-strong: #9cc2ff;
+  --brand-soft: #1a2747;
+  --brand-text: #9cc2ff;
+}
+html[data-deck='fr'] {
+  --brand: #a78bfa;
+  --brand-strong: #8f6ef5;
+  --brand-soft: #f1ebff;
+  --brand-text: #6131c9;
+}
+html[data-deck='fr'][data-theme='dark'] {
+  --brand: #b9a2ff;
+  --brand-strong: #c9b6ff;
+  --brand-soft: #2a2150;
+  --brand-text: #c9b6ff;
+}
+html[data-deck='it'] {
+  --brand: #34c38a;
+  --brand-strong: #20a873;
+  --brand-soft: #e3f6ee;
+  --brand-text: #0f7a57;
+}
+html[data-deck='it'][data-theme='dark'] {
+  --brand: #5fd6a4;
+  --brand-strong: #6fdcae;
+  --brand-soft: #16342a;
+  --brand-text: #6fdcae;
+}
+html[data-deck='es'] {
+  --brand: #f87171;
+  --brand-strong: #ef5350;
+  --brand-soft: #fdecec;
+  --brand-text: #b42318;
+}
+html[data-deck='es'][data-theme='dark'] {
+  --brand: #ff8f8f;
+  --brand-strong: #ffa3a3;
+  --brand-soft: #3d1f22;
+  --brand-text: #ffa3a3;
+}
+html[data-deck='nl'] {
+  --brand: #2cc7b4;
+  --brand-strong: #18ad9b;
+  --brand-soft: #e0f7f4;
+  --brand-text: #0b6e63;
+}
+html[data-deck='nl'][data-theme='dark'] {
+  --brand: #52d6c5;
+  --brand-strong: #6ee0d2;
+  --brand-soft: #143532;
+  --brand-text: #6ee0d2;
+}
+
+/* --- languages ("decks") ----------------------------------------------------------------- */
+
+.perch-top h1 {
+  flex: 1;
+}
+
+.deck-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 12%);
+  color: var(--on-perch);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.deck-chip:hover {
+  background: rgb(255 255 255 / 20%);
+}
+
+.deck-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--brand);
+  flex: none;
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 70%);
+}
+
+.deck-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s2);
+}
+
+.deck-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s3) var(--s4);
+  border-radius: var(--radius, 18px);
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.deck-row .grow {
+  display: flex;
+  flex-direction: column;
+}
+
+.deck-row.current {
+  border-color: var(--brand);
+  box-shadow: inset 0 0 0 1px var(--brand);
+}
+
+.deck-row .icon {
+  color: var(--ink-3);
+  transform: scaleX(-1);
+}
+
+html[dir='ltr'] .deck-row .icon {
+  transform: none;
+}
+
+.deck-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--s2);
+}
+
+.deck-choice {
+  align-items: flex-start;
+}
+
+.plus-note {
+  align-items: center;
+  text-align: center;
+  background: var(--brand-soft);
+}
+
+.language-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s2);
+  width: 100%;
+}
+
+.language-grid .option-card {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--s2);
+  min-height: 52px;
+}
+
+.intro-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s3);
+  width: 100%;
+  text-align: start;
+}
+
+.intro-list li {
+  display: flex;
+  gap: var(--s3);
+  align-items: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: var(--s3);
+}
+
+.intro-list li > span:first-child {
+  font-size: 1.4rem;
+  line-height: 1.4;
+}
+
+.language-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.language-picker select {
+  min-height: 40px;
+}

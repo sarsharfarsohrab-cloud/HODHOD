@@ -9,6 +9,8 @@ import { num } from '../format.ts'
 import { mascot, type MascotMood } from '../mascot.ts'
 import { t } from '../strings.ts'
 import { enablePush, pushState } from '../../data/push.ts'
+import { TARGET_LANGUAGE_INFO, UI_LANGUAGE_INFO, UI_LANGUAGES, targetsFor } from '../i18n/languages.ts'
+import { languageName } from '../i18n/names.ts'
 
 type Level = 'beginner' | 'some' | 'intermediate'
 const MINUTES = [5, 10, 20, 30] as const
@@ -19,14 +21,20 @@ export function suggestNewPerDay(minutes: number, level: Level): number {
   return level === 'beginner' ? Math.max(3, base - 2) : level === 'intermediate' ? base + 3 : base
 }
 
-export function welcomeScreen(ctx: Ctx): Screen {
+type Page = 'own' | 'learn' | 'intro' | 'hello' | 'time' | 'level' | 'ready'
+
+export function welcomeScreen(ctx: Ctx, params: Record<string, string> = {}): Screen {
   const el = h('main', { class: 'screen no-nav welcome' })
   const w = t.welcome
-  let step = 0
   let minutes: number = ctx.data.settings.dailyGoalMinutes && MINUTES.includes(ctx.data.settings.dailyGoalMinutes as (typeof MINUTES)[number]) ? ctx.data.settings.dailyGoalMinutes : 10
   let level: Level = 'beginner'
   // someone who already uses the app sees this once after an update: their numbers stay the start
   const returning = ctx.data.words.size > 0
+  // a new learner first picks their own language and the language to learn
+  const pages: Page[] = returning ? ['hello', 'time', 'level', 'ready'] : ['own', 'learn', 'intro', 'time', 'level', 'ready']
+  // the page number survives the rebuild that follows a change of interface language
+  let step = Math.min(Math.max(Number(params.step) || 0, 0), pages.length - 1)
+  let busy = false
   let perDay = returning ? ctx.data.settings.newPerDay || suggestNewPerDay(minutes, level) : suggestNewPerDay(minutes, level)
   let perDayTouched = false
 
@@ -35,17 +43,36 @@ export function welcomeScreen(ctx: Ctx): Screen {
     ctx.go(go, { replace: true })
   }
 
-  const dots = () => h('ol', { class: 'welcome-dots', 'aria-label': w.progress(step + 1, 4) }, [0, 1, 2, 3].map((i) => h('li', { class: i === step ? 'on' : i < step ? 'done' : '' })))
+  const dots = () => h('ol', { class: 'welcome-dots', 'aria-label': w.progress(step + 1, pages.length) }, pages.map((_, i) => h('li', { class: i === step ? 'on' : i < step ? 'done' : '' })))
+
+  /** Saves the languages; a new own language switches the whole interface (the screen is rebuilt). */
+  async function chooseLanguages(patch: { native?: string; target?: string }, nextStep: number) {
+    if (busy) return
+    busy = true
+    try {
+      const native = patch.native ?? ctx.data.profile.nativeLanguage
+      let target = patch.target ?? ctx.data.profile.activeTargetLanguage
+      if (target === native) target = targetsFor(native)[0]!
+      await ctx.data.setLanguages({ native, target })
+      step = nextStep
+      ctx.go(`/welcome?step=${nextStep}`, { replace: true })
+      render()
+    } catch {
+      ctx.toast(w.languageFailed, 'error')
+    } finally {
+      busy = false
+    }
+  }
 
   const page = (mood: MascotMood, title: string, body: string | null, content: Node | null, primary: HTMLElement, enter: 'fly' | 'hop' = 'hop') =>
     replace(
       el,
-      h('div', { class: 'welcome-top' }, dots(), step < 3 ? h('button', { class: 'btn ghost small', type: 'button', onclick: () => void finish('/home') }, w.skip) : h('span')),
+      h('div', { class: 'welcome-top' }, dots(), pages[step] !== 'ready' ? h('button', { class: 'btn ghost small', type: 'button', onclick: () => void finish('/home') }, w.skip) : h('span')),
       h('div', { class: 'welcome-bird' }, mascot(mood, { size: 168, enter })),
       h('h1', { class: 'welcome-title' }, title),
       body ? h('p', { class: 'welcome-body' }, body) : null,
       content,
-      h('div', { class: 'welcome-actions' }, primary, step > 0 && step < 3 ? h('button', { class: 'btn ghost', type: 'button', onclick: () => { step--; render() } }, t.common.back) : null),
+      h('div', { class: 'welcome-actions' }, primary, step > 0 && pages[step] !== 'ready' ? h('button', { class: 'btn ghost', type: 'button', onclick: () => { step--; render() } }, t.common.back) : null),
     )
 
   const next = (label: string = w.next) => h('button', { class: 'btn primary big block', type: 'button', 'data-autofocus': '', onclick: () => { step++; render() } }, label)
@@ -73,16 +100,66 @@ export function welcomeScreen(ctx: Ctx): Screen {
       ),
     )
 
+  const languageButton = (code: string, label: string, sub: string | null, current: boolean, pick: () => void, color?: string) =>
+    h(
+      'button',
+      { class: 'option-card', type: 'button', role: 'radio', 'aria-checked': String(current), disabled: busy, onclick: pick },
+      color ? h('span', { class: 'deck-dot', 'aria-hidden': 'true', style: { background: color } }) : null,
+      h('b', { lang: code }, label),
+      sub ? h('span', { class: 'small muted' }, sub) : null,
+    )
+
   function render() {
     const name = ctx.data.profile.displayName
-    if (step === 0) {
+    const kind = pages[step]
+    if (kind === 'own') {
+      const native = ctx.data.profile.nativeLanguage
+      return page(
+        'waiting',
+        w.ownTitle,
+        w.ownBody,
+        h(
+          'div',
+          { class: 'language-grid', role: 'radiogroup', 'aria-label': w.ownTitle },
+          UI_LANGUAGES.map((code) => languageButton(code, UI_LANGUAGE_INFO[code].name, null, code === native, () => void chooseLanguages({ native: code }, step + 1))),
+        ),
+        next(),
+        'fly',
+      )
+    }
+    if (kind === 'learn') {
+      const target = ctx.data.profile.activeTargetLanguage
+      return page(
+        'pointing',
+        w.learnTitle,
+        w.learnBody,
+        h(
+          'div',
+          { class: 'language-grid', role: 'radiogroup', 'aria-label': w.learnTitle },
+          targetsFor(ctx.data.profile.nativeLanguage).map((code) =>
+            languageButton(code, languageName(code), TARGET_LANGUAGE_INFO[code].name, code === target, () => void chooseLanguages({ target: code }, step + 1), TARGET_LANGUAGE_INFO[code].color),
+          ),
+        ),
+        next(),
+      )
+    }
+    if (kind === 'intro') {
+      return page(
+        'morning',
+        w.hello(name),
+        w.introTitle,
+        h('ul', { class: 'intro-list' }, w.intro.map(([emoji, text]) => h('li', null, h('span', { 'aria-hidden': 'true' }, emoji), h('span', null, text)))),
+        next(w.start),
+      )
+    }
+    if (kind === 'hello') {
       if (returning) {
         const news = h('ul', { class: 'whats-new' }, w.whatsNew.map(([emoji, text]) => h('li', null, h('span', { 'aria-hidden': 'true' }, emoji), text)))
         return page('excited', w.helloAgain(name), w.helloAgainBody, news, next(w.next), 'fly')
       }
       return page('morning', w.hello(name), w.helloBody, null, next(w.start), 'fly')
     }
-    if (step === 1) {
+    if (kind === 'time') {
       return page(
         'waiting',
         w.timeTitle,
@@ -98,7 +175,7 @@ export function welcomeScreen(ctx: Ctx): Screen {
         next(),
       )
     }
-    if (step === 2) {
+    if (kind === 'level') {
       return page(
         'teacher',
         w.levelTitle,

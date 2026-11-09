@@ -46,15 +46,19 @@ export interface TargetLanguageInfo {
   sample: string
   /** A word to show as an example in the "new word" field. */
   example: string
+  /** Examples for the help under the "new word" field: a noun, an expression and a sentence. */
+  examples: readonly [string, string, string]
+  /** The deck's colour (the same as --brand in app.css), for the language picker. */
+  color: string
 }
 
 export const TARGET_LANGUAGE_INFO: Record<TargetLanguage, TargetLanguageInfo> = {
-  en: { code: 'en', name: 'English', speech: 'en-GB', articles: [], sample: 'Hello! How are you today?', example: 'give up' },
-  de: { code: 'de', name: 'Deutsch', speech: 'de-DE', articles: ['der', 'die', 'das'], sample: 'Guten Tag! Wie geht es Ihnen?', example: 'aufgeben' },
-  fr: { code: 'fr', name: 'Français', speech: 'fr-FR', articles: ['le', 'la'], sample: 'Bonjour ! Comment allez-vous ?', example: 'se débrouiller' },
-  it: { code: 'it', name: 'Italiano', speech: 'it-IT', articles: ['il', 'lo', 'la'], sample: 'Buongiorno! Come sta?', example: 'in bocca al lupo' },
-  es: { code: 'es', name: 'Español', speech: 'es-ES', articles: ['el', 'la'], sample: '¡Hola! ¿Qué tal estás?', example: 'echar de menos' },
-  nl: { code: 'nl', name: 'Nederlands', speech: 'nl-NL', articles: ['de', 'het'], sample: 'Goedendag! Hoe gaat het met u?', example: 'opgeven' },
+  en: { code: 'en', name: 'English', speech: 'en-GB', articles: [], sample: 'Hello! How are you today?', example: 'give up', examples: ['a table', 'give up', 'How are you doing?'], color: '#5b9cf6' },
+  de: { code: 'de', name: 'Deutsch', speech: 'de-DE', articles: ['der', 'die', 'das'], sample: 'Guten Tag! Wie geht es Ihnen?', example: 'aufgeben', examples: ['der Tisch', 'Bescheid sagen', "Wie geht's dir?"], color: '#f5922b' },
+  fr: { code: 'fr', name: 'Français', speech: 'fr-FR', articles: ['le', 'la'], sample: 'Bonjour ! Comment allez-vous ?', example: 'se débrouiller', examples: ['la table', 'avoir besoin de', 'Ça va ?'], color: '#a78bfa' },
+  it: { code: 'it', name: 'Italiano', speech: 'it-IT', articles: ['il', 'lo', 'la'], sample: 'Buongiorno! Come sta?', example: 'in bocca al lupo', examples: ['il tavolo', 'avere bisogno di', 'Come stai?'], color: '#34c38a' },
+  es: { code: 'es', name: 'Español', speech: 'es-ES', articles: ['el', 'la'], sample: '¡Hola! ¿Qué tal estás?', example: 'echar de menos', examples: ['la mesa', 'echar de menos', '¿Qué tal?'], color: '#f87171' },
+  nl: { code: 'nl', name: 'Nederlands', speech: 'nl-NL', articles: ['de', 'het'], sample: 'Goedendag! Hoe gaat het met u?', example: 'opgeven', examples: ['de tafel', 'in de war zijn', 'Hoe gaat het?'], color: '#2cc7b4' },
 }
 
 export const isUiLanguage = (code: string | null | undefined): code is UiLanguage => !!code && (UI_LANGUAGES as readonly string[]).includes(code)

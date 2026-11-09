@@ -11,6 +11,8 @@ let native = 'fa'
 export function setLearningPair(pair: { target: string; native: string }): void {
   target = isTargetLanguage(pair.target) ? pair.target : 'de'
   native = isUiLanguage(pair.native) ? pair.native : 'fa'
+  // each deck has its own colour (see app.css)
+  if (typeof document !== 'undefined') document.documentElement.dataset.deck = target
 }
 
 /** Code of the language being learned ("de"). */

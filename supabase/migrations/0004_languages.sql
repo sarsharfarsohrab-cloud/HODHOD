@@ -108,3 +108,9 @@ create trigger words_language_guard before insert on public.words
 -- Each deck can have its own colour later; nothing else to store per language for now.
 revoke all on function public.has_plus(uuid) from anon, public;
 grant execute on function public.has_plus(uuid) to authenticated;
+
+-- The price of the model the app actually uses (gpt-6-luna: $0.10 input, $0.50 output per
+-- million tokens). Without it the default price of a far dearer model was counted.
+update public.app_config
+set value = value || '{"gpt-6-luna": {"input": 0.10, "output": 0.50}}'::jsonb
+where key = 'ai_prices' and not (value ? 'gpt-6-luna');

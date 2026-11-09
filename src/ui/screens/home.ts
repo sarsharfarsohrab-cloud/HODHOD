@@ -8,6 +8,8 @@ import { celebrateStreak, pendingMilestone } from '../celebrate.ts'
 import { burst, mascot, reactMascot, type MascotMood } from '../mascot.ts'
 import { announcements, type Announcement } from '../../data/platform.ts'
 import { appName, t } from '../strings.ts'
+import { learning } from '../learning.ts'
+import { languageName } from '../i18n/names.ts'
 import { iconButton } from '../widgets.ts'
 
 /** The bird flies in the first time the home screen is shown in a session, not on every visit. */
@@ -146,6 +148,13 @@ export function homeScreen(ctx: Ctx): Screen {
           'div',
           { class: 'perch-top' },
           h('h1', null, t.home.greeting(hour, data.profile.displayName)),
+          // the language being learned, in its colour; tapping it switches or adds a language
+          h(
+            'a',
+            { class: 'deck-chip', href: '#/decks', 'aria-label': `${t.decks.title}: ${languageName(learning())}` },
+            h('span', { class: 'deck-dot', 'aria-hidden': 'true' }),
+            languageName(learning()),
+          ),
           iconButton('settings', t.nav.settings, () => ctx.go('/settings'), 'on-dark'),
         ),
         h('div', { class: 'perch-bird' }, bird, h('p', { class: 'bubble cream' }, line)),
