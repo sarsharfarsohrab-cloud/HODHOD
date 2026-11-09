@@ -5,7 +5,7 @@
 import { localTimeZone } from '../../core/time.ts'
 import type { Ctx, Screen } from '../context.ts'
 import { h, icon, replace } from '../dom.ts'
-import { fa } from '../format.ts'
+import { num } from '../format.ts'
 import { mascot, type MascotMood } from '../mascot.ts'
 import { t } from '../strings.ts'
 import { enablePush, pushState } from '../../data/push.ts'
@@ -126,7 +126,7 @@ export function welcomeScreen(ctx: Ctx): Screen {
               'div',
               { class: 'row' },
               h('button', { class: 'btn square', type: 'button', 'aria-label': w.less, onclick: () => { perDay = Math.max(1, perDay - 1); perDayTouched = true; render() } }, '−'),
-              h('b', { class: 'big-number', 'aria-live': 'polite' }, fa(perDay)),
+              h('b', { class: 'big-number', 'aria-live': 'polite' }, num(perDay)),
               h('button', { class: 'btn square', type: 'button', 'aria-label': w.more, onclick: () => { perDay = Math.min(50, perDay + 1); perDayTouched = true; render() } }, '+'),
             ),
           ),

@@ -5,7 +5,7 @@
 import { computeStreak } from '../core/activity.ts'
 import type { Ctx } from './context.ts'
 import { h } from './dom.ts'
-import { fa } from './format.ts'
+import { num } from './format.ts'
 import { burst, mascot } from './mascot.ts'
 import { t } from './strings.ts'
 
@@ -78,7 +78,7 @@ export function celebrateStreak(days: number): Promise<void> {
         'div',
         { class: 'celebration-inner' },
         bird,
-        h('div', { class: 'celebration-number' }, fa(days)),
+        h('div', { class: 'celebration-number' }, num(days)),
         h('h2', null, t.celebrate.title(days)),
         h('p', null, t.celebrate.body(days)),
         button,

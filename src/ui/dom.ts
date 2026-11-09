@@ -95,6 +95,9 @@ const ICONS = {
 
 export type IconName = keyof typeof ICONS
 
+/** Icons that point along the reading direction; they are mirrored in left-to-right languages. */
+const DIRECTIONAL = new Set<string>(['back'])
+
 export function icon(name: IconName, options: { filled?: boolean; size?: number } = {}): SVGSVGElement {
   const size = String(options.size ?? 22)
   return svg(ICONS[name], {
@@ -107,6 +110,6 @@ export function icon(name: IconName, options: { filled?: boolean; size?: number 
     'stroke-linecap': 'round',
     'stroke-linejoin': 'round',
     'aria-hidden': 'true',
-    class: 'icon',
+    class: DIRECTIONAL.has(name) ? 'icon icon-directional' : 'icon',
   })
 }

@@ -8,9 +8,9 @@ import { toAppError } from '../../data/errors.ts'
 import { friends, type FriendRequestResult, type FriendRow } from '../../data/platform.ts'
 import type { Ctx, Screen } from '../context.ts'
 import { h, icon, replace } from '../dom.ts'
-import { fa } from '../format.ts'
+import { num } from '../format.ts'
 import { burst, mascot } from '../mascot.ts'
-import { describeError, t } from '../strings.ts'
+import { appName, describeError, t } from '../strings.ts'
 
 const MEDALS = ['🥇', '🥈', '🥉']
 
@@ -87,10 +87,10 @@ export function friendsScreen(ctx: Ctx): Screen {
     return h(
       'li',
       { class: `board-row ${row.is_me ? 'me' : ''}` },
-      h('span', { class: 'board-rank', 'aria-label': f.rank(rank + 1) }, MEDALS[rank] && row.week_reviews > 0 ? MEDALS[rank] : fa(rank + 1)),
+      h('span', { class: 'board-rank', 'aria-label': f.rank(rank + 1) }, MEDALS[rank] && row.week_reviews > 0 ? MEDALS[rank] : num(rank + 1)),
       h('span', { class: 'board-name' }, h('b', null, row.is_me ? f.me : row.display_name || f.noName), h('small', { class: 'muted' }, f.learned(row.learned))),
-      h('span', { class: `board-streak ${row.streak > 0 ? 'hot' : ''}`, title: f.streak }, h('b', null, icon('flame', { size: 16, filled: row.streak > 0 }), fa(row.streak)), h('small', null, f.days)),
-      h('span', { class: 'board-week' }, h('b', null, fa(row.week_reviews)), h('small', null, f.answers)),
+      h('span', { class: `board-streak ${row.streak > 0 ? 'hot' : ''}`, title: f.streak }, h('b', null, icon('flame', { size: 16, filled: row.streak > 0 }), num(row.streak)), h('small', null, f.days)),
+      h('span', { class: 'board-week' }, h('b', null, num(row.week_reviews)), h('small', null, f.answers)),
       remove,
     )
   }
@@ -110,7 +110,7 @@ export function friendsScreen(ctx: Ctx): Screen {
       h(
         'section',
         { class: 'friends-hero' },
-        h('button', { class: 'mascot-button', type: 'button', 'aria-label': 'هدهد', onclick: () => burst(art, 'hearts', 7) }, art),
+        h('button', { class: 'mascot-button', type: 'button', 'aria-label': appName(), onclick: () => burst(art, 'hearts', 7) }, art),
         h(
           'div',
           { class: 'stack', style: { gap: 'var(--s2)' } },
@@ -148,7 +148,7 @@ export function friendsScreen(ctx: Ctx): Screen {
         h('div', { class: 'row spread' }, h('h2', null, f.board), h('span', { class: 'small muted' }, f.thisWeek)),
         accepted.length <= 1 ? h('p', { class: 'small muted' }, f.alone) : null,
         h('ol', { class: 'board' }, accepted.map(boardRow)),
-        outgoing.length > 0 ? h('p', { class: 'small muted' }, f.waiting(outgoing.map((r) => r.display_name || f.noName).join('، '))) : null,
+        outgoing.length > 0 ? h('p', { class: 'small muted' }, f.waiting(outgoing.map((r) => r.display_name || f.noName).join(t.common.listSep))) : null,
       ),
     )
   }

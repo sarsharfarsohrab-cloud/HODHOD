@@ -3,11 +3,11 @@ import { averageSecondsPerAnswer, estimateMinutes, nextCard, queueCounts } from 
 import { dayKey, shiftDayKey } from '../../core/time.ts'
 import type { Ctx, Screen } from '../context.ts'
 import { h, icon, replace, svg } from '../dom.ts'
-import { fa, faRelative, faWeekday } from '../format.ts'
+import { num, fmtRelative, fmtWeekday } from '../format.ts'
 import { celebrateStreak, pendingMilestone } from '../celebrate.ts'
 import { burst, mascot, reactMascot, type MascotMood } from '../mascot.ts'
 import { announcements, type Announcement } from '../../data/platform.ts'
-import { t } from '../strings.ts'
+import { appName, t } from '../strings.ts'
 import { iconButton } from '../widgets.ts'
 
 /** The bird flies in the first time the home screen is shown in a session, not on every visit. */
@@ -97,13 +97,13 @@ export function homeScreen(ctx: Ctx): Screen {
       plan = h(
         'p',
         { class: 'perch-plan' },
-        counts.newCards > 0 ? [h('b', { class: 'count-new' }, fa(counts.newCards)), ` ${t.home.newCards}، `] : null,
-        counts.reviews + counts.learning > 0 ? [h('b', { class: 'count-review' }, fa(counts.reviews + counts.learning)), ` ${t.home.reviews}، `] : null,
+        counts.newCards > 0 ? [h('b', { class: 'count-new' }, num(counts.newCards)), ` ${t.home.newCards}${t.common.listSep}`] : null,
+        counts.reviews + counts.learning > 0 ? [h('b', { class: 'count-review' }, num(counts.reviews + counts.learning)), ` ${t.home.reviews}${t.common.listSep}`] : null,
         t.home.planMinutes(estimate),
       )
     } else if (next.kind === 'wait') {
       mood = 'waiting'
-      line = t.home.waitingLater(faRelative(next.until.toISOString(), now))
+      line = t.home.waitingLater(fmtRelative(next.until.toISOString(), now))
       action = h('a', { class: 'btn big block on-dark', href: '#/study' }, icon('clock'), t.study.waitNow)
     } else {
       mood = today ? (goalDone ? 'trophy' : 'celebrating') : hour >= 21 || hour < 4 ? 'sleepy' : 'idle'
@@ -118,7 +118,7 @@ export function homeScreen(ctx: Ctx): Screen {
       {
         class: 'mascot-button',
         type: 'button',
-        'aria-label': 'هدهد',
+        'aria-label': appName(),
         onclick: () => {
           reactMascot(art, 'happy', mood, 1500)
           burst(art, 'hearts', 7)
@@ -174,13 +174,13 @@ export function homeScreen(ctx: Ctx): Screen {
         h(
           'div',
           { class: 'today-top' },
-          h('div', { class: 'ring-holder' }, goalRing(goalDone ? 1 : minutes / goal, goalDone), h('div', { class: 'ring-center' }, goalDone ? icon('check', { size: 24 }) : h('b', null, fa(minutesShown)), goalDone ? null : h('span', null, t.home.minutesLabel))),
+          h('div', { class: 'ring-holder' }, goalRing(goalDone ? 1 : minutes / goal, goalDone), h('div', { class: 'ring-center' }, goalDone ? icon('check', { size: 24 }) : h('b', null, num(minutesShown)), goalDone ? null : h('span', null, t.home.minutesLabel))),
           h('div', { class: 'today-goal' }, h('b', null, t.home.goal), h('span', { class: 'small muted' }, goalText)),
           h(
             'div',
             { class: `streak-mini ${streak.current > 0 ? 'hot' : ''}`, title: t.home.streakDays },
             icon('flame', { size: 22, filled: streak.current > 0 }),
-            h('b', { class: 'streak-number' }, streak.current > 0 ? fa(streak.current) : '–'),
+            h('b', { class: 'streak-number' }, streak.current > 0 ? num(streak.current) : '–'),
             h('small', null, t.home.streakDays),
           ),
         ),
@@ -192,7 +192,7 @@ export function homeScreen(ctx: Ctx): Screen {
               'li',
               { class: `${d.reviews > 0 ? 'on' : ''} ${d.key === todayKey ? 'today' : ''}`, title: t.home.weekReviews(d.reviews) },
               h('span', { class: 'wd' }, d.reviews > 0 ? icon('check', { size: 16 }) : null),
-              h('span', { class: 'wd-label' }, faWeekday(d.date)),
+              h('span', { class: 'wd-label' }, fmtWeekday(d.date)),
             ),
           ),
         ),

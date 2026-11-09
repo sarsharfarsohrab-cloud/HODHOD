@@ -9,7 +9,7 @@ import { toAppError } from '../../data/errors.ts'
 import { wordColumns } from '../../data/mappers.ts'
 import type { Ctx, Screen } from '../context.ts'
 import { de, h, icon, replace } from '../dom.ts'
-import { fa } from '../format.ts'
+import { num } from '../format.ts'
 import { mascot } from '../mascot.ts'
 import { describeError, t } from '../strings.ts'
 import { tagEditor } from '../widgets.ts'
@@ -101,7 +101,7 @@ export function deckImportScreen(ctx: Ctx): Screen {
       if (!chosen) return
       prepare(await chosen.text())
     }
-    const area = h('textarea', { class: 'textarea', rows: 6, dir: 'auto', placeholder: 'der Tisch\tمیز\naufgeben\tدست کشیدن', 'aria-label': d.paste })
+    const area = h('textarea', { class: 'textarea', rows: 6, dir: 'auto', placeholder: d.placeholder, 'aria-label': d.paste })
     replace(
       el,
       header(),
@@ -136,9 +136,9 @@ export function deckImportScreen(ctx: Ctx): Screen {
         h(
           'ul',
           { class: 'deck-counts' },
-          h('li', null, h('b', null, fa(p.fresh.length)), d.countNew),
-          p.existing ? h('li', null, h('b', null, fa(p.existing)), d.countExisting) : null,
-          p.invalid + p.deck.skipped ? h('li', null, h('b', null, fa(p.invalid + p.deck.skipped)), d.countSkipped) : null,
+          h('li', null, h('b', null, num(p.fresh.length)), d.countNew),
+          p.existing ? h('li', null, h('b', null, num(p.existing)), d.countExisting) : null,
+          p.invalid + p.deck.skipped ? h('li', null, h('b', null, num(p.invalid + p.deck.skipped)), d.countSkipped) : null,
         ),
         p.fresh.length > 0
           ? h(

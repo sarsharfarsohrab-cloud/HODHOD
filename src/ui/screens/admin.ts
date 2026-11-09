@@ -31,7 +31,7 @@ import {
 import type { Ctx, Screen } from '../context.ts'
 import { de, h, icon, replace, type IconName } from '../dom.ts'
 import { createEditor } from '../editor.ts'
-import { fa, faDate, faDateTime, faRelative } from '../format.ts'
+import { num, fmtDate, fmtDateTime, fmtRelative } from '../format.ts'
 import { mascot } from '../mascot.ts'
 import { describeError, t } from '../strings.ts'
 import { emptyState, progressBar } from '../widgets.ts'
@@ -138,16 +138,16 @@ function numbers(o: AdminOverview): HTMLElement {
   return h(
     'section',
     { class: 'admin-stats' },
-    stat(fa(o.users), a.usersTotal, a.usersNew(o.users_7d)),
-    stat(fa(o.active_today), a.activeToday, a.active7(o.active_7d)),
-    stat(fa(o.reviews_today), a.reviewsToday, a.reviews7(o.reviews_7d)),
-    stat(fa(o.words), a.wordsTotal),
-    stat(fa(o.ai_calls_today), a.aiToday),
+    stat(num(o.users), a.usersTotal, a.usersNew(o.users_7d)),
+    stat(num(o.active_today), a.activeToday, a.active7(o.active_7d)),
+    stat(num(o.reviews_today), a.reviewsToday, a.reviews7(o.reviews_7d)),
+    stat(num(o.words), a.wordsTotal),
+    stat(num(o.ai_calls_today), a.aiToday),
     stat(usd(o.cost_today), a.costToday, `${a.cost7}: ${usdText(o.cost_7d)}، ${a.cost30}: ${usdText(o.cost_30d)}`),
     h(
       'a',
       { class: `admin-stat link ${o.feedback_new + o.reports_new > 0 ? 'attention' : ''}`, href: '#/admin/inbox' },
-      h('b', null, fa(o.feedback_new + o.reports_new)),
+      h('b', null, num(o.feedback_new + o.reports_new)),
       h('span', null, a.tabs.inbox),
       h('small', { class: 'muted' }, a.inboxNew(o.feedback_new, o.reports_new, o.errors_24h)),
     ),
@@ -176,7 +176,7 @@ function creditCard(ctx: Ctx, b: AdminBudget, credits: CreditEntry[], reload: ()
           h('b', { class: 'credit-number' }, usd(b.remaining)),
           h('span', null, a.remaining),
           progressBar(b.credit > 0 ? b.remaining / b.credit : 0, a.remaining),
-          h('small', { class: 'muted' }, a.spent(usdText(b.spent), b.since ? faDate(b.since) : '—')),
+          h('small', { class: 'muted' }, a.spent(usdText(b.spent), b.since ? fmtDate(b.since) : '—')),
           b.avg_card_cost > 0 ? h('small', { class: 'muted' }, a.perCard(usdText(b.avg_card_cost, 4))) : null,
           cardsLeft !== null ? h('small', { class: 'muted' }, a.cardsLeft(cardsLeft)) : null,
         )
@@ -199,7 +199,7 @@ function creditCard(ctx: Ctx, b: AdminBudget, credits: CreditEntry[], reload: ()
             'ul',
             { class: 'admin-list compact' },
             credits.map((c) =>
-              h('li', null, h('span', { class: 'chip' }, c.kind === 'topup' ? a.kindTopup : a.kindBalance), usd(Number(c.amount_usd)), h('span', { class: 'muted grow' }, c.note ?? ''), h('small', { class: 'muted' }, faDate(c.created_at))),
+              h('li', null, h('span', { class: 'chip' }, c.kind === 'topup' ? a.kindTopup : a.kindBalance), usd(Number(c.amount_usd)), h('span', { class: 'muted grow' }, c.note ?? ''), h('small', { class: 'muted' }, fmtDate(c.created_at))),
             ),
           ),
         )
@@ -221,12 +221,12 @@ function costChart(b: AdminBudget): HTMLElement | null {
       b.daily.map((d) =>
         h(
           'li',
-          { title: `${faDate(d.day)}: ${usdText(d.cost, 3)}، ${fa(d.calls)}`, 'aria-label': `${faDate(d.day)}: ${usdText(d.cost, 3)}` },
+          { title: `${fmtDate(d.day)}: ${usdText(d.cost, 3)}، ${num(d.calls)}`, 'aria-label': `${fmtDate(d.day)}: ${usdText(d.cost, 3)}` },
           h('span', { class: 'bar', style: { height: `${Math.max(2, (d.cost / max) * 100)}%` } }),
         ),
       ),
     ),
-    h('div', { class: 'row spread small muted' }, h('span', null, faDate(b.daily[0]!.day)), h('span', null, `max ${usdText(max, 3)}`), h('span', null, faDate(b.daily.at(-1)!.day))),
+    h('div', { class: 'row spread small muted' }, h('span', null, fmtDate(b.daily[0]!.day)), h('span', null, `max ${usdText(max, 3)}`), h('span', null, fmtDate(b.daily.at(-1)!.day))),
   )
 }
 
@@ -358,7 +358,7 @@ function users(ctx: Ctx, body: HTMLElement): () => void {
         u.ai_per_day !== null ? h('span', { class: 'chip' }, a.limitBadge(u.ai_per_day)) : null,
       ),
       h('bdi', { dir: 'ltr', class: 'small user-email' }, u.email),
-      h('p', { class: 'small muted' }, `${a.joined(faDate(u.created_at))}، ${u.last_active_at ? a.lastActive(faRelative(u.last_active_at, now)) : a.neverActive}`),
+      h('p', { class: 'small muted' }, `${a.joined(fmtDate(u.created_at))}، ${u.last_active_at ? a.lastActive(fmtRelative(u.last_active_at, now)) : a.neverActive}`),
       h('p', { class: 'small' }, a.userStats(u.words, u.reviews_30d, u.ai_calls_30d, usdText(u.cost_30d, 3), u.packs)),
       u.is_admin ? null : h('div', { class: 'row wrap' }, limitBtn, blockBtn, deleteBtn),
     )
@@ -409,7 +409,7 @@ function reportList(ctx: Ctx, rows: ReportRow[], reload: () => void): HTMLElemen
     return h(
       'li',
       { class: 'inbox-item' },
-      h('div', { class: 'row wrap' }, statusChip(r.status), h('span', { class: 'chip' }, t.report.reasons[r.reason]), h('b', { class: 'de grow', lang: 'de', dir: 'ltr' }, r.lemma), h('small', { class: 'muted' }, faDateTime(r.created_at))),
+      h('div', { class: 'row wrap' }, statusChip(r.status), h('span', { class: 'chip' }, t.report.reasons[r.reason]), h('b', { class: 'de grow', lang: 'de', dir: 'ltr' }, r.lemma), h('small', { class: 'muted' }, fmtDateTime(r.created_at))),
       r.message ? h('p', { class: 'small' }, r.message) : null,
       r.status === 'new'
         ? h('div', { class: 'row wrap' }, r.content ? h('a', { class: 'btn small primary', href: `#/admin/reports/${r.id}` }, icon('edit', { size: 16 }), a.fix) : null, reject)
@@ -419,7 +419,7 @@ function reportList(ctx: Ctx, rows: ReportRow[], reload: () => void): HTMLElemen
   return h(
     'section',
     { class: 'card stack' },
-    h('h2', null, `${a.reportsTitle} (${fa(open.length)})`),
+    h('h2', null, `${a.reportsTitle} (${num(open.length)})`),
     open.length + closed.length === 0 ? h('p', { class: 'muted small' }, a.nothing) : h('ul', { class: 'admin-list' }, [...open, ...closed].map(row)),
   )
 }
@@ -436,7 +436,7 @@ function feedbackList(ctx: Ctx, rows: FeedbackRow[], reload: () => void): HTMLEl
     return h(
       'li',
       { class: `inbox-item ${f.status}` },
-      h('div', { class: 'row wrap' }, statusChip(f.status), h('span', { class: 'chip' }, t.feedback.kinds[f.kind]), h('span', { class: 'grow' }), h('small', { class: 'muted' }, faDateTime(f.created_at))),
+      h('div', { class: 'row wrap' }, statusChip(f.status), h('span', { class: 'chip' }, t.feedback.kinds[f.kind]), h('span', { class: 'grow' }), h('small', { class: 'muted' }, fmtDateTime(f.created_at))),
       h('p', { class: 'inbox-message' }, f.message),
       f.context && Object.keys(f.context).length > 0 ? h('small', { class: 'muted', dir: 'ltr' }, Object.entries(f.context).map(([k, v]) => `${k}: ${String(v)}`).join(' · ')) : null,
       h('div', { class: 'row wrap' }, f.status === 'new' ? mark('seen', a.markSeen) : null, f.status !== 'done' ? mark('done', a.markDone) : null),
@@ -447,7 +447,7 @@ function feedbackList(ctx: Ctx, rows: FeedbackRow[], reload: () => void): HTMLEl
   return h(
     'section',
     { class: 'card stack' },
-    h('h2', null, `${a.feedbackTitle} (${fa(rows.filter((f) => f.status === 'new').length)})`),
+    h('h2', null, `${a.feedbackTitle} (${num(rows.filter((f) => f.status === 'new').length)})`),
     rows.length === 0 ? h('p', { class: 'muted small' }, a.nothing) : h('ul', { class: 'admin-list' }, [...open, ...done].map(row)),
   )
 }
@@ -456,7 +456,7 @@ function errorList(rows: ErrorRow[]): HTMLElement {
   return h(
     'section',
     { class: 'card stack' },
-    h('h2', null, `${a.errorsTitle} (${fa(rows.length)})`),
+    h('h2', null, `${a.errorsTitle} (${num(rows.length)})`),
     rows.length === 0
       ? h('p', { class: 'muted small' }, a.nothing)
       : h(
@@ -466,7 +466,7 @@ function errorList(rows: ErrorRow[]): HTMLElement {
             h(
               'li',
               { class: 'inbox-item' },
-              h('details', null, h('summary', { dir: 'ltr', class: 'error-line' }, h('small', { class: 'muted' }, faDateTime(e.created_at)), ' ', e.message), h('pre', { class: 'error-stack', dir: 'ltr' }, [e.url, e.app_version, e.user_agent, e.stack].filter(Boolean).join('\n'))),
+              h('details', null, h('summary', { dir: 'ltr', class: 'error-line' }, h('small', { class: 'muted' }, fmtDateTime(e.created_at)), ' ', e.message), h('pre', { class: 'error-stack', dir: 'ltr' }, [e.url, e.app_version, e.user_agent, e.stack].filter(Boolean).join('\n'))),
             ),
           ),
         ),
@@ -519,7 +519,7 @@ function news(ctx: Ctx, body: HTMLElement): void {
     return h(
       'article',
       { class: `card stack ${n.published ? '' : 'faded'}` },
-      h('div', { class: 'row wrap' }, h('b', { class: 'grow' }, n.title), n.published ? null : h('span', { class: 'chip' }, a.newsHidden), h('small', { class: 'muted' }, faDateTime(n.created_at))),
+      h('div', { class: 'row wrap' }, h('b', { class: 'grow' }, n.title), n.published ? null : h('span', { class: 'chip' }, a.newsHidden), h('small', { class: 'muted' }, fmtDateTime(n.created_at))),
       n.body ? h('p', { class: 'small' }, n.body) : null,
       h('div', { class: 'row wrap' }, push, toggle),
     )
@@ -905,7 +905,7 @@ export function adminPackScreen(ctx: Ctx, params: Record<string, string>): Scree
       h(
         'section',
         { class: 'card stack' },
-        h('div', { class: 'row spread' }, h('h2', null, `${a.items} (${fa(items.length)})`), items.length > 0 ? relessonBtn : null),
+        h('div', { class: 'row spread' }, h('h2', null, `${a.items} (${num(items.length)})`), items.length > 0 ? relessonBtn : null),
         [...byLesson.entries()].map(([lesson, list]) => h('div', { class: 'stack', style: { gap: 'var(--s1)' } }, h('h3', { class: 'small muted' }, t.store.lesson(lesson)), h('ul', { class: 'admin-list' }, list.map(itemRow)))),
       ),
     )
@@ -991,7 +991,7 @@ export function adminReportScreen(ctx: Ctx, params: Record<string, string>): Scr
         h(
           'section',
           { class: 'card stack' },
-          h('div', { class: 'row wrap' }, h('span', { class: 'chip' }, t.report.reasons[report.reason]), h('small', { class: 'muted' }, faDateTime(report.created_at))),
+          h('div', { class: 'row wrap' }, h('span', { class: 'chip' }, t.report.reasons[report.reason]), h('small', { class: 'muted' }, fmtDateTime(report.created_at))),
           report.message ? h('p', null, report.message) : null,
           h('p', { class: 'help' }, a.fixHelp),
         ),

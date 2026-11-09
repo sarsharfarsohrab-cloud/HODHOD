@@ -13,7 +13,7 @@ import { openLocalDb } from './data/localDb.ts'
 import { SupabaseClient, type KeyValueStore, type Session, type SupabaseConfig } from './data/supabase.ts'
 import type { Ctx, Screen, ScreenFactory } from './ui/context.ts'
 import { h, icon, replace, type IconName } from './ui/dom.ts'
-import { fa } from './ui/format.ts'
+import { num } from './ui/format.ts'
 import { mascot, preloadMascot } from './ui/mascot.ts'
 import { adminItemScreen, adminPackScreen, adminReportScreen, adminScreen } from './ui/screens/admin.ts'
 import { authScreen } from './ui/screens/auth.ts'
@@ -31,7 +31,7 @@ import { studyScreen } from './ui/screens/study.ts'
 import { wordDetailScreen, wordEditScreen } from './ui/screens/wordDetail.ts'
 import { welcomeScreen } from './ui/screens/welcome.ts'
 import { wordsScreen } from './ui/screens/words.ts'
-import { APP_NAME, describeError, t } from './ui/strings.ts'
+import { appName, describeError, setLanguage, t } from './ui/strings.ts'
 import { confirmSheet, emptyState, toast } from './ui/widgets.ts'
 
 declare global {
@@ -85,6 +85,14 @@ function applyTheme(theme: Settings['theme']): void {
   document.documentElement.dataset.theme = dark ? 'dark' : 'light'
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#131127' : '#f1f1f9')
   storage.setItem(THEME_KEY, theme) // read by the inline script in index.html before first paint
+}
+
+const LANGUAGE_KEY = 'hodhod.language'
+
+/** Switches the interface language and remembers it on this device (used before sign-in, too). */
+function applyLanguage(code: string | null | undefined): void {
+  const applied = setLanguage(code)
+  storage.setItem(LANGUAGE_KEY, applied)
 }
 
 function readConfig(): SupabaseConfig | null {
@@ -222,7 +230,7 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
 
   // --- shell ---
   const banner = h('div', { class: 'banner', role: 'status', hidden: true })
-  const nav = h('nav', { class: 'nav', 'aria-label': APP_NAME })
+  const nav = h('nav', { class: 'nav', 'aria-label': appName() })
   const outlet = h('div', { class: 'grow', style: { display: 'flex', flexDirection: 'column', minWidth: '0' } })
   const shell = h('div', { class: 'shell' }, nav, outlet)
   replace(root, banner, shell)
@@ -237,14 +245,14 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
     const counts = queueCounts(data.activeCards(), { settings: data.settings, now: ctx.now() })
     replace(
       nav,
-      h('div', { class: 'nav-brand' }, mascot('idle', { size: 44, enter: 'none' }), APP_NAME),
+      h('div', { class: 'nav-brand' }, mascot('idle', { size: 44, enter: 'none' }), appName()),
       TABS.map((tab) =>
         h(
           'a',
           { class: 'nav-item', href: `#${tab.path}`, 'aria-current': tab.id === activeTab ? 'page' : undefined },
           h('span', { class: 'nav-icon' }, icon(tab.icon)),
           tab.label,
-          tab.id === 'study' && counts.total > 0 ? h('span', { class: 'nav-badge', 'aria-label': t.study.remaining(counts.total) }, fa(Math.min(counts.total, 999))) : null,
+          tab.id === 'study' && counts.total > 0 ? h('span', { class: 'nav-badge', 'aria-label': t.study.remaining(counts.total) }, num(Math.min(counts.total, 999))) : null,
         ),
       ),
     )
@@ -363,6 +371,7 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
 // --- boot -------------------------------------------------------------------------------
 
 async function boot() {
+  applyLanguage(storage.getItem(LANGUAGE_KEY))
   if (STAGING) document.body.append(h('div', { class: 'staging-ribbon', 'aria-hidden': 'true' }, t.staging))
   applyTheme((storage.getItem(THEME_KEY) as Settings['theme'] | null) ?? 'system')
   const config = readConfig()

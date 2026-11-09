@@ -21,7 +21,7 @@ import {
 import { listenOnce, speechRecognitionSupported, type Listening } from '../../audio/recognition.ts'
 import type { Ctx, Screen } from '../context.ts'
 import { de, h, icon, replace } from '../dom.ts'
-import { faPercent } from '../format.ts'
+import { fmtPercent } from '../format.ts'
 import { burst, mascot, reactMascot, setMascotMood } from '../mascot.ts'
 import { t } from '../strings.ts'
 import { emptyState, iconButton, progressBar, segmented, speakButton, wordTitle } from '../widgets.ts'
@@ -381,7 +381,7 @@ export function quizScreen(ctx: Ctx, params: Record<string, string>): Screen {
             'div',
             { class: 'summary-grid' },
             h('div', { class: 'plan-number' }, h('b', null, t.quiz.score(summary.correct, summary.total)), h('span', null, t.quiz.correctLabel)),
-            h('div', { class: 'plan-number' }, h('b', null, faPercent(summary.accuracy)), h('span', null, t.quiz.accuracyLabel)),
+            h('div', { class: 'plan-number' }, h('b', null, fmtPercent(summary.accuracy)), h('span', null, t.quiz.accuracyLabel)),
           ),
         ),
       }),

@@ -4,7 +4,7 @@ import { toAppError } from '../../data/errors.ts'
 import { stories, type StoryRow } from '../../data/platform.ts'
 import type { Ctx, Screen } from '../context.ts'
 import { de, h, icon, replace } from '../dom.ts'
-import { faDate } from '../format.ts'
+import { fmtDate } from '../format.ts'
 import { mascot } from '../mascot.ts'
 import { describeError, t } from '../strings.ts'
 import { emptyState, segmented, speakButton } from '../widgets.ts'
@@ -82,7 +82,7 @@ export function storiesScreen(ctx: Ctx): Screen {
                         'a',
                         { class: `story-item ${story.read_at ? 'read' : 'unread'}`, href: `#/stories/${story.id}` },
                         h('span', { class: 'story-item-text' }, h('b', { class: 'de', lang: 'de', dir: 'ltr' }, story.title_de), h('span', null, story.title_fa)),
-                        h('span', { class: 'small muted' }, [story.level, faDate(story.created_at)].filter(Boolean).join('، ')),
+                        h('span', { class: 'small muted' }, [story.level, fmtDate(story.created_at)].filter(Boolean).join(t.common.listSep)),
                         story.read_at ? null : h('span', { class: 'chip status-new' }, s.unread),
                       ),
                     ),

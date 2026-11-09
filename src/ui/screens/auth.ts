@@ -2,7 +2,7 @@ import { AppError, toAppError } from '../../data/errors.ts'
 import type { SupabaseClient } from '../../data/supabase.ts'
 import { h, replace } from '../dom.ts'
 import { mascot } from '../mascot.ts'
-import { APP_NAME, describeError, t } from '../strings.ts'
+import { appName, describeError, t } from '../strings.ts'
 import { segmented } from '../widgets.ts'
 import { captchaSiteKey, createCaptcha } from '../captcha.ts'
 
@@ -131,7 +131,7 @@ export function authScreen(client: SupabaseClient, options: { mode?: Mode; notic
       { class: 'auth-hero' },
       // the bird on its own ink-blue perch, as in the app icon and the welcome tour
       h('div', { class: 'auth-bird' }, mascot('happy', { size: 128, enter: 'hop' }), h('p', { class: 'auth-bubble' }, t.auth.hello)),
-      h('h1', null, APP_NAME),
+      h('h1', null, appName()),
       h('p', { class: 'muted' }, t.auth.tagline),
     ),
     form,

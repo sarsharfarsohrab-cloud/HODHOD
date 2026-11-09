@@ -6,7 +6,7 @@ import type { SchedulingResult } from '../../core/scheduler.ts'
 import { RATINGS, type Card, type Rating, type ReviewEvent, type Word } from '../../core/types.ts'
 import type { Ctx, Screen } from '../context.ts'
 import { de, h, icon, replace } from '../dom.ts'
-import { fa, faDuration, faPercent, faRelative } from '../format.ts'
+import { num, fmtDuration, fmtPercent, fmtRelative } from '../format.ts'
 import { celebrateStreak, pendingMilestone } from '../celebrate.ts'
 import { burst, mascot, reactMascot, setMascotMood, type MascotMood } from '../mascot.ts'
 import { openReportSheet } from '../reportSheet.ts'
@@ -108,7 +108,7 @@ export function studyScreen(ctx: Ctx, params: Record<string, string> = {}): Scre
       iconButton('close', t.study.exit, exit),
       h('div', { class: 'grow' }, progressBar(total === 0 ? 1 : session.answered / total, t.study.remaining(counts.total))),
       // plain words instead of three coloured numbers nobody could decode
-      h('span', { class: 'study-left small muted', title: `${t.home.newCards} ${fa(counts.newCards)}، ${t.home.learning} ${fa(counts.learning)}، ${t.home.reviews} ${fa(counts.reviews)}` }, t.study.remaining(counts.total)),
+      h('span', { class: 'study-left small muted', title: [`${t.home.newCards} ${num(counts.newCards)}`, `${t.home.learning} ${num(counts.learning)}`, `${t.home.reviews} ${num(counts.reviews)}`].join(t.common.listSep) }, t.study.remaining(counts.total)),
       undo,
     )
   }
@@ -131,7 +131,7 @@ export function studyScreen(ctx: Ctx, params: Record<string, string> = {}): Scre
     const reverse = card.cardType === 'production'
     const many = content.meanings.length > 1
     const meaningTitle = (text: string, i: number) =>
-      h('div', { class: 'meaning-title' }, many ? h('span', { class: 'meaning-index', 'aria-hidden': 'true' }, fa(i + 1)) : null, text)
+      h('div', { class: 'meaning-title' }, many ? h('span', { class: 'meaning-index', 'aria-hidden': 'true' }, num(i + 1)) : null, text)
 
     const badge = reverse
       ? h('span', { class: 'chip status-review' }, icon('swap', { size: 14 }), t.study.reverseBadge)
@@ -191,9 +191,9 @@ export function studyScreen(ctx: Ctx, params: Record<string, string> = {}): Scre
           RATINGS.map((rating) =>
             h(
               'button',
-              { class: `rating rating-${rating}`, type: 'button', title: t.study.ratingHelp[rating], 'aria-label': `${t.study.ratings[rating]} — ${t.study.ratingHelp[rating]} — ${faDuration(preview[rating].intervalMs)}`, onclick: () => void rate(rating) },
+              { class: `rating rating-${rating}`, type: 'button', title: t.study.ratingHelp[rating], 'aria-label': `${t.study.ratings[rating]} — ${t.study.ratingHelp[rating]} — ${fmtDuration(preview[rating].intervalMs)}`, onclick: () => void rate(rating) },
               h('b', null, t.study.ratings[rating]),
-              h('span', null, faDuration(preview[rating].intervalMs)),
+              h('span', null, fmtDuration(preview[rating].intervalMs)),
             ),
           ),
         ),
@@ -308,7 +308,7 @@ export function studyScreen(ctx: Ctx, params: Record<string, string> = {}): Scre
       emptyState({
         art: mascot('sleepy', { size: 132 }),
         title: t.study.waitTitle,
-        body: t.study.waitBody(counts.learning, faRelative(until.toISOString(), ctx.now())),
+        body: t.study.waitBody(counts.learning, fmtRelative(until.toISOString(), ctx.now())),
         action: h(
           'div',
           { class: 'stack', style: { width: '100%', maxWidth: '320px' } },
@@ -354,10 +354,10 @@ export function studyScreen(ctx: Ctx, params: Record<string, string> = {}): Scre
           h(
             'div',
             { class: 'summary-grid' },
-            stat(fa(session.answered), t.study.doneCards),
-            stat(faPercent(session.recalled / session.answered), t.study.doneCorrect),
+            stat(num(session.answered), t.study.doneCards),
+            stat(fmtPercent(session.recalled / session.answered), t.study.doneCorrect),
             stat(t.study.doneDuration(session.durationMs), t.study.doneTime),
-            stat(fa(session.newSeen), t.study.doneNew),
+            stat(num(session.newSeen), t.study.doneNew),
           ),
           h('button', { class: 'btn primary big block', type: 'button', 'data-autofocus': '', onclick: exit }, t.study.doneHome),
           // what to do next with the same words

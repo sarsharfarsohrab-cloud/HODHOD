@@ -3,8 +3,8 @@ import { SETTINGS_LIMITS, type Settings } from '../../core/types.ts'
 import { toAppError } from '../../data/errors.ts'
 import type { Ctx, Screen } from '../context.ts'
 import { h, icon, replace } from '../dom.ts'
-import { fa, faDateTime, faPercent } from '../format.ts'
-import { APP_NAME, describeError, t } from '../strings.ts'
+import { num, fmtDateTime, fmtPercent } from '../format.ts'
+import { appName, describeError, t } from '../strings.ts'
 import { openSheet, saveFile, segmented } from '../widgets.ts'
 import { exportDeck } from '../../core/deckImport.ts'
 import { isAdmin } from '../../data/platform.ts'
@@ -112,8 +112,8 @@ export function settingsScreen(ctx: Ctx): Screen {
       h(
         'p',
         { class: 'small muted', 'aria-live': 'polite' },
-        sync.syncing ? s.syncing : sync.lastSyncedAt ? s.synced(faDateTime(sync.lastSyncedAt)) : s.neverSynced,
-        sync.pending > 0 ? `، ${s.pending(sync.pending)}` : '',
+        sync.syncing ? s.syncing : sync.lastSyncedAt ? s.synced(fmtDateTime(sync.lastSyncedAt)) : s.neverSynced,
+        sync.pending > 0 ? `${t.common.listSep}${s.pending(sync.pending)}` : '',
       ),
       !sync.online ? h('p', { class: 'notice warn' }, icon('offline', { size: 18 }), t.sync.offlineBanner) : null,
       h('button', { class: 'btn block', type: 'button', disabled: sync.syncing || !sync.online, onclick: () => void ctx.data.syncNow() }, icon('refresh', { size: 18 }), s.syncNow),
@@ -145,7 +145,7 @@ export function settingsScreen(ctx: Ctx): Screen {
       'div',
       { class: 'stepper', role: 'group', 'aria-label': label },
       h('button', { class: 'icon-btn', type: 'button', 'aria-label': `${label}: −`, disabled: value <= min, onclick: () => onChange(Math.max(min, value - 1)) }, '−'),
-      h('output', { 'aria-live': 'polite' }, fa(value)),
+      h('output', { 'aria-live': 'polite' }, num(value)),
       h('button', { class: 'icon-btn', type: 'button', 'aria-label': `${label}: +`, disabled: value >= max, onclick: () => onChange(Math.min(max, value + 1)) }, '+'),
     )
 
@@ -165,8 +165,8 @@ export function settingsScreen(ctx: Ctx): Screen {
       }
     }
 
-    const retentionLabel = h('output', null, faPercent(settings.desiredRetention))
-    const rateLabel = h('output', null, `${fa(Math.round(settings.speechRate * 100))}٪`)
+    const retentionLabel = h('output', null, fmtPercent(settings.desiredRetention))
+    const rateLabel = h('output', null, fmtPercent(settings.speechRate))
 
     replace(
       el,
@@ -241,7 +241,7 @@ export function settingsScreen(ctx: Ctx): Screen {
               min: SETTINGS_LIMITS.desiredRetention.min, max: SETTINGS_LIMITS.desiredRetention.max, step: 0.01, value: String(settings.desiredRetention),
               oninput: (e: Event) => {
                 const value = Number((e.target as HTMLInputElement).value)
-                retentionLabel.textContent = faPercent(value)
+                retentionLabel.textContent = fmtPercent(value)
                 updateSoon({ desiredRetention: value })
               },
             }),
@@ -266,7 +266,7 @@ export function settingsScreen(ctx: Ctx): Screen {
                   min: SETTINGS_LIMITS.speechRate.min, max: SETTINGS_LIMITS.speechRate.max, step: 0.05, value: String(settings.speechRate),
                   oninput: (e: Event) => {
                     const value = Number((e.target as HTMLInputElement).value)
-                    rateLabel.textContent = `${fa(Math.round(value * 100))}٪`
+                    rateLabel.textContent = fmtPercent(value)
                     updateSoon({ speechRate: value })
                   },
                 }),
@@ -343,7 +343,7 @@ export function settingsScreen(ctx: Ctx): Screen {
         h(
           'dl',
           { class: 'facts' },
-          h('dt', null, s.version), h('dd', null, h('bdi', { dir: 'ltr' }, `${APP_NAME} ${typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev'}`)),
+          h('dt', null, s.version), h('dd', null, h('bdi', { dir: 'ltr' }, `${appName()} ${typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev'}`)),
           h('dt', null, s.scheduler), h('dd', null, h('bdi', { dir: 'ltr', class: 'de' }, FSRS_SCHEDULER_VERSION)),
         ),
         h('p', { class: 'small muted' }, s.aboutBody),

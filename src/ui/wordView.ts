@@ -3,7 +3,7 @@ import type { WordContent } from '../../supabase/functions/_shared/wordSchema.ts
 import { buildConjugation, spokenForm } from '../core/conjugation.ts'
 import type { Ctx } from './context.ts'
 import { de, h, icon } from './dom.ts'
-import { fa } from './format.ts'
+import { num } from './format.ts'
 import { t } from './strings.ts'
 import { cefrChip, deList, speakButton, wordTitle } from './widgets.ts'
 
@@ -35,7 +35,7 @@ export function meaningsCard(ctx: Ctx, content: WordContent): HTMLElement {
       h(
         'div',
         { class: 'meaning' },
-        h('div', { class: 'meaning-title' }, many ? h('span', { class: 'meaning-index', 'aria-hidden': 'true' }, fa(i + 1)) : null, meaning.translation),
+        h('div', { class: 'meaning-title' }, many ? h('span', { class: 'meaning-index', 'aria-hidden': 'true' }, num(i + 1)) : null, meaning.translation),
         meaning.note ? h('p', { class: 'small muted' }, meaning.note) : null,
         meaning.examples.map((example) =>
           h(
@@ -70,7 +70,7 @@ export function grammarCard(ctx: Ctx, content: WordContent): HTMLElement | null 
     rows.push(...fact(d.auxiliary, de(v.auxiliary)))
     rows.push(...fact('Partizip II', de(v.partizip2)))
     rows.push(...fact('Präteritum', de(`${v.praeteritum[2]}`)))
-    const traits = [v.separable ? d.separable : null, v.irregular ? d.irregular : d.regular, v.reflexive !== 'none' ? d.reflexive : null].filter(Boolean).join('، ')
+    const traits = [v.separable ? d.separable : null, v.irregular ? d.irregular : d.regular, v.reflexive !== 'none' ? d.reflexive : null].filter(Boolean).join(t.common.listSep)
     rows.push(...fact(d.traits, traits))
     rows.push(...fact(d.government, v.government ? de(v.government) : null))
   }

@@ -4,6 +4,8 @@
 
 :root {
   color-scheme: light;
+  /* the side where reading starts: right in Persian and Arabic, left otherwise */
+  --reading-edge: right;
 
   /* colour — the palette of a hoopoe: saffron body, ink-and-white wing, on cool paper */
   --bg: #f1f1f9;
@@ -1297,7 +1299,7 @@ button.mascot-button {
 
 /* in a card the word sits at the reading edge, in line with the Persian text under it */
 .card .word-title {
-  text-align: right;
+  text-align: var(--reading-edge);
 }
 
 .article-der {
@@ -1364,7 +1366,7 @@ button.mascot-button {
 .example .de {
   display: block;
   /* the German line sits at the same (right) edge as its Persian translation */
-  text-align: right;
+  text-align: var(--reading-edge);
   font-weight: 600;
   line-height: 1.55;
 }
@@ -1698,7 +1700,7 @@ details.fold[open] > summary .icon {
 .word-row .de {
   font-size: var(--text-md);
   font-weight: 700;
-  text-align: right; /* aligned with the Persian line below it, at the reading edge */
+  text-align: var(--reading-edge); /* aligned with the Persian line below it, at the reading edge */
   line-height: 1.5;
 }
 
@@ -2022,7 +2024,7 @@ input[type='range'] {
 }
 
 .option-card b.de {
-  text-align: right;
+  text-align: var(--reading-edge);
 }
 
 .option-card span {
@@ -3505,7 +3507,7 @@ button.quiz-option:hover {
 }
 .user-email {
   color: var(--ink-2);
-  text-align: right;
+  text-align: var(--reading-edge);
 }
 .faded {
   opacity: 0.6;
@@ -4025,7 +4027,7 @@ button.quiz-option:hover {
   color: var(--accent);
   font-weight: 700;
 }
-.today-link .icon {
+html[dir='rtl'] .today-link .icon {
   transform: scaleX(-1);
 }
 
@@ -4077,4 +4079,17 @@ button.quiz-option:hover {
 }
 .board-week small {
   white-space: nowrap;
+}
+
+
+html[dir='ltr'] {
+  --reading-edge: left;
+}
+html[dir='ltr'] .icon-directional {
+  transform: scaleX(-1);
+}
+
+/* Vazirmatn is made for Persian and Arabic script; other interface languages use the system font */
+html:not([lang='fa']):not([lang='ar']) {
+  --font-fa: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
