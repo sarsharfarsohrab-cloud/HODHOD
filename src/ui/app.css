@@ -1130,8 +1130,9 @@ button.chip[aria-pressed='true'] {
   100% { transform: none; }
 }
 
+/* with the sheet at 500%, frame k sits at k×25%; 125% with steps(5) lands on 0, 25, 50, 75, 100% */
 @keyframes m-flap {
-  to { background-position: -500% 0; }
+  to { background-position: 125% 0; }
 }
 
 @keyframes m-wings-out {
