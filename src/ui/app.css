@@ -1302,15 +1302,19 @@ button.mascot-button {
   text-align: var(--reading-edge);
 }
 
-.article-der {
+.article-der,
+.gender-m,
+.gender-c {
   color: var(--der);
 }
 
-.article-die {
+.article-die,
+.gender-f {
   color: var(--die);
 }
 
-.article-das {
+.article-das,
+.gender-n {
   color: var(--das);
 }
 
@@ -2091,14 +2095,18 @@ button.quiz-option:hover {
   font-size: var(--text-lg);
 }
 
+.quiz-option.gender-m,
+.quiz-option.gender-c,
 .quiz-option.article-der {
   color: var(--der);
 }
 
+.quiz-option.gender-f,
 .quiz-option.article-die {
   color: var(--die);
 }
 
+.quiz-option.gender-n,
 .quiz-option.article-das {
   color: var(--das);
 }

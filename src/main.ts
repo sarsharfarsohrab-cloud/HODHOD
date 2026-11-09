@@ -31,7 +31,8 @@ import { studyScreen } from './ui/screens/study.ts'
 import { wordDetailScreen, wordEditScreen } from './ui/screens/wordDetail.ts'
 import { welcomeScreen } from './ui/screens/welcome.ts'
 import { wordsScreen } from './ui/screens/words.ts'
-import { appName, describeError, setLanguage, t } from './ui/strings.ts'
+import { appName, currentLanguage, describeError, setLanguage, t } from './ui/strings.ts'
+import { setLearningPair } from './ui/learning.ts'
 import { confirmSheet, emptyState, toast } from './ui/widgets.ts'
 
 declare global {
@@ -163,6 +164,14 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
   cleanups.push(() => data.close())
   await data.load()
   applyTheme(data.settings.theme)
+  /** The account's languages decide the interface language and the deck on screen. Returns true when the interface language changed. */
+  const syncLanguages = (): boolean => {
+    setLearningPair({ target: data.profile.activeTargetLanguage, native: data.profile.nativeLanguage })
+    if (data.profile.nativeLanguage === currentLanguage()) return false
+    applyLanguage(data.profile.nativeLanguage)
+    return true
+  }
+  syncLanguages()
 
   // First visit on this device: the Word Bank has to arrive before there is anything to show.
   while (!data.hasSyncedOnce && !stopped) {
@@ -321,6 +330,11 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
 
   cleanups.push(
     data.subscribe(() => {
+      if (syncLanguages()) {
+        renderChrome()
+        void route()
+        return
+      }
       renderChrome()
       screen?.onData?.()
       maybeWelcome()

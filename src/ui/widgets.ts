@@ -1,9 +1,10 @@
 /** Small reusable pieces of interface. */
-import { displayWord, type Cefr, type WordContent } from '../../supabase/functions/_shared/wordSchema.ts'
+import { ARTICLES, displayWord, type Cefr, type WordContent } from '../../supabase/functions/_shared/wordSchema.ts'
 import type { WordStatus } from '../core/cards.ts'
 import type { ConfirmOptions, Ctx } from './context.ts'
 import { de, h, icon, type IconName } from './dom.ts'
 import { t } from './strings.ts'
+import { learning } from './learning.ts'
 
 // --- toast -------------------------------------------------------------------
 
@@ -127,8 +128,12 @@ export function wordTitle(content: Pick<WordContent, 'lemma' | 'noun'>, tag: 'h1
   const article = content.noun?.article
   // sentences and long expressions get a smaller title so they still fit on a phone
   const size = content.lemma.length > 60 ? ' title-long' : content.lemma.length > 24 ? ' title-mid' : ''
-  const el = h(tag, { class: className + size, lang: 'de', dir: 'ltr' })
-  if (article) el.append(h('span', { class: `article-${article}` }, article), ' ')
+  const el = h(tag, { class: className + size, lang: learning(), dir: 'ltr' })
+  if (article) {
+    const gender = content.noun?.gender ?? ARTICLES[learning()]?.[article] ?? null
+    // elided articles (l') join the noun without a space
+    el.append(h('span', { class: gender ? `gender-${gender}` : 'article' }, article), article.endsWith("'") ? '' : ' ')
+  }
   el.append(content.lemma)
   el.setAttribute('aria-label', displayWord(content))
   return el

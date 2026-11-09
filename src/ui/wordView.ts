@@ -6,6 +6,7 @@ import { de, h, icon } from './dom.ts'
 import { num } from './format.ts'
 import { t } from './strings.ts'
 import { cefrChip, deList, speakButton, wordTitle } from './widgets.ts'
+import { learning, ownDir, ownLanguage } from './learning.ts'
 
 export function wordHeader(ctx: Ctx, content: WordContent, trailing: (Node | null)[] = []): HTMLElement {
   const spoken = content.noun?.article ? `${content.noun.article} ${content.lemma}` : content.lemma
@@ -43,7 +44,7 @@ export function meaningsCard(ctx: Ctx, content: WordContent): HTMLElement {
             { class: 'example' },
             h('div', null, h('span', { class: 'example-level' }, t.levels[example.level]), de(example.de)),
             speakButton(ctx, example.de, { compact: true }),
-            h('span', { class: 'fa' }, example.fa),
+            h('span', { class: 'fa', lang: ownLanguage(), dir: ownDir() }, example.fa),
           ),
         ),
       ),
@@ -61,9 +62,10 @@ export function grammarCard(ctx: Ctx, content: WordContent): HTMLElement | null 
   const rows: (HTMLElement | null)[] = []
   if (content.noun) {
     const n = content.noun
+    const german = learning() === 'de'
     if (n.pluralOnly) rows.push(...fact(d.plural, d.pluralOnly))
-    else rows.push(...fact(d.plural, n.plural ? de(`die ${n.plural}`) : d.noPlural))
-    rows.push(...fact(d.genitive, n.genitive ? de(`${n.article === 'die' ? 'der' : 'des'} ${n.genitive}`) : null))
+    else rows.push(...fact(d.plural, n.plural ? de(german ? `die ${n.plural}` : n.plural) : d.noPlural))
+    if (german) rows.push(...fact(d.genitive, n.genitive ? de(`${n.article === 'die' ? 'der' : 'des'} ${n.genitive}`) : null))
   }
   if (content.verb) {
     const v = content.verb
@@ -74,6 +76,14 @@ export function grammarCard(ctx: Ctx, content: WordContent): HTMLElement | null 
     rows.push(...fact(d.traits, traits))
     rows.push(...fact(d.government, v.government ? de(v.government) : null))
   }
+  if (content.conjugation) {
+    const c = content.conjugation
+    rows.push(...fact(d.auxiliary, c.auxiliary ? de(c.auxiliary) : null))
+    rows.push(...fact(d.participle, de(c.participle)))
+    const traits = [c.separable ? d.separable : null, c.irregular ? d.irregular : d.regular, c.reflexive ? d.reflexive : null].filter(Boolean).join(t.common.listSep)
+    rows.push(...fact(d.traits, traits))
+    rows.push(...fact(d.government, c.government ? de(c.government) : null))
+  }
   if (content.adjective) {
     rows.push(...fact(d.comparative, content.adjective.comparative ? de(content.adjective.comparative) : null))
     rows.push(...fact(d.superlative, content.adjective.superlative ? de(content.adjective.superlative) : null))
@@ -83,8 +93,12 @@ export function grammarCard(ctx: Ctx, content: WordContent): HTMLElement | null 
 }
 
 export function conjugationCard(ctx: Ctx, content: WordContent): HTMLElement | null {
-  if (!content.verb) return null
-  const tables = buildConjugation(content.lemma, content.verb)
+  const tables = content.verb
+    ? buildConjugation(content.lemma, content.verb)
+    : content.conjugation
+      ? content.conjugation.tenses.map((tense) => ({ title: tense.name, rows: tense.forms }))
+      : null
+  if (!tables || tables.length === 0) return null
   return h(
     'section',
     { class: 'card' },
@@ -102,7 +116,7 @@ export function conjugationCard(ctx: Ctx, content: WordContent): HTMLElement | n
             'tbody',
             null,
             table.rows.map((row) =>
-              h('tr', null, h('td', null, row.person), h('td', { class: 'form', lang: 'de' }, row.form), h('td', null, speakButton(ctx, spokenForm(row), { compact: true }))),
+              h('tr', null, h('td', null, row.person), h('td', { class: 'form', lang: learning() }, row.form), h('td', null, speakButton(ctx, spokenForm(row), { compact: true }))),
             ),
           ),
         ),

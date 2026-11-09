@@ -3,8 +3,9 @@
  * It edits a private copy; nothing leaves this form until `read()` returns a valid result.
  */
 import {
-  ARTICLE_VALUES,
+  ARTICLES,
   CEFR_VALUES,
+  GENDER_VALUES,
   EXAMPLE_LEVELS,
   LIMITS,
   PERSONS,
@@ -19,6 +20,7 @@ import {
 } from '../../supabase/functions/_shared/wordSchema.ts'
 import { h, icon, replace } from './dom.ts'
 import { t } from './strings.ts'
+import { learning, ownDir, ownLanguage } from './learning.ts'
 
 export interface Editor {
   el: HTMLElement
@@ -45,8 +47,8 @@ export function createEditor(initial: WordContent): Editor {
     const common = {
       class: `${options.multiline ? 'textarea' : 'input'} ${options.german ? 'de' : ''}`,
       value,
-      dir: options.german ? 'ltr' : 'rtl',
-      lang: options.german ? 'de' : 'fa',
+      dir: options.german ? 'ltr' : ownDir(),
+      lang: options.german ? learning() : ownLanguage(),
       placeholder: options.placeholder ?? '',
       maxLength: options.maxLength ?? LIMITS.sentence,
       autocapitalize: 'off',
@@ -168,7 +170,7 @@ export function createEditor(initial: WordContent): Editor {
     h(
       'details',
       { class: 'fold' },
-      h('summary', null, h('bdi', { class: 'de', lang: 'de', dir: 'ltr' }, title), icon('chevron', { size: 20 })),
+      h('summary', null, h('bdi', { class: 'de', lang: learning(), dir: 'ltr' }, title), icon('chevron', { size: 20 })),
       h(
         'div',
         { class: 'six', 'data-path': path },
@@ -183,16 +185,58 @@ export function createEditor(initial: WordContent): Editor {
     const children: (Node | null)[] = []
     if (draft.pos === 'noun' && draft.noun) {
       const noun = draft.noun
+      const articles = Object.keys(ARTICLES[learning()] ?? {})
       children.push(
         h('h2', null, t.detail.grammar),
         h(
           'div',
           { class: 'form-grid' },
-          field(f.article, select(noun.article ?? '', [{ value: '', label: '—' }, ...ARTICLE_VALUES.map((a) => ({ value: a, label: a }))], (v) => (noun.article = v || null), 'noun.article')),
+          articles.length
+            ? field(f.article, select(noun.article ?? '', [{ value: '', label: '—' }, ...articles.map((a) => ({ value: a, label: a }))], (v) => (noun.article = v || null), 'noun.article'))
+            : null,
+          articles.length && learning() !== 'de'
+            ? field(f.gender, select(noun.gender ?? '', [{ value: '', label: '—' }, ...GENDER_VALUES.filter((g) => Object.values(ARTICLES[learning()] ?? {}).includes(g)).map((g) => ({ value: g, label: t.gender[g] }))], (v) => (noun.gender = v || null), 'noun.gender'))
+            : null,
           field(f.plural, textInput(noun.plural ?? '', (v) => (noun.plural = v || null), { german: true, maxLength: LIMITS.shortText, path: 'noun.plural' })),
-          field(f.genitive, textInput(noun.genitive ?? '', (v) => (noun.genitive = v || null), { german: true, maxLength: LIMITS.shortText, path: 'noun.genitive' }), 'full'),
+          learning() === 'de'
+            ? field(f.genitive, textInput(noun.genitive ?? '', (v) => (noun.genitive = v || null), { german: true, maxLength: LIMITS.shortText, path: 'noun.genitive' }), 'full')
+            : null,
         ),
         checkbox(f.pluralOnly, noun.pluralOnly, (v) => (noun.pluralOnly = v)),
+      )
+    } else if (draft.pos === 'verb' && learning() !== 'de') {
+      const c = (draft.conjugation ??= { auxiliary: null, irregular: false, separable: false, reflexive: false, participle: '', government: null, tenses: [] })
+      children.push(
+        h('h2', null, t.detail.conjugation),
+        h(
+          'div',
+          { class: 'form-grid' },
+          field(t.detail.participle, textInput(c.participle, (v) => (c.participle = v), { german: true, maxLength: LIMITS.shortText, path: 'conjugation.participle' })),
+          field(`${f.auxiliary} (${t.common.optional})`, textInput(c.auxiliary ?? '', (v) => (c.auxiliary = v || null), { german: true, maxLength: LIMITS.shortText })),
+          field(`${f.government} (${t.common.optional})`, textInput(c.government ?? '', (v) => (c.government = v || null), { german: true, maxLength: LIMITS.shortText }), 'full'),
+        ),
+        checkbox(f.separable, c.separable, (v) => (c.separable = v)),
+        checkbox(f.irregular, c.irregular, (v) => (c.irregular = v)),
+        checkbox(f.reflexive, c.reflexive, (v) => (c.reflexive = v)),
+        h(
+          'div',
+          null,
+          c.tenses.map((tense, ti) =>
+            h(
+              'details',
+              { class: 'fold', open: ti === 0 },
+              h('summary', null, h('bdi', { class: 'de', lang: learning(), dir: 'ltr' }, tense.name), icon('chevron', { size: 20 })),
+              h(
+                'div',
+                { class: 'six', 'data-path': `conjugation.tenses.${ti}` },
+                tense.forms.flatMap((row, i) => {
+                  const id = `tense-${ti}-${i}`
+                  return [h('label', { for: id }, row.person), Object.assign(textInput(row.form, (v) => (row.form = v), { german: true, maxLength: LIMITS.shortText }), { id })]
+                }),
+              ),
+            ),
+          ),
+        ),
       )
     } else if (draft.pos === 'verb' && draft.verb) {
       const verb = draft.verb
@@ -221,7 +265,7 @@ export function createEditor(initial: WordContent): Editor {
           h(
             'details',
             { class: 'fold' },
-            h('summary', null, h('bdi', { class: 'de', lang: 'de', dir: 'ltr' }, 'Imperativ'), icon('chevron', { size: 20 })),
+            h('summary', null, h('bdi', { class: 'de', lang: learning(), dir: 'ltr' }, 'Imperativ'), icon('chevron', { size: 20 })),
             h(
               'div',
               { class: 'six', 'data-path': 'verb.imperativ' },
@@ -321,8 +365,15 @@ export function createEditor(initial: WordContent): Editor {
     dirty: () => dirty,
     read() {
       // Blocks that do not belong to the chosen part of speech are simply not submitted.
-      const candidate = { ...draft, noun: draft.pos === 'noun' ? draft.noun : null, verb: draft.pos === 'verb' ? draft.verb : null, adjective: draft.pos === 'adjective' ? draft.adjective : null }
-      const result = validateWordContent(candidate, { mode: 'user' })
+      const german = learning() === 'de'
+      const candidate = {
+        ...draft,
+        noun: draft.pos === 'noun' ? draft.noun : null,
+        verb: draft.pos === 'verb' && german ? draft.verb : null,
+        conjugation: draft.pos === 'verb' && !german ? draft.conjugation : null,
+        adjective: draft.pos === 'adjective' ? draft.adjective : null,
+      }
+      const result = validateWordContent(candidate, { mode: 'user', target: learning(), native: ownLanguage() })
       for (const node of el.querySelectorAll('[aria-invalid]')) node.removeAttribute('aria-invalid')
       if (result.ok) {
         replace(problems)

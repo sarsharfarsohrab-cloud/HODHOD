@@ -9,6 +9,7 @@ import { num } from '../format.ts'
 import { mascot } from '../mascot.ts'
 import { describeError, t } from '../strings.ts'
 import { emptyState, progressBar, segmented } from '../widgets.ts'
+import { learning } from '../learning.ts'
 
 type KindFilter = 'all' | StorePack['kind']
 
@@ -181,7 +182,7 @@ export function packScreen(ctx: Ctx, params: Record<string, string>): Screen {
                 return h(
                   'li',
                   { class: known ? 'known' : '' },
-                  h('span', { class: 'de', lang: 'de', dir: 'ltr' }, de(item?.lemma ?? item?.input ?? '')),
+                  h('span', { class: 'de', lang: learning(), dir: 'ltr' }, de(item?.lemma ?? item?.input ?? '')),
                   h('span', { class: 'muted' }, item?.primary_meaning ?? ''),
                 )
               }),

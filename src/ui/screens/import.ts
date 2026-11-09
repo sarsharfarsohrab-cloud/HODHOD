@@ -15,6 +15,7 @@ import { draftFromResult, draftPanel, saveDraft, type Draft, type DraftPanel } f
 import { mascot } from '../mascot.ts'
 import { describeError, t } from '../strings.ts'
 import { emptyState, iconButton, progressBar, tagEditor } from '../widgets.ts'
+import { learning } from '../learning.ts'
 
 export const MAX_IMPORT = 40
 const LIMIT_PAUSE_MS = 20_000
@@ -162,7 +163,7 @@ export function importScreen(ctx: Ctx): Screen {
 
   function renderInput(error?: string) {
     const area = h('textarea', {
-      class: 'textarea de import-area', rows: 9, lang: 'de', dir: 'ltr', value: s.text, placeholder: t.import.placeholder,
+      class: 'textarea de import-area', rows: 9, lang: learning(), dir: 'ltr', value: s.text, placeholder: t.import.placeholder,
       autocapitalize: 'off', autocomplete: 'off', spellcheck: false, 'aria-label': t.import.listLabel, 'aria-describedby': 'import-help',
       oninput: () => (s.text = area.value),
     })

@@ -6,7 +6,12 @@
  * every user edit). Nothing that fails `validateWordContent` is ever stored.
  */
 
-export const CONTENT_VERSION = 2
+/**
+ * 3: any language pair. The two text slots of an example, a collocation and a reply keep
+ * their historical names: `de` holds the text in the language being learned and `fa` the
+ * text in the learner's own language, whatever the pair is.
+ */
+export const CONTENT_VERSION = 3
 
 export const POS_VALUES = [
   'noun',
@@ -33,11 +38,31 @@ export const EXAMPLE_LEVELS = ['easy', 'medium', 'hard'] as const
 export type ExampleLevel = (typeof EXAMPLE_LEVELS)[number]
 
 export const ARTICLE_VALUES = ['der', 'die', 'das'] as const
-export type Article = (typeof ARTICLE_VALUES)[number]
+/** A definite article in the singular ("der", "la", "het", "l'"). */
+export type Article = string
+
+/** Grammatical gender: masculine, feminine, neuter, or common (Dutch de-words). */
+export const GENDER_VALUES = ['m', 'f', 'n', 'c'] as const
+export type Gender = (typeof GENDER_VALUES)[number]
+
+/** Singular definite articles per learned language, with the gender each one marks (null: it does not tell). */
+export const ARTICLES: Record<string, Record<string, Gender | null>> = {
+  de: { der: 'm', die: 'f', das: 'n' },
+  fr: { le: 'm', la: 'f', "l'": null },
+  it: { il: 'm', lo: 'm', la: 'f', "l'": null },
+  es: { el: 'm', la: 'f' },
+  nl: { de: 'c', het: 'n' },
+  en: {},
+}
+
+/** Does this learned language mark nouns with a gendered article? */
+export const hasArticles = (target: string): boolean => Object.keys(ARTICLES[target] ?? {}).length > 0
 
 export interface Example {
   level: ExampleLevel
+  /** sentence in the learned language */
   de: string
+  /** its translation into the learner's language */
   fa: string
 }
 
@@ -48,8 +73,10 @@ export interface Meaning {
 }
 
 export interface NounInfo {
-  /** null only for nouns that exist in the plural alone (die Eltern → pluralOnly). */
+  /** null for plural-only nouns and in languages without gendered articles (English). */
   article: Article | null
+  /** Since content version 3; for German it follows from the article. */
+  gender?: Gender | null
   plural: string | null
   genitive: string | null
   pluralOnly: boolean
@@ -72,6 +99,28 @@ export interface VerbInfo {
   konjunktiv1: SixForms
   konjunktiv2: SixForms
   imperativ: { du: string; ihr: string; Sie: string }
+}
+
+/** One tense of a verb in a language other than German, as the AI wrote it. */
+export interface Tense {
+  /** name of the tense in the learned language ("présent", "Past simple") */
+  name: string
+  forms: { person: string; form: string }[]
+}
+
+/** Verb details for every learned language except German (which keeps the richer VerbInfo). */
+export interface Conjugation {
+  /** auxiliary of the perfect tense (avoir/être, essere/avere, hebben/zijn, haber, have) */
+  auxiliary: string | null
+  irregular: boolean
+  /** Dutch separable verbs (opbellen → ik bel op) */
+  separable: boolean
+  reflexive: boolean
+  /** past participle */
+  participle: string
+  /** fixed preposition worth knowing ("penser à", "depend on") */
+  government: string | null
+  tenses: Tense[]
 }
 
 export interface AdjectiveInfo {
@@ -101,7 +150,10 @@ export interface WordContent {
   ipa: string | null
   meanings: Meaning[]
   noun: NounInfo | null
+  /** German verbs */
   verb: VerbInfo | null
+  /** verbs of every other learned language (content version 3) */
+  conjugation?: Conjugation | null
   adjective: AdjectiveInfo | null
   synonyms: string[]
   antonyms: string[]
@@ -133,6 +185,8 @@ export const LIMITS = {
   shortText: 120,
   sentence: 300,
   note: 600,
+  tenses: 5,
+  persons: 8,
 } as const
 
 export interface ValidationIssue {
@@ -156,10 +210,22 @@ export interface ValidateOptions {
    * 'user': the learner may trim a draft down, but the essentials must remain.
    */
   mode: 'ai' | 'user'
+  /** language being learned (default German) */
+  target?: string
+  /** the learner's own language, in which meanings are written (default Persian) */
+  native?: string
 }
 
 const PERSIAN = /[؀-ۿ]/
 const LATIN = /\p{Script=Latin}/u
+const CYRILLIC = /\p{Script=Cyrillic}/u
+
+/** The script a native language is written in, when it differs from the Latin script of every learned language. */
+export function nativeScript(native: string): RegExp | null {
+  if (native === 'fa' || native === 'ar') return PERSIAN
+  if (native === 'uk' || native === 'ru') return CYRILLIC
+  return null
+}
 
 type Rec = Record<string, unknown>
 const isRec = (v: unknown): v is Rec => typeof v === 'object' && v !== null && !Array.isArray(v)
@@ -192,6 +258,12 @@ export function validateWordContent(input: unknown, options: ValidateOptions): V
   const issues: ValidationIssue[] = []
   const add = (path: string, code: ValidationIssue['code']) => issues.push({ path, code })
   if (!isRec(input)) return { ok: false, issues: [{ path: '', code: 'required' }] }
+  const target = options.target ?? 'de'
+  const script = nativeScript(options.native ?? 'fa')
+  /** text in the learner's language: in its own script when that script is not Latin */
+  const nativeOk = (v: string) => !script || script.test(v)
+  /** text in the learned language: Latin script, none of the native script */
+  const targetOk = (v: string) => LATIN.test(v) && !(script && script.test(v))
 
   const pos = input.pos as PartOfSpeech
   if (!POS_VALUES.includes(pos)) add('pos', 'invalid_value')
@@ -201,7 +273,7 @@ export function validateWordContent(input: unknown, options: ValidateOptions): V
   const lemmaMax = isSentence ? LIMITS.lemmaSentence : pos === 'phrase' ? LIMITS.lemmaPhrase : LIMITS.lemma
   if (!lemma) add('lemma', 'required')
   else if (lemma.length > lemmaMax) add('lemma', 'too_long')
-  else if (!LATIN.test(lemma) || PERSIAN.test(lemma)) add('lemma', 'wrong_script')
+  else if (!targetOk(lemma)) add('lemma', 'wrong_script')
 
   let cefr: Cefr | null = null
   if (input.cefr !== null && input.cefr !== undefined && input.cefr !== '') {
@@ -225,7 +297,7 @@ export function validateWordContent(input: unknown, options: ValidateOptions): V
     const translation = text(raw.translation)
     if (!translation) add(`${p}.translation`, 'required')
     else if (translation.length > (isSentence ? LIMITS.translationSentence : LIMITS.shortText)) add(`${p}.translation`, 'too_long')
-    else if (!PERSIAN.test(translation)) add(`${p}.translation`, 'wrong_script')
+    else if (!nativeOk(translation)) add(`${p}.translation`, 'wrong_script')
 
     const note = optionalText(raw.note)
     if (note && note.length > LIMITS.note) add(`${p}.note`, 'too_long')
@@ -242,10 +314,10 @@ export function validateWordContent(input: unknown, options: ValidateOptions): V
       const fa = text(ex.fa)
       if (!de) add(`${q}.de`, 'required')
       else if (de.length > LIMITS.sentence) add(`${q}.de`, 'too_long')
-      else if (!LATIN.test(de) || PERSIAN.test(de)) add(`${q}.de`, 'wrong_script')
+      else if (!targetOk(de)) add(`${q}.de`, 'wrong_script')
       if (!fa) add(`${q}.fa`, 'required')
       else if (fa.length > LIMITS.sentence) add(`${q}.fa`, 'too_long')
-      else if (!PERSIAN.test(fa)) add(`${q}.fa`, 'wrong_script')
+      else if (!nativeOk(fa)) add(`${q}.fa`, 'wrong_script')
       examples.push({ level, de, fa })
     })
     // a sentence is its own example: further examples are optional
@@ -265,26 +337,74 @@ export function validateWordContent(input: unknown, options: ValidateOptions): V
     else {
       const raw = input.noun
       const pluralOnly = raw.pluralOnly === true
+      const allowed = ARTICLES[target] ?? {}
+      const withArticles = Object.keys(allowed).length > 0
       let article: Article | null = null
-      if (ARTICLE_VALUES.includes(raw.article as Article)) article = raw.article as Article
-      else if (!pluralOnly) add('noun.article', raw.article ? 'invalid_value' : 'required')
+      const rawArticle = text(raw.article).toLowerCase().replace(/’/g, "'")
+      if (withArticles && rawArticle in allowed) article = rawArticle
+      else if (withArticles && !pluralOnly) add('noun.article', rawArticle ? 'invalid_value' : 'required')
+      // the stated gender wins: Spanish "el agua" is feminine although "el" usually marks masculine
+      let gender: Gender | null = GENDER_VALUES.includes(raw.gender as Gender) ? (raw.gender as Gender) : null
+      if (!gender && article) gender = allowed[article] ?? null
+      if (target === 'de' && article) gender = allowed[article] ?? gender
+      if (withArticles && article && !gender) add('noun.gender', 'required')
       const plural = optionalText(raw.plural)
-      const genitive = optionalText(raw.genitive)
+      const genitive = target === 'de' ? optionalText(raw.genitive) : null
       if (plural && plural.length > LIMITS.shortText) add('noun.plural', 'too_long')
       if (genitive && genitive.length > LIMITS.shortText) add('noun.genitive', 'too_long')
-      noun = { article: pluralOnly && !article ? 'die' : article, plural, genitive, pluralOnly }
+      if (target === 'de' && pluralOnly && !article) article = 'die'
+      noun = { article, gender, plural, genitive, pluralOnly }
     }
   }
 
   let verb: VerbInfo | null = null
-  if (pos === 'verb') {
+  let conjugation: Conjugation | null = null
+  if (pos === 'verb' && target !== 'de') {
+    if (!isRec(input.conjugation)) add('conjugation', 'required')
+    else {
+      const raw = input.conjugation
+      const participle = text(raw.participle)
+      if (!participle && options.mode === 'ai') add('conjugation.participle', 'required')
+      else if (participle.length > LIMITS.shortText) add('conjugation.participle', 'too_long')
+      const auxiliary = optionalText(raw.auxiliary)
+      const government = optionalText(raw.government)
+      if ((auxiliary?.length ?? 0) > LIMITS.shortText) add('conjugation.auxiliary', 'too_long')
+      if ((government?.length ?? 0) > LIMITS.shortText) add('conjugation.government', 'too_long')
+      const tenses: Tense[] = []
+      const rawTenses = Array.isArray(raw.tenses) ? raw.tenses : []
+      if (rawTenses.length === 0 && options.mode === 'ai') add('conjugation.tenses', 'required')
+      if (rawTenses.length > LIMITS.tenses) add('conjugation.tenses', 'too_many')
+      rawTenses.slice(0, LIMITS.tenses).forEach((rt, i) => {
+        if (!isRec(rt)) return add(`conjugation.tenses.${i}`, 'invalid_value')
+        const name = text(rt.name)
+        const rawForms = Array.isArray(rt.forms) ? rt.forms : []
+        const forms = rawForms
+          .slice(0, LIMITS.persons)
+          .map((f) => (isRec(f) ? { person: text(f.person), form: text(f.form) } : { person: '', form: '' }))
+        if (!name || forms.length === 0 || forms.some((f) => !f.form)) add(`conjugation.tenses.${i}`, 'invalid_value')
+        else if (forms.some((f) => f.form.length > LIMITS.shortText || f.person.length > LIMITS.shortText || !targetOk(f.form)))
+          add(`conjugation.tenses.${i}`, 'invalid_value')
+        tenses.push({ name, forms })
+      })
+      conjugation = {
+        auxiliary,
+        irregular: raw.irregular === true,
+        separable: raw.separable === true,
+        reflexive: raw.reflexive === true,
+        participle,
+        government,
+        tenses,
+      }
+    }
+  }
+  if (pos === 'verb' && target === 'de') {
     if (!isRec(input.verb)) add('verb', 'required')
     else {
       const raw = input.verb
       const six = (key: 'praesens' | 'praeteritum' | 'konjunktiv1' | 'konjunktiv2'): SixForms => {
         const list = Array.isArray(raw[key]) ? (raw[key] as unknown[]).map(text) : []
         if (list.length !== 6 || list.some((f) => !f)) add(`verb.${key}`, list.length ? 'invalid_value' : 'required')
-        else if (list.some((f) => f.length > LIMITS.shortText || PERSIAN.test(f))) add(`verb.${key}`, 'invalid_value')
+        else if (list.some((f) => f.length > LIMITS.shortText || !targetOk(f))) add(`verb.${key}`, 'invalid_value')
         return [0, 1, 2, 3, 4, 5].map((i) => list[i] ?? '') as SixForms
       }
       const auxiliary = raw.auxiliary === 'sein' ? 'sein' : raw.auxiliary === 'haben' ? 'haben' : null
@@ -357,7 +477,7 @@ export function validateWordContent(input: unknown, options: ValidateOptions): V
   // --- expression details (content version 2) ----------------------------------
   const literal = optionalText(input.literal)
   if (literal && literal.length > LIMITS.translationSentence) add('literal', 'too_long')
-  else if (literal && !PERSIAN.test(literal)) add('literal', 'wrong_script')
+  else if (literal && !nativeOk(literal)) add('literal', 'wrong_script')
 
   let register: Register | null = null
   if (input.register !== null && input.register !== undefined && input.register !== '') {
@@ -373,7 +493,7 @@ export function validateWordContent(input: unknown, options: ValidateOptions): V
 
   // extra alternatives are dropped rather than refused
   const alternatives = uniqueList(input.alternatives).filter((a) => a !== lemma)
-  if (alternatives.some((a) => a.length > LIMITS.lemmaSentence || PERSIAN.test(a) || !LATIN.test(a))) add('alternatives', 'invalid_value')
+  if (alternatives.some((a) => a.length > LIMITS.lemmaSentence || !targetOk(a))) add('alternatives', 'invalid_value')
 
   let reply: Reply | null = null
   if (isRec(input.reply)) {
@@ -381,9 +501,9 @@ export function validateWordContent(input: unknown, options: ValidateOptions): V
     const fa = text(input.reply.fa)
     if (de || fa) {
       if (!de) add('reply.de', 'required')
-      else if (de.length > LIMITS.sentence || PERSIAN.test(de)) add('reply.de', 'invalid_value')
+      else if (de.length > LIMITS.sentence || !targetOk(de)) add('reply.de', 'invalid_value')
       if (!fa) add('reply.fa', 'required')
-      else if (fa.length > LIMITS.sentence || !PERSIAN.test(fa)) add('reply.fa', 'invalid_value')
+      else if (fa.length > LIMITS.sentence || !nativeOk(fa)) add('reply.fa', 'invalid_value')
       reply = { de, fa }
     }
   }
@@ -400,6 +520,7 @@ export function validateWordContent(input: unknown, options: ValidateOptions): V
       meanings,
       noun,
       verb,
+      conjugation,
       adjective,
       synonyms,
       antonyms,
@@ -416,5 +537,8 @@ export function validateWordContent(input: unknown, options: ValidateOptions): V
 
 /** The word as it is shown and spoken: nouns carry their article. */
 export function displayWord(content: Pick<WordContent, 'lemma' | 'noun'>): string {
-  return content.noun?.article ? `${content.noun.article} ${content.lemma}` : content.lemma
+  const article = content.noun?.article
+  if (!article) return content.lemma
+  // elided articles join the noun: l'arbre, l'amica
+  return article.endsWith("'") ? `${article}${content.lemma}` : `${article} ${content.lemma}`
 }

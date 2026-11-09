@@ -25,6 +25,8 @@ import { fmtPercent } from '../format.ts'
 import { burst, mascot, reactMascot, setMascotMood } from '../mascot.ts'
 import { t } from '../strings.ts'
 import { emptyState, iconButton, progressBar, segmented, speakButton, wordTitle } from '../widgets.ts'
+import { learning, learningSpeech } from '../learning.ts'
+import { ARTICLES } from '../../../supabase/functions/_shared/wordSchema.ts'
 
 const KINDS: QuizKind[] = ['mixed', 'choice', 'typing', 'article', 'listening', 'speaking']
 const GREAT = 0.9
@@ -155,7 +157,7 @@ export function quizScreen(ctx: Ctx, params: Record<string, string>): Screen {
   function renderDictation(question: Question) {
     const word = ctx.data.words.get(question.wordId)
     const input = h('input', {
-      class: 'input create-input', type: 'text', lang: 'de', dir: 'ltr', placeholder: t.quiz.typePlaceholder, 'aria-label': t.quiz.typePlaceholder,
+      class: 'input create-input', type: 'text', lang: learning(), dir: 'ltr', placeholder: t.quiz.typePlaceholder, 'aria-label': t.quiz.typePlaceholder,
       autocapitalize: 'off', autocomplete: 'off', autocorrect: 'off', spellcheck: false, enterKeyHint: 'done', maxLength: 240,
     })
     const submit = (value: string) => answer(value.trim(), word ? gradeDictation(value, word) : { correct: false, note: null })
@@ -220,7 +222,7 @@ export function quizScreen(ctx: Ctx, params: Record<string, string>): Screen {
         ctx.audio.stop()
         mic.classList.add('on')
         line.textContent = t.quiz.listening
-        listening = listenOnce(`${ctx.data.profile.activeTargetLanguage === 'de' ? 'de-DE' : ctx.data.profile.activeTargetLanguage}`)
+        listening = listenOnce(learningSpeech())
         const outcome = await listening.result
         listening = null
         mic.classList.remove('on')
@@ -255,7 +257,7 @@ export function quizScreen(ctx: Ctx, params: Record<string, string>): Screen {
         options.map((option) =>
           h(
             'button',
-            { class: `quiz-option ${question.type === 'article' ? `article-${option.label}` : ''}`, type: 'button', onclick: () => answer(option.label, gradeChoice(option.label, question)) },
+            { class: `quiz-option ${question.type === 'article' ? `gender-${ARTICLES[learning()]?.[option.label] ?? 'none'}` : ''}`, type: 'button', onclick: () => answer(option.label, gradeChoice(option.label, question)) },
             option.language === 'de' ? de(option.label) : option.label,
           ),
         ),
@@ -270,7 +272,7 @@ export function quizScreen(ctx: Ctx, params: Record<string, string>): Screen {
     } else {
       const word = ctx.data.words.get(question.wordId)
       const input = h('input', {
-        class: 'input create-input', type: 'text', lang: 'de', dir: 'ltr', placeholder: t.quiz.typePlaceholder, 'aria-label': t.quiz.typePlaceholder,
+        class: 'input create-input', type: 'text', lang: learning(), dir: 'ltr', placeholder: t.quiz.typePlaceholder, 'aria-label': t.quiz.typePlaceholder,
         autocapitalize: 'off', autocomplete: 'off', autocorrect: 'off', spellcheck: false, enterKeyHint: 'done', maxLength: 80,
       })
       const submit = (value: string) => answer(value.trim(), word ? gradeTyped(value, word) : { correct: false, note: null })

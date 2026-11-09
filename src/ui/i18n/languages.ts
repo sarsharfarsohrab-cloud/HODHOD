@@ -42,15 +42,19 @@ export interface TargetLanguageInfo {
   speech: string
   /** Definite articles that mark grammatical gender, in display order; empty when the language has none. */
   articles: readonly string[]
+  /** A friendly sentence to try the voice with. */
+  sample: string
+  /** A word to show as an example in the "new word" field. */
+  example: string
 }
 
 export const TARGET_LANGUAGE_INFO: Record<TargetLanguage, TargetLanguageInfo> = {
-  en: { code: 'en', name: 'English', speech: 'en-GB', articles: [] },
-  de: { code: 'de', name: 'Deutsch', speech: 'de-DE', articles: ['der', 'die', 'das'] },
-  fr: { code: 'fr', name: 'Français', speech: 'fr-FR', articles: ['le', 'la'] },
-  it: { code: 'it', name: 'Italiano', speech: 'it-IT', articles: ['il', 'lo', 'la'] },
-  es: { code: 'es', name: 'Español', speech: 'es-ES', articles: ['el', 'la'] },
-  nl: { code: 'nl', name: 'Nederlands', speech: 'nl-NL', articles: ['de', 'het'] },
+  en: { code: 'en', name: 'English', speech: 'en-GB', articles: [], sample: 'Hello! How are you today?', example: 'give up' },
+  de: { code: 'de', name: 'Deutsch', speech: 'de-DE', articles: ['der', 'die', 'das'], sample: 'Guten Tag! Wie geht es Ihnen?', example: 'aufgeben' },
+  fr: { code: 'fr', name: 'Français', speech: 'fr-FR', articles: ['le', 'la'], sample: 'Bonjour ! Comment allez-vous ?', example: 'se débrouiller' },
+  it: { code: 'it', name: 'Italiano', speech: 'it-IT', articles: ['il', 'lo', 'la'], sample: 'Buongiorno! Come sta?', example: 'in bocca al lupo' },
+  es: { code: 'es', name: 'Español', speech: 'es-ES', articles: ['el', 'la'], sample: '¡Hola! ¿Qué tal estás?', example: 'echar de menos' },
+  nl: { code: 'nl', name: 'Nederlands', speech: 'nl-NL', articles: ['de', 'het'], sample: 'Goedendag! Hoe gaat het met u?', example: 'opgeven' },
 }
 
 export const isUiLanguage = (code: string | null | undefined): code is UiLanguage => !!code && (UI_LANGUAGES as readonly string[]).includes(code)

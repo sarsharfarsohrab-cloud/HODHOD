@@ -1,4 +1,5 @@
 /** Tiny DOM helpers. Screens build real elements; text is always set as text, never as HTML. */
+import { learning } from './learning.ts'
 
 type Child = Node | string | number | null | undefined | false
 type Props = {
@@ -39,7 +40,7 @@ export function replace(parent: Element, ...children: (Child | Child[])[]): void
 
 /** German text inside the Persian interface: isolated, left-to-right, with the right font and language. */
 export function de(text: string, className = ''): HTMLElement {
-  return h('bdi', { class: `de ${className}`.trim(), lang: 'de', dir: 'ltr' }, text)
+  return h('bdi', { class: `de ${className}`.trim(), lang: learning(), dir: 'ltr' }, text)
 }
 
 const SVG_NS = 'http://www.w3.org/2000/svg'

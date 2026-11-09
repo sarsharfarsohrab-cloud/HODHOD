@@ -504,8 +504,8 @@ export const stories = {
     return (await client.select<StoryRow>('stories', { select: '*', id: `eq.${id}` }))[0] ?? null
   },
   /** Asks the AI for a new story around these words; takes 10–30 seconds. */
-  create(client: SupabaseClient, words: string[], level: string): Promise<StoryRow> {
-    return client.invoke<StoryRow>('story', { words, level }, { timeoutMs: 120_000 })
+  create(client: SupabaseClient, words: string[], level: string, languages = { target: 'de', native: 'fa' }): Promise<StoryRow> {
+    return client.invoke<StoryRow>('story', { words, level, targetLanguage: languages.target, nativeLanguage: languages.native }, { timeoutMs: 120_000 })
   },
   async markRead(client: SupabaseClient, id: string): Promise<void> {
     await client.update('stories', { id: `eq.${id}` }, { read_at: new Date().toISOString() }).catch(() => undefined)

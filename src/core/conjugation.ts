@@ -87,6 +87,10 @@ export function buildConjugation(lemma: string, verb: VerbInfo): TenseTable[] {
 /** What the audio button says for a row: with the pronoun, the way it is actually used. */
 export function spokenForm(row: { person: string; form: string }): string {
   if (!row.person) return row.form
-  const pronoun = row.person === 'er/sie/es' ? 'er' : row.person === 'sie/Sie' ? 'sie' : row.person
+  // "er/sie/es" → "er", "il/elle/on" → "il", "you (pl.)" → "you"
+  const pronoun = row.person.split('/')[0]!.replace(/\s*\(.*?\)\s*/g, '').trim()
+  if (!pronoun) return row.form
+  // French elision: je + ai → j'ai
+  if (pronoun === 'je' && /^[aeiouhéèêàâîôû]/i.test(row.form)) return `j'${row.form}`
   return `${pronoun} ${row.form}`
 }

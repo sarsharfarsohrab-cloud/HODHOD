@@ -6,6 +6,8 @@
  */
 import { callStructured, type AiEnv, type ChatMessage } from './aiClient.ts'
 import { checkAllowance } from './budget.ts'
+import { isSupportedPair, pairNames, type LanguagePair } from './prompt.ts'
+import { nativeScript } from './wordSchema.ts'
 import { adminRest, corsHeaders, errorResponse, HttpError, json, readJsonBody, requireUser, type FetchLike, type FunctionEnv } from './http.ts'
 
 export interface StoryEnv extends FunctionEnv, AiEnv {}
@@ -43,23 +45,30 @@ const STORY_SCHEMA = {
   },
 }
 
-const SYSTEM = `You write short, warm, everyday German reading texts for Persian-speaking learners.
-Write ONE short story or dialogue (6 to 10 sentences) at the requested CEFR level, set in daily life in Germany (family, work, shopping, friends, travel, appointments). Use as many of the given words as fit naturally — at least half of them — in any grammatical form; you may add other simple words of the level. Each sentence: natural standard German with correct grammar and punctuation, at most 20 words. Give a faithful, natural Persian translation of every sentence in modern written Persian (Persian script, correct half-spaces). In a dialogue, start lines with the speaker's first name and a colon in both languages. "used_words": the given words you actually used, exactly as given. Titles: short German title and its Persian translation. Nothing violent, sexual or political.`
+/** The story prompt for a language pair. The JSON keys keep their historical names: "de" is the learned language, "fa" the learner's own. */
+export function storySystem(pair: LanguagePair): string {
+  const n = pairNames(pair)
+  return `You write short, warm, everyday ${n.target} reading texts for ${n.native}-speaking learners.
+Write ONE short story or dialogue (6 to 10 sentences) at the requested CEFR level, set in everyday life (family, work, shopping, friends, travel, appointments). Use as many of the given words as fit naturally — at least half of them — in any grammatical form; you may add other simple words of the level. Each sentence ("de"): natural standard ${n.target} with correct grammar and punctuation, at most 20 words. Give a faithful, natural ${n.native} translation of every sentence ("fa"), written in ${n.nativeRules} In a dialogue, start lines with the speaker's first name and a colon in both languages. "used_words": the given words you actually used, exactly as given. Titles: a short ${n.target} title ("title_de") and its ${n.native} translation ("title_fa"). Nothing violent, sexual or political.`
+}
 
-export function validateStory(raw: unknown, given: string[]): Omit<Story, 'level'> | null {
+export function validateStory(raw: unknown, given: string[], native = 'fa'): Omit<Story, 'level'> | null {
+  const script = nativeScript(native)
+  const nativeOk = (v: string) => !script || script.test(v)
+  const targetOk = (v: string) => LATIN.test(v) && !(script && script.test(v))
   if (!raw || typeof raw !== 'object') return null
   const r = raw as Record<string, unknown>
   const clean = (v: unknown, max: number) => (typeof v === 'string' ? v.normalize('NFC').replace(/\s+/g, ' ').trim().slice(0, max) : '')
   const title_de = clean(r.title_de, 200)
   const title_fa = clean(r.title_fa, 200)
-  if (!title_de || !LATIN.test(title_de) || !title_fa || !PERSIAN.test(title_fa)) return null
+  if (!title_de || !targetOk(title_de) || !title_fa || !nativeOk(title_fa)) return null
   const list = Array.isArray(r.sentences) ? r.sentences : []
   const sentences: StorySentence[] = []
   for (const item of list.slice(0, 14)) {
     const s = (item ?? {}) as Record<string, unknown>
     const de = clean(s.de, 300)
     const fa = clean(s.fa, 300)
-    if (!de || !fa || PERSIAN.test(de) || !LATIN.test(de) || !PERSIAN.test(fa)) return null
+    if (!de || !fa || !targetOk(de) || !nativeOk(fa)) return null
     sentences.push({ de, fa })
   }
   if (sentences.length < 3) return null
@@ -88,13 +97,18 @@ export async function handleStory(
       .slice(0, 40)
     if (words.length < 3) throw new HttpError(400, 'invalid_input', 'At least three known words are needed')
     const level = typeof body.level === 'string' && LEVELS.includes(body.level) ? body.level : 'A2'
+    const pair: LanguagePair = {
+      target: typeof body.targetLanguage === 'string' ? body.targetLanguage : 'de',
+      native: typeof body.nativeLanguage === 'string' ? body.nativeLanguage : 'fa',
+    }
+    if (!isSupportedPair(pair)) throw new HttpError(400, 'unsupported_language', 'This language pair is not available')
 
     const db = adminRest(env, fetchImpl)
     await checkAllowance(db, user.id, 'story', 3)
     if (!env.aiApiKey || !env.aiModel || !env.aiBaseUrl) throw new HttpError(500, 'not_configured', 'The AI service is not configured')
 
     const messages: ChatMessage[] = [
-      { role: 'system', content: SYSTEM },
+      { role: 'system', content: storySystem(pair) },
       { role: 'user', content: `Level: ${level}\nWords: ${JSON.stringify(words)}` },
     ]
     let story: Omit<Story, 'level'> | null = null
@@ -103,7 +117,7 @@ export async function handleStory(
       const answer = await callStructured(messages, env, { name: 'story', schema: STORY_SCHEMA, maxOutputTokens: 3_000 }, fetchImpl, sleep)
       usage = { inputTokens: usage.inputTokens + answer.usage.inputTokens, outputTokens: usage.outputTokens + answer.usage.outputTokens }
       try {
-        story = validateStory(JSON.parse(answer.text), words)
+        story = validateStory(JSON.parse(answer.text), words, pair.native)
       } catch {
         story = null
       }

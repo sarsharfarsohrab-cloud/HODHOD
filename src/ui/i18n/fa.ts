@@ -11,6 +11,8 @@ import { describePath } from '../strings.ts'
 export const fa = {
   nav: { home: 'خانه', create: 'کلمهٔ تازه', words: 'واژه‌ها', study: 'مرور', quiz: 'آزمون', settings: 'تنظیمات', stats: 'آمار' },
 
+  gender: { m: 'مذکر', f: 'مؤنث', n: 'خنثی', c: 'مشترک (de)' },
+
   common: {
     cancel: 'انصراف',
     retry: 'دوباره امتحان کن',
@@ -233,6 +235,7 @@ export const fa = {
       addMeaning: 'افزودن معنی',
       addExample: 'افزودن مثال',
       article: 'حرف تعریف',
+      gender: 'جنس دستوری',
       plural: 'جمع',
       genitive: 'حالت Genitiv',
       pluralOnly: 'فقط به شکل جمع به کار می‌رود',
@@ -415,6 +418,7 @@ export const fa = {
     pluralOnly: 'فقط جمع',
     noPlural: 'جمع ندارد',
     auxiliary: 'فعل کمکی',
+    participle: 'وجه وصفی (participle)',
     separable: 'جداشدنی',
     inseparable: 'جدانشدنی',
     irregular: 'بی‌قاعده',

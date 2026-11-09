@@ -1,5 +1,6 @@
 /**
- * Rules for what may be typed into "create word": one German word, a fixed expression
+ * Rules for what may be typed into "create word" (in any learned language, all written in
+ * Latin script): one word, a fixed expression
  * such as "Bescheid sagen" or "jdm. auf die Nerven gehen", or a short everyday sentence
  * ("Kannst du mir kurz helfen?").
  * Shared by the client (instant feedback) and the AI function (never trust the client).
@@ -32,9 +33,10 @@ const PERSIAN_ARABIC = /[؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]/
 /** Latin letters (incl. umlauts and accents used in loanwords), inner hyphen or apostrophe. */
 const TOKEN = /^\p{Script=Latin}+(?:[-'’]\p{Script=Latin}+)*$/u
 /** Dictionary placeholders that may appear inside expressions. */
-const ABBREVIATION = /^(?:jdn|jdm|jds|jd|etw|bzw|usw|ca|z|B|d|h|o|ä|Dr|Fr|Hr|Nr|Str|bzgl|evtl|ggf|inkl|vgl)\.$/u
+const ABBREVIATION =
+  /^(?:jdn|jdm|jds|jd|etw|bzw|usw|ca|z|B|d|h|o|ä|Dr|Fr|Hr|Nr|Str|bzgl|evtl|ggf|inkl|vgl|sb|sth|sb's|qn|qch|qqn|qqch|qc|qlcu|qlco|alg|algn|iem|iets|etc|Mr|Mrs|Ms|St|Sr|Sra|Mme|Mlle|Sig|ecc)\.$/u
 /** Characters allowed in a sentence besides letters and digits. */
-const SENTENCE_CHARS = /^[\p{Script=Latin}\p{Nd}\s.,:!?'’"„“”‚‘«»()\-–—…/%€]+$/u
+const SENTENCE_CHARS = /^[\p{Script=Latin}\p{Nd}\s.,:;!?¿¡'’"„“”‚‘«»()\-–—…/%€£$]+$/u
 const EDGE_PUNCTUATION = /^[\s"'„“”‚‘’«»()[\].,;:!?…]+|[\s"'„“”‚‘’«»()[\].,;:!?…]+$/g
 /** Leading quotes and bullets only; a sentence keeps its final ".", "?" or "!". */
 const SENTENCE_EDGES = /^[\s"'„“”‚‘’«»(\-–—•*·]+|[\s"'„“”‚‘’«»)]+$/g

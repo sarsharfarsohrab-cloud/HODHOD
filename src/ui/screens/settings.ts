@@ -5,6 +5,7 @@ import type { Ctx, Screen } from '../context.ts'
 import { h, icon, replace } from '../dom.ts'
 import { num, fmtDateTime, fmtPercent } from '../format.ts'
 import { appName, describeError, t } from '../strings.ts'
+import { learningInfo } from '../learning.ts'
 import { openSheet, saveFile, segmented } from '../widgets.ts'
 import { exportDeck } from '../../core/deckImport.ts'
 import { isAdmin } from '../../data/platform.ts'
@@ -270,7 +271,7 @@ export function settingsScreen(ctx: Ctx): Screen {
                     updateSoon({ speechRate: value })
                   },
                 }),
-                h('button', { class: 'btn small', type: 'button', onclick: () => void ctx.audio.speak('Guten Tag! Wie geht es Ihnen?', data.profile.activeTargetLanguage, ctx.data.settings.speechRate) }, icon('speaker', { size: 18 }), s.audioTest),
+                h('button', { class: 'btn small', type: 'button', onclick: () => void ctx.audio.speak(learningInfo().sample, data.profile.activeTargetLanguage, ctx.data.settings.speechRate) }, icon('speaker', { size: 18 }), s.audioTest),
               ),
               h(
                 'div',
@@ -283,7 +284,7 @@ export function settingsScreen(ctx: Ctx): Screen {
                       settings.aiVoiceGender,
                       (aiVoiceGender) => {
                         update({ aiVoiceGender }, false)
-                        void ctx.audio.speak('Guten Tag! Wie geht es Ihnen?', data.profile.activeTargetLanguage, ctx.data.settings.speechRate)
+                        void ctx.audio.speak(learningInfo().sample, data.profile.activeTargetLanguage, ctx.data.settings.speechRate)
                       },
                       s.aiVoice,
                     )

@@ -190,8 +190,9 @@ describe('analyze-word: input', () => {
     expect(await errorCode(await call('{not json'))).toBe('invalid_json')
     expect(await errorCode(await call({ word: 'Tisch', padding: 'x'.repeat(3000) }))).toBe('payload_too_large')
   })
-  test('rejects language pairs that have no prompt yet', async () => {
-    expect(await errorCode(await call({ word: 'table', targetLanguage: 'en' }))).toBe('unsupported_language')
+  test('rejects language pairs that are not offered', async () => {
+    expect(await errorCode(await call({ word: 'masa', targetLanguage: 'tr' }))).toBe('unsupported_language')
+    expect(await errorCode(await call({ word: 'Tisch', targetLanguage: 'de', nativeLanguage: 'de' }))).toBe('unsupported_language')
   })
 })
 

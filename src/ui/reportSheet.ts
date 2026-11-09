@@ -6,6 +6,7 @@ import type { Ctx } from './context.ts'
 import { h, icon } from './dom.ts'
 import { describeError, t } from './strings.ts'
 import { openSheet, segmented } from './widgets.ts'
+import { learning } from './learning.ts'
 
 declare const __APP_VERSION__: string | undefined
 const version = () => (typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev')
@@ -35,7 +36,7 @@ export function openReportSheet(ctx: Ctx, word: { id: string | null; content: Wo
           },
         },
         h('h2', null, r.title),
-        h('p', { class: 'de small muted', lang: 'de', dir: 'ltr' }, word.content.lemma),
+        h('p', { class: 'de small muted', lang: learning(), dir: 'ltr' }, word.content.lemma),
         segmented<ReportReason>(
           (Object.keys(r.reasons) as ReportReason[]).map((k) => ({ value: k, label: r.reasons[k] })),
           reason,
