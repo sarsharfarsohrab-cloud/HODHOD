@@ -100,7 +100,8 @@ bun run e2e              # browser tests (needs Playwright: NODE_PATH=$(npm root
 
 `dist/` is a folder of static files; any static host works.
 
-- **GitHub Pages:** push to `main`; `.github/workflows/deploy.yml` tests, builds and publishes. In the repository: *Settings → Pages → Source: GitHub Actions*.
+- **Cloudflare (https://apphodhod.com):** push to `main`; Cloudflare Workers Builds runs `bun run scripts/build.ts` and `npx wrangler deploy` (`wrangler.jsonc` serves `dist/`). Domain and hosting are in the owner's Cloudflare account.
+- **Old address:** `.github/workflows/deploy.yml` still runs the tests and publishes `redirect/` to GitHub Pages, so the old `…github.io/HODHOD/` link and installed copies move to the new address.
 - **Test version:** the branch `staging` is published at `…/staging/` against its own Supabase project (`config/staging.js`), marked with a red ribbon and with its own sign-in. A push to `staging` starts the deploy on `main` (`staging.yml`), so both are always published together.
 - The app uses hash routes (`#/home`), so no server rewrite rules are needed and it works from a sub-path.
 
