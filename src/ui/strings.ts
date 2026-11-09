@@ -25,14 +25,24 @@ function deepCopy<T>(value: T): T {
   if (Array.isArray(value)) return value.map(deepCopy) as T
   if (!isPlain(value)) return value
   const out: Plain = {}
-  for (const [k, v] of Object.entries(value)) out[k] = deepCopy(v)
+  deepAssign(out, value)
   return out as T
 }
 
+/**
+ * Copies a dictionary into `t` in place. Getters stay getters, so texts that name a language
+ * ("کلمهٔ آلمانی") follow the deck that is open at the moment they are read.
+ */
 function deepAssign(target: Plain, source: Plain): void {
-  for (const [k, v] of Object.entries(source)) {
-    if (isPlain(v) && isPlain(target[k])) deepAssign(target[k] as Plain, v)
-    else target[k] = deepCopy(v)
+  for (const [k, d] of Object.entries(Object.getOwnPropertyDescriptors(source))) {
+    if (d.get) {
+      Object.defineProperty(target, k, { get: d.get, enumerable: true, configurable: true })
+      continue
+    }
+    const v = d.value as unknown
+    const current = Object.getOwnPropertyDescriptor(target, k)
+    if (isPlain(v) && current && !current.get && isPlain(current.value)) deepAssign(current.value as Plain, v)
+    else Object.defineProperty(target, k, { value: deepCopy(v), writable: true, enumerable: true, configurable: true })
   }
 }
 

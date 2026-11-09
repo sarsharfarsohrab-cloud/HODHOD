@@ -7,6 +7,7 @@ import type { Rating } from '../../core/types.ts'
 import type { AppError } from '../../data/errors.ts'
 import { num } from '../format.ts'
 import { describePath } from '../strings.ts'
+import { L, O } from './names.ts'
 
 export const fa = {
   nav: { home: 'خانه', create: 'کلمهٔ تازه', words: 'واژه‌ها', study: 'مرور', quiz: 'آزمون', settings: 'تنظیمات', stats: 'آمار' },
@@ -35,7 +36,9 @@ export const fa = {
   },
 
   auth: {
-    tagline: 'واژه‌های آلمانی، هر روز کمی بیشتر',
+    get tagline() {
+      return `واژه‌های ${L()}، هر روز کمی بیشتر`
+    },
     hello: 'سلام! من هدهدم.',
     signIn: 'ورود',
     signUp: 'ساخت حساب',
@@ -124,7 +127,9 @@ export const fa = {
     weekTitle: '۷ روز اخیر',
     weekDone: (n: number) => `${num(n)} روز از ۷ روز`,
     mascot: {
-      first: 'سلام! من هدهدم. یک کلمهٔ آلمانی بده تا با هم شروع کنیم.',
+      get first() {
+        return `سلام! من هدهدم. یک کلمهٔ ${L()} بده تا با هم شروع کنیم.`
+      },
       morning: 'صبح بخیر! با چند کارت روزت را شروع کنیم؟',
       due: 'کارت‌های امروز آماده‌اند. هر وقت تو آماده بودی.',
       goalDone: 'هدف امروزت را زدی. آفرین!',
@@ -161,12 +166,16 @@ export const fa = {
     reminderTitle: 'یادآوری هم بخواهی؟',
     reminderOn: 'روشن کردن یادآوری',
     reminderDone: 'یادآوری روشن شد',
-    helloBody: 'من هدهدم. کمکت می‌کنم هر روز چند کلمهٔ آلمانی یاد بگیری و دیگر فراموششان نکنی. دو سؤال کوتاه می‌پرسم تا برنامه‌ات را بچینم.',
+    get helloBody() {
+      return `من هدهدم. کمکت می‌کنم هر روز چند کلمهٔ ${L()} یاد بگیری و دیگر فراموششان نکنی. دو سؤال کوتاه می‌پرسم تا برنامه‌ات را بچینم.`
+    },
     timeTitle: 'هر روز چقدر وقت داری؟',
     timeBody: 'کم ولی هر روز، بهتر از زیاد و گاه‌به‌گاه است.',
     minutes: (n: number) => `${num(n)} دقیقه`,
     timeHint: { 5: 'سر صبحانه یا توی صف', 10: 'یک استراحت کوتاه', 20: 'یک تمرین درست‌وحسابی', 30: 'برای کسی که جدی است' } as Record<number, string>,
-    levelTitle: 'آلمانی‌ات چطور است؟',
+    get levelTitle() {
+      return `${L()}‌ات چطور است؟`
+    },
     levelBody: 'بر اساس جوابت تعداد کلمهٔ تازهٔ هر روز را پیشنهاد می‌دهم.',
     levels: { beginner: 'تازه شروع کرده‌ام', some: 'کمی بلدم', intermediate: 'متوسط هستم' },
     levelHints: { beginner: 'A1، چند کلمه بلدم', some: 'A2، جمله‌های ساده می‌گویم', intermediate: 'B1 یا بالاتر' },
@@ -183,7 +192,9 @@ export const fa = {
 
   create: {
     title: 'کلمهٔ تازه',
-    label: 'کلمه یا عبارت آلمانی',
+    get label() {
+      return `کلمه یا عبارت ${L()}`
+    },
     placeholder: 'مثلاً aufgeben',
     help: 'یک کلمه، یک عبارت یا یک جملهٔ کوتاه بنویس، مثل der Tisch، Bescheid sagen یا Wie geht\'s dir?',
     importLink: 'وارد کردن گروهی از روی لیست',
@@ -191,8 +202,8 @@ export const fa = {
     loading: 'دارم کارت این کلمه را آماده می‌کنم…',
     loadingHint: 'معمولاً ۱۰ تا ۲۰ ثانیه طول می‌کشد.',
     failed: 'فعلاً نتوانستم این کلمه را آماده کنم.',
-    notAWord: (w: string) => `«${w}» را به‌عنوان یک کلمه یا عبارت آلمانی نشناختم. املایش را نگاه کن.`,
-    wrongLanguage: (w: string) => `«${w}» آلمانی نیست. فعلاً فقط کلمهٔ آلمانی می‌سازم.`,
+    notAWord: (w: string) => `«${w}» را به‌عنوان یک کلمه یا عبارت ${L()} نشناختم. املایش را نگاه کن.`,
+    wrongLanguage: (w: string) => `«${w}» ${L()} نیست. فعلاً فقط کلمهٔ ${L()} می‌سازم.`,
     didYouMean: 'منظورت این بود؟',
     useSuggestion: 'بله، همین',
     duplicateTitle: 'این کلمه در بانک واژه‌ات هست',
@@ -202,8 +213,12 @@ export const fa = {
       empty: 'یک کلمه بنویس.',
       too_long: 'این خیلی بلند است. یک کلمه، عبارت یا جملهٔ کوتاه (حداکثر ۲۰ کلمه) بنویس.',
       multiple_words: 'این خیلی بلند است. جمله‌ها حداکثر ۲۰ کلمه می‌توانند باشند.',
-      wrong_script: 'کلمه را به آلمانی بنویس، نه فارسی.',
-      invalid_characters: 'فقط حروف آلمانی بنویس؛ عدد و علامت نه.',
+      get wrong_script() {
+        return `کلمه را به ${L()} بنویس، نه ${O()}.`
+      },
+      get invalid_characters() {
+        return `فقط حروف ${L()} بنویس؛ عدد و علامت نه.`
+      },
     } satisfies Record<InputErrorCode, string>,
   },
 
@@ -227,10 +242,14 @@ export const fa = {
       cefr: 'سطح',
       ipa: 'تلفظ (IPA)',
       meaning: (n: number) => `معنی ${num(n)}`,
-      translation: 'ترجمهٔ فارسی',
+      get translation() {
+        return `ترجمهٔ ${O()}`
+      },
       meaningNote: 'توضیح کوتاه',
       examples: 'مثال‌ها',
-      exampleDe: 'جملهٔ آلمانی',
+      get exampleDe() {
+        return `جملهٔ ${L()}`
+      },
       exampleFa: 'ترجمهٔ جمله',
       addMeaning: 'افزودن معنی',
       addExample: 'افزودن مثال',
@@ -264,7 +283,9 @@ export const fa = {
       frequency: 'رایج بودن',
       alternatives: 'شکل‌های دیگر گفتن',
       reply: 'جواب رایج',
-      replyDe: 'جواب به آلمانی',
+      get replyDe() {
+        return `جواب به ${L()}`
+      },
       replyFa: 'ترجمهٔ جواب',
       // names of the parts of a card, used in validation messages
       meaningsAll: 'معنی‌ها',
@@ -290,7 +311,7 @@ export const fa = {
         case 'too_many':
           return `${where} بیش از حد مجاز است.`
         case 'wrong_script':
-          return `${where} به خط درست نوشته نشده (آلمانی با حروف لاتین، ترجمه با حروف فارسی).`
+          return `${where} به خط درست نوشته نشده (${L()} با حروف لاتین، ترجمه به ${O()}).`
         case 'missing_levels':
           return `${where} کامل نیست.`
         default:
@@ -350,7 +371,9 @@ export const fa = {
 
   words: {
     title: 'بانک واژه',
-    search: 'جست‌وجو در آلمانی یا فارسی',
+    get search() {
+      return `جست‌وجو در ${L()} یا ${O()}`
+    },
     count: (shown: number, total: number) => (shown === total ? `${num(total)} کلمه` : `${num(shown)} از ${num(total)} کلمه`),
     empty: 'اولین کلمه‌ات را اضافه کن 🌱',
     emptyBody: 'هر کلمه‌ای که ذخیره کنی اینجا می‌ماند و به‌نوبت وارد مرور روزانه می‌شود.',
@@ -401,7 +424,9 @@ export const fa = {
     stability: 'ماندگاری در حافظه',
     difficulty: 'سختی',
     notStarted: 'هنوز وارد مرور نشده؛ در صف کلمه‌های تازه است.',
-    reverseCard: 'کارت معکوس (فارسی به آلمانی)',
+    get reverseCard() {
+      return `کارت معکوس (${O()} به ${L()})`
+    },
     reverseWaiting: 'بعد از یاد گرفتن خود لغت شروع می‌شود.',
     never: 'هنوز نه',
     difficultyWords: ['خیلی آسان', 'آسان', 'متوسط', 'سخت', 'خیلی سخت'],
@@ -435,8 +460,12 @@ export const fa = {
     title: 'مرور',
     showAnswer: 'نمایش جواب',
     recallPrompt: 'معنی‌اش را به یاد بیاور، بعد جواب را ببین.',
-    reversePrompt: 'آلمانی‌اش را به یاد بیاور (اسم‌ها با حرف تعریف).',
-    reverseBadge: 'فارسی به آلمانی',
+    get reversePrompt() {
+      return `${L()}‌اش را به یاد بیاور (اسم‌ها با حرف تعریف).`
+    },
+    get reverseBadge() {
+      return `${O()} به ${L()}`
+    },
     undo: 'برگرداندن جواب قبلی',
     undone: 'جواب قبلی برگشت.',
     streak: (n: number) => `${num(n)} تا پشت سر هم!`,
@@ -481,15 +510,24 @@ export const fa = {
     kinds: {
       mixed: { title: 'مخلوط', body: 'همهٔ نوع‌ها با هم' },
       choice: { title: 'چهارگزینه‌ای', body: 'معنی درست را انتخاب کن' },
-      typing: { title: 'نوشتاری', body: 'آلمانی‌اش را خودت بنویس' },
+      typing: {
+        title: 'نوشتاری',
+        get body() {
+          return `${L()}‌اش را خودت بنویس`
+        },
+      },
       article: { title: 'der / die / das', body: 'حرف تعریف اسم‌ها' },
       listening: { title: 'شنیداری', body: 'بشنو و بنویس (دیکته)' },
       speaking: { title: 'گفتاری', body: 'بلند بگو و تلفظت را بسنج' },
     } satisfies Record<QuizKind, { title: string; body: string }>,
-    needSound: 'این دستگاه صدای آلمانی ندارد.',
+    get needSound() {
+      return `این دستگاه صدای ${L()} ندارد.`
+    },
     listen: 'پخش',
     listenSlow: 'آهسته‌تر',
-    dictationHelp: 'هر چه شنیدی به آلمانی بنویس. برای اسم‌ها حرف تعریف را هم بنویس.',
+    get dictationHelp() {
+      return `هر چه شنیدی به ${L()} بنویس. برای اسم‌ها حرف تعریف را هم بنویس.`
+    },
     speakNow: 'بزن و بگو',
     listening: 'گوش می‌دهم…',
     heard: (text: string) => `شنیدم: «${text}»`,
@@ -507,13 +545,19 @@ export const fa = {
     needNouns: 'برای این تمرین باید چند اسم در بانک واژه‌ات باشد.',
     prompts: {
       choice_de_fa: 'معنی این کلمه چیست؟',
-      choice_fa_de: 'آلمانی‌اش کدام است؟',
-      typing_fa_de: 'آلمانی‌اش را بنویس',
+      get choice_fa_de() {
+        return `${L()}‌اش کدام است؟`
+      },
+      get typing_fa_de() {
+        return `${L()}‌اش را بنویس`
+      },
       article: 'حرف تعریفش کدام است؟',
       dictation: 'گوش بده و بنویس',
       speaking: 'بلند بگو',
     } satisfies Record<QuestionType, string>,
-    typePlaceholder: 'به آلمانی بنویس',
+    get typePlaceholder() {
+      return `به ${L()} بنویس`
+    },
     typeHelp: 'برای اسم‌ها می‌توانی حرف تعریف را هم بنویسی.',
     check: 'بررسی',
     dontKnow: 'نمی‌دانم',
@@ -616,8 +660,12 @@ export const fa = {
     retention: 'دقت هدف',
     retentionHelp: 'یعنی می‌خواهی موقع مرور چند درصد کلمه‌ها یادت بیاید. عدد بالاتر یعنی مرور بیشتر.',
     learningSteps: 'گام‌های یادگیری کلمهٔ تازه: ۱ دقیقه و ۱۰ دقیقه. گام یادگیری دوباره: ۱۰ دقیقه.',
-    reverseCards: 'کارت معکوس (فارسی به آلمانی)',
-    reverseCardsHelp: 'برای هر لغت یک کارت دوم ساخته می‌شود که معنی فارسی را نشان می‌دهد و آلمانی‌اش را می‌پرسد. این کارت چند روز بعد از یاد گرفتن خود لغت می‌آید و مرور روزانه را بیشتر می‌کند.',
+    get reverseCards() {
+      return `کارت معکوس (${O()} به ${L()})`
+    },
+    get reverseCardsHelp() {
+      return `برای هر لغت یک کارت دوم ساخته می‌شود که معنی ${O()} را نشان می‌دهد و ${L()}‌اش را می‌پرسد. این کارت چند روز بعد از یاد گرفتن خود لغت می‌آید و مرور روزانه را بیشتر می‌کند.`
+    },
     audio: 'صدا',
     speechRate: 'سرعت تلفظ',
     speechSlow: 'آهسته',
@@ -628,7 +676,9 @@ export const fa = {
     aiVoiceHelp: 'با اینترنت، واژه‌ها و جمله‌ها با صدای طبیعی خوانده می‌شوند. هر متن فقط یک بار ساخته و بعد ذخیره می‌شود. بدون اینترنت، صدای خود گوشی پخش می‌شود.',
     voiceFemale: 'صدای زن',
     voiceMale: 'صدای مرد',
-    audioUnavailable: 'این مرورگر صدای آلمانی ندارد.',
+    get audioUnavailable() {
+      return `این مرورگر صدای ${L()} ندارد.`
+    },
     appearance: 'ظاهر',
     themes: { system: 'هماهنگ با دستگاه', light: 'روشن', dark: 'تیره' },
     data: 'داده و همگام‌سازی',
@@ -763,7 +813,7 @@ export const fa = {
     tileHint: 'جدول هفته',
     myCode: 'کد دوستی من',
     share: 'فرستادن کد',
-    shareText: (code: string, url: string) => `با هم آلمانی یاد بگیریم! در هدهد کد دوستی من را وارد کن: ${code}\n${url}`,
+    shareText: (code: string, url: string) => `با هم ${L()} یاد بگیریم! در هدهد کد دوستی من را وارد کن: ${code}\n${url}`,
     copied: 'کد کپی شد',
     addTitle: 'افزودن دوست',
     addLabel: 'کد دوستی',
@@ -823,15 +873,19 @@ export const fa = {
   deck: {
     title: 'از Anki یا Quizlet',
     entry: 'وارد کردن از Anki یا Quizlet',
-    intro: 'فایل متنی کارت‌هایت را از Anki یا Quizlet انتخاب کن. هر خط یک کارت: آلمانی و فارسی (ترتیبشان مهم نیست).',
+    get intro() {
+      return `فایل متنی کارت‌هایت را از Anki یا Quizlet انتخاب کن. هر خط یک کارت: ${L()} و ${O()} (ترتیبشان مهم نیست).`
+    },
     pickFile: 'انتخاب فایل',
     placeholder: 'der Tisch\tمیز\naufgeben\tدست کشیدن',
     howTitle: 'چطور فایل بگیرم؟',
-    how: [
-      'Anki: روی دسته ← Export ← «Notes in Plain Text (.txt)».',
-      'Quizlet: مجموعه ← ⋯ ← Export ← متن را کپی کن و پایین همین صفحه بچسبان.',
-      'هر فایل متنی که در هر خط یک واژهٔ آلمانی و معنی فارسی‌اش (با Tab یا ویرگول جدا) دارد هم کار می‌کند.',
-    ],
+    get how() {
+      return [
+        'Anki: روی دسته ← Export ← «Notes in Plain Text (.txt)».',
+        'Quizlet: مجموعه ← ⋯ ← Export ← متن را کپی کن و پایین همین صفحه بچسبان.',
+        `هر فایل متنی که در هر خط یک کلمهٔ ${L()} و معنی ${O()}‌اش (با Tab یا ویرگول جدا) دارد هم کار می‌کند.`,
+      ]
+    },
     paste: 'یا متن را اینجا بچسبان',
     read: 'خواندن متن',
     found: (n: number) => `${num(n)} کارت پیدا شد`,
