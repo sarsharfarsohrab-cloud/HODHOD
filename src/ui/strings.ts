@@ -14,6 +14,7 @@ import { fa as faStrings } from './i18n/fa.ts'
 import { en as enStrings } from './i18n/en.ts'
 import { de as deStrings } from './i18n/de.ts'
 import { ar as arStrings } from './i18n/ar.ts'
+import { tr as trStrings } from './i18n/tr.ts'
 import { isUiLanguage, UI_LANGUAGE_INFO, type UiLanguage } from './i18n/languages.ts'
 
 export type Strings = typeof faStrings
@@ -22,7 +23,7 @@ export type Strings = typeof faStrings
 export type Dictionary = Omit<Strings, 'admin'>
 
 /** Dictionaries that ship with the app; a language without one falls back to English for now. */
-const DICTIONARIES: Partial<Record<UiLanguage, Dictionary>> = { fa: faStrings, en: enStrings, de: deStrings, ar: arStrings }
+const DICTIONARIES: Partial<Record<UiLanguage, Dictionary>> = { fa: faStrings, en: enStrings, de: deStrings, ar: arStrings, tr: trStrings }
 
 /** The language a first-time visitor sees: English, the international one. */
 export const DEFAULT_LANGUAGE: UiLanguage = 'en'
