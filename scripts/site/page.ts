@@ -238,7 +238,7 @@ ${alternates}
         ]
           .map(
             ([img, cap], i) =>
-              `<figure class="shot s${i + 1}"><div class="phone"><img src="/img/${img}.webp" alt="${esc(cap!)}" width="780" height="1688" loading="lazy"></div><figcaption>${esc(cap!)}</figcaption></figure>`,
+              `<figure class="shot s${i + 1}"><div class="phone"><img src="/img/shots/${lang}/${img}.webp" alt="${esc(cap!)}" width="780" height="1688" loading="lazy"></div><figcaption>${esc(cap!)}</figcaption></figure>`,
           )
           .join('\n        ')}
         <img class="screens-bird" src="/img/teacher.webp" alt="" width="150" height="150" loading="lazy">

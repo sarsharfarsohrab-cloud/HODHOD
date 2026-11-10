@@ -14,6 +14,8 @@ const ORIGIN = `http://localhost:${port}`
 const speech = new Uint8Array(await Bun.file(join(import.meta.dir, '..', 'fixtures', 'speech.mp3')).arrayBuffer())
 let backend = new FakeSupabase({ origin: ORIGIN })
 let aiMode: 'ok' | 'error' | 'invalid' | 'slow' = 'ok'
+/** Extra words the fake AI knows (scripts/site-shots.mjs teaches it words of other languages). */
+let customWords: Record<string, unknown> = {}
 
 const empty = { lemma: '', meanings: [], noun: null, verb: null, adjective: null, pos: 'other', cefr: 'A1' }
 
@@ -24,6 +26,7 @@ function configure() {
     if (aiMode === 'error') return new Response('upstream down', { status: 503 })
     if (aiMode === 'invalid') return aiResponse({ status: 'ok', lemma: word })
     const key = word.toLowerCase()
+    if (customWords[key]) return aiResponse(customWords[key] as Record<string, unknown>)
     if (key === 'aufgeben' || key === 'gab') return aiResponse(asAiOutput(AUFGEBEN, key === 'gab' ? { input_note: '«gab» گذشتهٔ سادهٔ فعل «geben» است؛ این کارت برای «aufgeben» ساخته شد.' } : {}))
     if (key === 'tisch' || key === 'der tisch') return aiResponse(asAiOutput(TISCH))
     if (key === 'schnell') return aiResponse(asAiOutput(SCHNELL))
@@ -76,6 +79,7 @@ Bun.serve({
         case '/__test/reset':
           backend = new FakeSupabase({ origin: ORIGIN, confirmEmail: body.confirmEmail === true, welcome: body.welcome === true })
           aiMode = 'ok'
+          customWords = {}
           configure()
           break
         case '/__test/forget-welcome':
@@ -95,6 +99,9 @@ Bun.serve({
           break
         case '/__test/platform':
           return Response.json({ ttsCalls: backend.requests.filter((r) => r === 'POST /functions/v1/tts').length, ...Object.fromEntries(['packs', 'pack_items', 'user_packs', 'feedback', 'card_reports', 'announcements', 'client_errors', 'user_limits', 'ai_credit_entries', 'ai_word_cache', 'tts_cache'].map((k) => [k, backend.tables[k]])) })
+        case '/__test/ai-words':
+          customWords = { ...customWords, ...(body.words as Record<string, unknown>) }
+          break
         case '/__test/ai':
           aiMode = body.mode as typeof aiMode
           break
