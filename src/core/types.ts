@@ -69,8 +69,12 @@ export interface Settings {
   /** False until the welcome tour was finished or skipped. */
   onboarded: boolean
   notifyDaily: boolean
-  /** "HH:MM", local time of the daily reminder. */
+  /** "HH:MM", local time of the first reminder (kept for older servers; see notifyTimes). */
   notifyTime: string
+  /** The learner's own reminder times, "HH:MM" local time, at most eight. */
+  notifyTimes: string[]
+  /** True: a reminder only comes when today's work is not done yet. False: like an alarm clock. */
+  notifyOnlyPending: boolean
   notifyStreak: boolean
   notifyUpdates: boolean
   /** Streak milestones already celebrated (each is shown once). */
@@ -92,6 +96,8 @@ export const DEFAULT_SETTINGS: Settings = {
   onboarded: true,
   notifyDaily: false,
   notifyTime: '20:00',
+  notifyTimes: [],
+  notifyOnlyPending: false,
   notifyStreak: true,
   notifyUpdates: true,
   celebratedStreaks: [],

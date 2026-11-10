@@ -60,6 +60,8 @@ export interface SettingsRow {
   onboarded_at?: string | null
   notify_daily?: boolean
   notify_time?: string
+  notify_times?: string[] | null
+  notify_only_pending?: boolean
   notify_streak?: boolean
   notify_updates?: boolean
   celebrated_streaks?: number[] | null
@@ -136,6 +138,9 @@ export const settingsFromRow = (r: SettingsRow): Settings => ({
   onboarded: !('onboarded_at' in r) || r.onboarded_at !== null,
   notifyDaily: r.notify_daily ?? DEFAULT_SETTINGS.notifyDaily,
   notifyTime: r.notify_time ?? DEFAULT_SETTINGS.notifyTime,
+  // before migration 0006 there is only the one time
+  notifyTimes: r.notify_times?.length ? [...r.notify_times].sort() : [r.notify_time ?? DEFAULT_SETTINGS.notifyTime],
+  notifyOnlyPending: r.notify_only_pending ?? DEFAULT_SETTINGS.notifyOnlyPending,
   notifyStreak: r.notify_streak ?? DEFAULT_SETTINGS.notifyStreak,
   notifyUpdates: r.notify_updates ?? DEFAULT_SETTINGS.notifyUpdates,
   celebratedStreaks: r.celebrated_streaks ?? [],
@@ -157,6 +162,13 @@ export function settingsToRow(patch: Partial<Settings>): Record<string, unknown>
   if (patch.onboarded !== undefined) row.onboarded_at = patch.onboarded ? new Date().toISOString() : null
   if (patch.notifyDaily !== undefined) row.notify_daily = patch.notifyDaily
   if (patch.notifyTime !== undefined) row.notify_time = patch.notifyTime
+  if (patch.notifyTimes !== undefined) {
+    const times = [...new Set(patch.notifyTimes)].sort().slice(0, 8)
+    row.notify_times = times
+    // older servers read only the single time
+    if (times.length > 0) row.notify_time = times[0]
+  }
+  if (patch.notifyOnlyPending !== undefined) row.notify_only_pending = patch.notifyOnlyPending
   if (patch.notifyStreak !== undefined) row.notify_streak = patch.notifyStreak
   if (patch.notifyUpdates !== undefined) row.notify_updates = patch.notifyUpdates
   if (patch.celebratedStreaks !== undefined) row.celebrated_streaks = patch.celebratedStreaks

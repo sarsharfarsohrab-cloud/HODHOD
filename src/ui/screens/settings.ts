@@ -63,13 +63,53 @@ export function settingsScreen(ctx: Ctx): Screen {
     else if (state === 'denied') parts.push(h('p', { class: 'notice warn' }, icon('info', { size: 18 }), h('span', null, r.deniedHelp)))
     else if (state === 'off') parts.push(h('p', { class: 'small' }, r.offBody), turnOn)
     else {
-      const time = h('input', {
-        class: 'input', type: 'time', value: settings.notifyTime, dir: 'ltr', step: '900', 'aria-label': r.dailyTime, disabled: !settings.notifyDaily,
-        onchange: (e: Event) => {
-          const value = (e.target as HTMLInputElement).value
-          if (/^\d{2}:\d{2}$/.test(value)) update({ notifyTime: value, timeZone: localTimeZone() }, false)
-        },
-      })
+      // the learner's own reminder times, like alarms; at most eight a day
+      let times = settings.notifyDaily ? [...settings.notifyTimes] : []
+      const timesList = h('ul', { class: 'reminder-times' })
+      const addTime = h('button', { class: 'btn small', type: 'button' }, icon('plus', { size: 16 }), r.addTime)
+      const saveTimes = () => {
+        times = [...new Set(times)].sort()
+        update({ notifyTimes: times, notifyDaily: times.length > 0, timeZone: localTimeZone() }, false)
+      }
+      const renderTimes = () => {
+        replace(
+          timesList,
+          ...times.map((value, i) =>
+            h(
+              'li',
+              { class: 'row' },
+              icon('bell', { size: 18 }),
+              h('input', {
+                class: 'input grow', type: 'time', value, dir: 'ltr', 'aria-label': `${r.dailyTime} ${i + 1}`,
+                onchange: (e: Event) => {
+                  const next = (e.target as HTMLInputElement).value
+                  if (!/^\d{2}:\d{2}$/.test(next)) return
+                  times[i] = next
+                  saveTimes()
+                  renderTimes()
+                },
+              }),
+              h('button', { class: 'icon-btn', type: 'button', 'aria-label': r.removeTime(value), title: r.removeTime(value), onclick: () => { times.splice(i, 1); saveTimes(); renderTimes() } }, icon('close', { size: 18 })),
+            ),
+          ),
+        )
+        addTime.disabled = times.length >= 8
+        addTime.title = times.length >= 8 ? r.timesFull : ''
+      }
+      addTime.onclick = () => {
+        // a sensible next time: an hour after the last one, or the old single time
+        const last = times.at(-1)
+        let next = settings.notifyTime || '20:00'
+        if (last) {
+          const [hh, mm] = last.split(':').map(Number)
+          next = `${String(((hh ?? 0) + 1) % 24).padStart(2, '0')}:${String(mm ?? 0).padStart(2, '0')}`
+        }
+        if (!times.includes(next)) times.push(next)
+        saveTimes()
+        renderTimes()
+        timesList.querySelector<HTMLInputElement>(`input[value="${next}"]`)?.focus()
+      }
+      renderTimes()
       const test = h('button', { class: 'btn small', type: 'button' }, icon('bell', { size: 16 }), r.test)
       test.onclick = async () => {
         test.disabled = true
@@ -88,9 +128,12 @@ export function settingsScreen(ctx: Ctx): Screen {
         void renderReminders()
       }
       parts.push(
-        toggle(r.daily, settings.notifyDaily, (v) => { update({ notifyDaily: v, timeZone: localTimeZone() }, false); time.disabled = !v }),
-        h('label', { class: 'field' }, h('span', null, r.dailyTime), time),
+        h('h3', null, r.daily),
         h('p', { class: 'help' }, r.dailyHelp),
+        timesList,
+        addTime,
+        toggle(r.onlyPending, settings.notifyOnlyPending, (v) => update({ notifyOnlyPending: v }, false)),
+        h('p', { class: 'help' }, r.onlyPendingHelp),
         toggle(r.streak, settings.notifyStreak, (v) => update({ notifyStreak: v }, false)),
         toggle(r.updates, settings.notifyUpdates, (v) => update({ notifyUpdates: v }, false)),
         h('p', { class: 'help' }, r.limitHelp),

@@ -4524,3 +4524,19 @@ html[dir='ltr'] .deck-row .icon {
 .cost-chart + .row {
   direction: ltr;
 }
+
+.reminder-times {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.reminder-times li {
+  align-items: center;
+  gap: var(--s2);
+}
+.reminder-times .input {
+  min-width: 0;
+}

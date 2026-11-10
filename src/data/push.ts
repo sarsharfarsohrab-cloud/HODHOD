@@ -16,7 +16,7 @@ export function isStandalone(): boolean {
 }
 
 export function pushSupported(): boolean {
-  return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && location.protocol === 'https:'
+  return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && window.isSecureContext
 }
 
 /** "BASE64URL" → bytes, as PushManager wants the server key. */

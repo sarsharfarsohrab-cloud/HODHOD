@@ -138,7 +138,16 @@ function reminders(r: AdminReminders | null, now: Date): HTMLElement | null {
     { class: 'card stack' },
     h('h2', null, icon('bell', { size: 20 }), ' ', a.remindersTitle),
     on && r.settings
-      ? h('p', null, a.reminderSetup(r.settings.time, r.settings.time_zone ?? 'Europe/Berlin', r.settings.streak))
+      ? h(
+          'p',
+          null,
+          a.reminderSetup(
+            (r.settings.times?.length ? r.settings.times : [r.settings.time]).map((x) => `\u2066${x}\u2069`).join('، '),
+            r.settings.time_zone ?? 'Europe/Berlin',
+            r.settings.streak,
+            r.settings.only_pending === true,
+          ),
+        )
       : h('p', { class: 'muted' }, a.remindersOff),
     r.devices.length === 0
       ? on
@@ -167,7 +176,7 @@ function reminders(r: AdminReminders | null, now: Date): HTMLElement | null {
       : h(
           'ul',
           { class: 'admin-list compact' },
-          r.sent.map((s) => h('li', null, h('span', { class: 'chip' }, a.sentKinds[s.kind] ?? s.kind), h('small', { class: 'muted grow' }, fmtDateTime(s.sent_at)))),
+          r.sent.map((s) => h('li', null, h('span', { class: 'chip' }, a.sentKinds[s.kind] ?? s.kind, s.ref ? ` ${s.ref}` : ''), h('small', { class: 'muted grow' }, fmtDateTime(s.sent_at)))),
         ),
   )
 }

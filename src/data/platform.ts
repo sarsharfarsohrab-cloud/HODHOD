@@ -225,9 +225,9 @@ export interface AdminUserDetail {
 }
 
 export interface AdminReminders {
-  settings: { daily: boolean; time: string; streak: boolean; time_zone: string | null } | null
+  settings: { daily: boolean; time: string; times?: string[] | null; only_pending?: boolean; streak: boolean; time_zone: string | null } | null
   devices: { agent: string | null; created_at: string; last_success_at: string | null; failures: number }[]
-  sent: { kind: string; sent_at: string }[]
+  sent: { kind: string; ref?: string | null; sent_at: string }[]
 }
 
 export interface AdminBudget {

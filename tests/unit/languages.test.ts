@@ -167,4 +167,8 @@ describe('reminders in the learner’s own language', () => {
     expect(reminderMessage('streak', 0, 5, 'ar').body).toContain('راجعت')
     expect(reminderMessage('daily', 12, 0, 'xx').body).toBe('۱۲ کارت منتظرت است.')
   })
+  test('a reminder the learner set for themselves still speaks when no card is waiting', () => {
+    expect(reminderMessage('daily', 0, 0, 'en').body).toBe('Take a few minutes for your words.')
+    expect(reminderMessage('daily', 0, 0, 'en').url).toBe('#/home')
+  })
 })

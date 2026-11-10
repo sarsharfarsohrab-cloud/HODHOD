@@ -1130,7 +1130,7 @@ await test('a wrong card is reported and fixed for everyone from the admin inbox
   // one learner's own page, with their reminders
   await page.locator('.user-card', { hasText: 'nahid@example.test' }).locator('.user-name').click()
   await page.getByRole('heading', { name: 'یادآورها', exact: true }).waitFor()
-  await page.getByText('یادآور روزانه ساعت 20:00', { exact: false }).waitFor()
+  await page.getByText('20:00', { exact: false }).first().waitFor()
   await noHorizontalScroll(page, 'admin user page')
   await snap(page, 'admin-user', { fullPage: true })
 
@@ -1190,7 +1190,6 @@ await test('natural voice: generated once, then played from the saved file; the 
   // a male voice is a different recording
   await page.goto(`${BASE}/#/settings`)
   await page.getByRole('heading', { name: 'یادآوری‌ها' }).waitFor()
-  await page.getByText('این مرورگر اعلان پشتیبانی نمی‌کند.').waitFor() // the test server is plain http
   await page.getByRole('button', { name: 'صدای مرد' }).click()
   await page.waitForFunction(() => performance.getEntriesByType('resource').filter((e) => e.name.includes('/storage/v1/object/public/tts/')).length >= 2)
   p = await control('platform')
@@ -1203,6 +1202,40 @@ await test('natural voice: generated once, then played from the saved file; the 
   await page.waitForTimeout(500)
   assert((await control('platform')).ttsCalls === 2, 'with the natural voice off nothing is generated')
   assert((await played()) >= 2, 'the saved recordings were played')
+  return page
+})
+
+await test('the learner chooses their own reminder times, like alarms', async () => {
+  const page = await newPage()
+  // a phone where notifications are already allowed and this device is registered
+  await page.context().addInitScript(() => {
+    const sub = {
+      endpoint: 'https://push.example.test/e2e', options: { applicationServerKey: null },
+      toJSON: () => ({ endpoint: 'https://push.example.test/e2e', keys: { p256dh: 'k', auth: 'a' } }), unsubscribe: async () => true,
+    }
+    const reg = { pushManager: { getSubscription: async () => sub, subscribe: async () => sub } }
+    Object.defineProperty(Notification, 'permission', { get: () => 'granted' })
+    Notification.requestPermission = async () => 'granted'
+    navigator.serviceWorker.getRegistration = async () => reg
+  })
+  await signUp(page)
+  await page.goto(`${BASE}/#/settings`)
+  await page.getByRole('heading', { name: 'یادآوری‌های من' }).waitFor()
+  await page.getByRole('button', { name: 'افزودن یادآور' }).click()
+  await page.getByRole('button', { name: 'افزودن یادآور' }).click()
+  await page.getByRole('button', { name: 'افزودن یادآور' }).click()
+  await page.getByRole('button', { name: 'حذف یادآور ساعت 21:00' }).click()
+  await page.getByLabel('ساعت یادآوری 1').fill('08:30')
+  await page.getByLabel('ساعت یادآوری 1').dispatchEvent('change')
+  await page.waitForTimeout(600)
+  let s = (await state()).settings[0]
+  assert(JSON.stringify(s?.notify_times) === JSON.stringify(['08:30', '22:00']) && s?.notify_daily === true, `the chosen times are saved (${JSON.stringify(s)})`)
+  assert(s?.notify_time === '08:30', 'older servers still get the first time')
+  await page.getByText('فقط وقتی هنوز مرور نکرده‌ام').click()
+  await page.waitForTimeout(600)
+  assert((await state()).settings[0]?.notify_only_pending === true, '"only when not reviewed yet" is saved')
+  await noHorizontalScroll(page, 'reminder times')
+  await snap(page, 'reminder-times')
   return page
 })
 
