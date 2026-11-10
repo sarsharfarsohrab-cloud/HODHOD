@@ -420,6 +420,15 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
 
 async function boot() {
   // a new device has no language yet: it opens in English and asks first (see languageScreen)
+  // coming from the introduction site (app.apphodhod.com/?lang=de): that page's language is the choice
+  const fromSite = new URLSearchParams(location.search).get('lang')
+  if (isUiLanguage(fromSite)) {
+    storage.setItem(LANGUAGE_KEY, fromSite)
+    const params = new URLSearchParams(location.search)
+    params.delete('lang')
+    const rest = params.toString()
+    history.replaceState(null, '', `${location.pathname}${rest ? `?${rest}` : ''}${location.hash}`)
+  }
   let languageChosen = isUiLanguage(storage.getItem(LANGUAGE_KEY))
   if (languageChosen) applyLanguage(storage.getItem(LANGUAGE_KEY))
   else setLanguage(null)

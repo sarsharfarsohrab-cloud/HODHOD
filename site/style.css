@@ -162,6 +162,8 @@ svg { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 2
   border: 1px solid var(--line);
   box-shadow: var(--shadow-lg);
 }
+/* on Persian and Arabic pages the button sits on the left: open the list towards the page */
+[dir='rtl'] .langmenu-list { right: auto; left: 0; }
 .langmenu-list a { display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 4px 10px; border-radius: 12px; color: var(--ink); text-decoration: none; font-weight: 600; }
 .langmenu-list a:hover, .langmenu-list a[aria-current] { background: var(--accent-soft); }
 .langmenu-list small { margin-left: auto; color: var(--ink-2); font-weight: 400; }
