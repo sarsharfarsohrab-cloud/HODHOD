@@ -462,7 +462,9 @@ async function boot() {
     running = null
     if (!session) {
       applyTheme('system')
-      if (!/^#\/(home)?$/.test(location.hash)) history.replaceState(null, '', `${location.pathname}${location.search}#/home`)
+      // signed out: start over at home (on admin.apphodhod.com: at the admin panel, after signing in)
+      const start = location.hostname.startsWith('admin.') ? '#/admin' : '#/home'
+      if (location.hash !== start) history.replaceState(null, '', `${location.pathname}${location.search}${start}`)
       const signIn = () =>
         replace(
           root,
