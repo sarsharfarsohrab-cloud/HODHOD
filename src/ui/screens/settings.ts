@@ -12,6 +12,7 @@ import { isAdmin } from '../../data/platform.ts'
 import { openFeedbackSheet } from '../reportSheet.ts'
 import { disablePush, enablePush, pushState, sendTestPush } from '../../data/push.ts'
 import { localTimeZone } from '../../core/time.ts'
+import { UI_LANGUAGE_INFO, UI_LANGUAGES } from '../i18n/languages.ts'
 
 declare const __APP_VERSION__: string
 
@@ -301,6 +302,34 @@ export function settingsScreen(ctx: Ctx): Screen {
         'section',
         { class: 'card stack' },
         h('h2', null, s.appearance),
+        h(
+          'label',
+          { class: 'field' },
+          h('span', null, t.auth.language),
+          h(
+            'select',
+            {
+              class: 'input',
+              onchange: async (e: Event) => {
+                const select = e.target as HTMLSelectElement
+                select.disabled = true
+                try {
+                  // the screen is rebuilt in the new language as soon as the account changes
+                  await ctx.data.setLanguages({ native: select.value })
+                } catch {
+                  select.value = ctx.data.profile.nativeLanguage
+                  ctx.toast(t.welcome.languageFailed, 'error')
+                } finally {
+                  select.disabled = false
+                }
+              },
+            },
+            // the language being learned cannot also be the own language
+            UI_LANGUAGES.filter((code) => code !== ctx.data.profile.activeTargetLanguage).map((code) =>
+              h('option', { value: code, selected: code === ctx.data.profile.nativeLanguage, lang: code }, UI_LANGUAGE_INFO[code].name),
+            ),
+          ),
+        ),
         segmented(
           (['system', 'light', 'dark'] as const).map((value) => ({ value, label: s.themes[value] })),
           settings.theme,

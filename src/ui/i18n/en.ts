@@ -1,14 +1,14 @@
 /** English: the first language a new visitor sees. Same shape as fa.ts (the admin panel stays Persian). */
 import type { ValidationIssue } from '../../../supabase/functions/_shared/wordSchema.ts'
 import { num } from '../format.ts'
-import { describePath, type Strings } from '../strings.ts'
+import { describePath, type Dictionary } from '../strings.ts'
 import { L, O } from './names.ts'
 import { learningInfo } from '../learning.ts'
 
 /** "1 card", "3 cards" */
 const n_ = (n: number, one: string, many: string) => `${num(n)} ${n === 1 ? one : many}`
 
-export const en: Omit<Strings, 'admin'> = {
+export const en: Dictionary = {
   nav: { home: 'Home', create: 'New word', words: 'Words', study: 'Review', quiz: 'Quiz', settings: 'Settings', stats: 'Stats' },
 
   gender: { m: 'masculine', f: 'feminine', n: 'neuter', c: 'common (de)' },

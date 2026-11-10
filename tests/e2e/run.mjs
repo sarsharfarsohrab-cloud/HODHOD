@@ -847,6 +847,13 @@ await test('a first visit opens in English and asks for the language first', asy
   assert(s.profiles?.[0]?.native_language === 'en' && s.profiles?.[0]?.active_target_language === 'fr', `the languages are saved (${JSON.stringify(s.profiles?.[0])})`)
   await page.reload()
   await page.getByRole('heading', { name: 'Hi Mary, welcome!' }).waitFor()
+  // the own language can be changed later in the settings: the app switches to German at once
+  await page.goto(`${BASE}/#/settings`)
+  await page.getByLabel('Language').selectOption('de')
+  await page.getByRole('heading', { name: 'Einstellungen' }).waitFor()
+  await page.getByText('Wie das Gerät').waitFor()
+  assert((await state()).profiles[0].native_language === 'de', 'the new own language is saved')
+  await snap(page, 'settings-german')
   return page
 })
 
