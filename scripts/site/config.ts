@@ -22,7 +22,7 @@ export const SITE_CONFIG = {
   /** Supabase: the public address and publishable key (both public by design, as in the app). */
   supabaseUrl: 'https://arhmdxtclovgfwokrxob.supabase.co',
   /** Contact e-mail in the footer; null hides it until the address exists. */
-  contactEmail: null as string | null,
+  contactEmail: 'support@apphodhod.com' as string | null,
   /**
    * Reviews from real learners only, with their permission. While the list is empty the section
    * is not shown at all. Example: { name: 'Sara', place: 'Berlin', text: '…', lang: 'fa', stars: 5 }

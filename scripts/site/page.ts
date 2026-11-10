@@ -127,7 +127,8 @@ ${alternates}
 <script type="application/ld+json">${JSON.stringify(ld)}</script>
 <script>
   // old links and installed copies of the app from when it lived on this address
-  if (location.hash.startsWith('#/')) location.replace(${JSON.stringify(app)} + location.hash)
+  if (location.hash.startsWith('#/') || location.hash.includes('access_token=')) location.replace(${JSON.stringify(app)} + location.hash)
+  else if (matchMedia('(display-mode: standalone)').matches) location.replace(${JSON.stringify(app)})
 </script>
 </head>
 <body>

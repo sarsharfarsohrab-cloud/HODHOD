@@ -434,6 +434,9 @@ async function boot() {
   const client = new SupabaseClient(config, storage)
   window.addEventListener('storage', () => client.reloadFromStorage())
 
+  // admin.apphodhod.com is the same app, opened straight on the admin panel
+  if (location.hostname.startsWith('admin.') && ['', '#', '#/', '#/home'].includes(location.hash)) history.replaceState(null, '', `${location.pathname}${location.search}#/admin`)
+
   // E-mail confirmation and password-reset links come back with the session in the address.
   let recovery = false
   let linkProblem: string | undefined

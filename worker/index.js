@@ -2,6 +2,8 @@
  * One Cloudflare Worker serves every address of Hodhod from the built files in www/:
  *   apphodhod.com          → www/site  (the public introduction site, for people and search engines)
  *   app.apphodhod.com      → www/app   (the app itself)
+ *   admin.apphodhod.com    → www/app   (the same app, opening on the admin panel; locked by
+ *                                       Cloudflare Access to the owner's e-mail)
  *   www.apphodhod.com      → permanent redirect to apphodhod.com
  * Any other host (the *.workers.dev preview address) shows the site.
  *
@@ -10,7 +12,7 @@
  * address shows the site already, as a preview.
  */
 const APEX = 'apphodhod.com'
-const SITE_LIVE = false
+const SITE_LIVE = true
 
 export default {
   async fetch(request, env) {
@@ -23,7 +25,8 @@ export default {
     }
 
     const preview = host.endsWith('.workers.dev')
-    const folder = host.startsWith('app.') || (!SITE_LIVE && !preview) ? '/app' : '/site'
+    const appHost = host.startsWith('app.') || host.startsWith('admin.')
+    const folder = appHost || (!SITE_LIVE && !preview) ? '/app' : '/site'
     const assetUrl = new URL(url)
     assetUrl.pathname = folder + url.pathname
     const response = await env.ASSETS.fetch(new Request(assetUrl, request))
