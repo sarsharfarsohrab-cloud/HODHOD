@@ -178,6 +178,49 @@ export async function handlePlatform(fake: FakeSupabase, userId: string, name: s
             }),
           )
         )
+      case 'admin_costs': {
+        const denied = adminOnly()
+        if (denied) return denied
+        const logs = t.ai_generation_logs!
+        const cost = (l: Row) => (Number(l.input_tokens) || 0) * 0.1e-6 + (Number(l.output_tokens) || 0) * 0.5e-6
+        const kinds = [...new Set(logs.map((l) => String(l.kind)))]
+        const today = now().slice(0, 10)
+        return json({
+          days: Number(args.p_days) || 30,
+          total: logs.reduce((n, l) => n + cost(l), 0),
+          by_kind: kinds.map((kind) => {
+            const rows = logs.filter((l) => l.kind === kind)
+            const ok = rows.filter((l) => l.status === 'ok')
+            return {
+              kind, calls: rows.filter((l) => l.status === 'ok' || l.status === 'rejected').length, ok: ok.length, cache_hits: rows.filter((l) => l.status === 'cache_hit').length,
+              errors: rows.filter((l) => l.status === 'error').length, cost: rows.reduce((n, l) => n + cost(l), 0), avg_cost: ok.length ? ok.reduce((n, l) => n + cost(l), 0) / ok.length : 0,
+              users: new Set(rows.map((l) => l.user_id)).size,
+            }
+          }),
+          daily: kinds.map((kind) => ({ day: today, kind, cost: logs.filter((l) => l.kind === kind).reduce((n, l) => n + cost(l), 0) })),
+          models: [...new Set(logs.filter((l) => l.status !== 'cache_hit').map((l) => `${l.kind}|${l.model}`))].map((key) => {
+            const [kind, model] = key.split('|')
+            return { kind, model, calls: logs.filter((l) => l.kind === kind && String(l.model) === model).length, priced: kind === 'tts' }
+          }),
+          top_users: fake.users.slice(0, 3).map((u) => ({ user_id: u.id, email: u.email, display_name: t.profiles!.find((p) => p.id === u.id)?.display_name ?? null, cost: 0.0123, calls: 4 })),
+          active_users: fake.users.length,
+        })
+      }
+      case 'admin_growth': {
+        const denied = adminOnly()
+        if (denied) return denied
+        const days = Number(args.p_days) || 30
+        const daily = Array.from({ length: days }, (_, i) => {
+          const day = new Date(Date.now() - (days - 1 - i) * 86_400_000).toISOString().slice(0, 10)
+          return { day, signups: i === days - 1 ? fake.users.length : i % 5 === 0 ? 1 : 0, active: i % 3 === 0 ? 2 : 1 }
+        })
+        const count = (key: string) => t.profiles!.reduce<Record<string, number>>((m, p) => ((m[String(p[key])] = (m[String(p[key])] ?? 0) + 1), m), {})
+        return json({
+          days, users: fake.users.length, dau: 1, wau: 2, mau: 3, plus: 0, push: 0, daily,
+          retention: { d1: { base: 4, back: 3 }, d7: { base: 3, back: 2 }, d30: { base: 0, back: 0 } },
+          native: count('native_language'), learning: count('active_target_language'),
+        })
+      }
       case 'admin_set_limit': {
         const denied = adminOnly()
         if (denied) return denied

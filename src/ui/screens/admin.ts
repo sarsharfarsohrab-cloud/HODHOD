@@ -35,11 +35,14 @@ import { num, fmtDate, fmtDateTime, fmtRelative } from '../format.ts'
 import { mascot } from '../mascot.ts'
 import { describeError, t } from '../strings.ts'
 import { emptyState, progressBar } from '../widgets.ts'
+import { growth, money } from './adminInsights.ts'
 
 const a = t.admin
-type Tab = 'overview' | 'users' | 'inbox' | 'news' | 'packs'
+type Tab = 'overview' | 'money' | 'growth' | 'users' | 'inbox' | 'news' | 'packs'
 const TABS: { id: Tab; icon: IconName }[] = [
-  { id: 'overview', icon: 'chart' },
+  { id: 'overview', icon: 'home' },
+  { id: 'money', icon: 'wallet' },
+  { id: 'growth', icon: 'trend' },
   { id: 'users', icon: 'users' },
   { id: 'inbox', icon: 'message' },
   { id: 'news', icon: 'bell' },
@@ -48,9 +51,9 @@ const TABS: { id: Tab; icon: IconName }[] = [
 /** Below this many dollars the overview warns that the credit is running out. */
 const LOW_CREDIT_USD = 1
 
-const usd = (n: number, digits = 2) => h('bdi', { dir: 'ltr', class: 'money' }, `$${n.toFixed(digits)}`)
+export const usd = (n: number, digits = 2) => h('bdi', { dir: 'ltr', class: 'money' }, `$${n.toFixed(digits)}`)
 /** Isolated left-to-right, so "$0.25" never turns into "0.25$" inside Persian text. */
-const usdText = (n: number, digits = 2) => `\u2066$${n.toFixed(digits)}\u2069`
+export const usdText = (n: number, digits = 2) => `\u2066$${n.toFixed(digits)}\u2069`
 
 const back = (ctx: Ctx, to: string) =>
   h('button', { class: 'icon-btn', type: 'button', 'aria-label': t.common.back, title: t.common.back, onclick: () => ctx.go(to) }, icon('back'))
@@ -79,12 +82,12 @@ function guarded(ctx: Ctx, el: HTMLElement, header: () => HTMLElement, start: ()
   })
 }
 
-function failure(err: unknown): HTMLElement {
+export function failure(err: unknown): HTMLElement {
   const error = toAppError(err)
   return h('p', { class: 'notice error' }, icon('info', { size: 18 }), h('span', null, error.kind === 'not_found' ? a.notReady : describeError(error)))
 }
 
-const stat = (value: string | Node, label: string, hint?: string) =>
+export const stat = (value: string | Node, label: string, hint?: string) =>
   h('div', { class: 'admin-stat' }, h('b', null, value), h('span', null, label), hint ? h('small', { class: 'muted' }, hint) : null)
 
 // --- the tabbed panel -------------------------------------------------------------------------
@@ -107,8 +110,8 @@ export function adminScreen(ctx: Ctx, params: Record<string, string>): Screen {
   let destroy: (() => void) | undefined
   guarded(ctx, el, header, () => {
     replace(el, header(), body)
-    const views: Record<Tab, (ctx: Ctx, body: HTMLElement) => void | (() => void)> = { overview, users, inbox, news, packs }
-    destroy = views[tab](ctx, body) ?? undefined
+    const views: Record<Tab, (ctx: Ctx, body: HTMLElement, params: Record<string, string>) => void | (() => void)> = { overview, money, growth, users, inbox, news, packs }
+    destroy = views[tab](ctx, body, params) ?? undefined
   })
   return { el, destroy: () => destroy?.() }
 }
@@ -119,14 +122,8 @@ function overview(ctx: Ctx, body: HTMLElement): void {
   replace(body, h('p', { class: 'muted' }, t.common.loading))
   const load = async () => {
     try {
-      const [o, b, credits, prices, budget] = await Promise.all([
-        admin.overview(ctx.client),
-        admin.budget(ctx.client),
-        admin.credits(ctx.client),
-        admin.config<AiPrices>(ctx.client, 'ai_prices'),
-        admin.config<AiBudgetConfig>(ctx.client, 'ai_budget'),
-      ])
-      replace(body, numbers(o), creditCard(ctx, b, credits, load), costChart(b), settingsCard(ctx, prices, budget))
+      const [o, b, credits] = await Promise.all([admin.overview(ctx.client), admin.budget(ctx.client), admin.credits(ctx.client)])
+      replace(body, numbers(o), creditCard(ctx, b, credits, load), costChart(b))
     } catch (err) {
       replace(body, failure(err))
     }
@@ -230,7 +227,8 @@ function costChart(b: AdminBudget): HTMLElement | null {
   )
 }
 
-function settingsCard(ctx: Ctx, prices: AiPrices | null, budget: AiBudgetConfig | null): HTMLElement {
+/** Prices per model (every model the app used gets a row) and the spending limits. */
+export function settingsCard(ctx: Ctx, prices: AiPrices | null, budget: AiBudgetConfig | null, models: string[] = []): HTMLElement {
   const p: AiPrices = structuredClone(prices ?? { default: { input: 1.25, output: 10 }, tts: { input: 15, output: 0 } })
   const bud: AiBudgetConfig = { daily_usd: 1.5, new_user_days: 3, new_user_per_day: 30, tts_per_day: 300, stories_per_day: 3, ...(budget ?? {}) }
   const numberInput = (value: number, onChange: (v: number) => void, label: string, step = '0.01') =>
@@ -256,6 +254,7 @@ function settingsCard(ctx: Ctx, prices: AiPrices | null, budget: AiBudgetConfig 
     { class: 'card stack fold' },
     h('summary', null, h('h2', null, a.prices), icon('chevron', { size: 18 })),
     h('p', { class: 'help' }, a.pricesHelp),
+    models.filter((m) => m !== 'default' && m !== 'tts').map((m) => priceRow(m, a.priceModel(m))),
     priceRow('default', a.priceDefault),
     priceRow('tts', a.priceTts),
     numberInput(bud.daily_usd, (v) => (bud.daily_usd = v), a.dailyUsd),
@@ -277,10 +276,10 @@ function settingsCard(ctx: Ctx, prices: AiPrices | null, budget: AiBudgetConfig 
 
 // --- users ---------------------------------------------------------------------------------------
 
-function users(ctx: Ctx, body: HTMLElement): () => void {
+function users(ctx: Ctx, body: HTMLElement, params: Record<string, string> = {}): () => void {
   let list: AdminUser[] = []
   let total = 0
-  let query = ''
+  let query = params.q ?? ''
   let timer: ReturnType<typeof setTimeout> | undefined
   const search = h('input', {
     class: 'input',
@@ -288,6 +287,7 @@ function users(ctx: Ctx, body: HTMLElement): () => void {
     placeholder: a.search,
     'aria-label': a.search,
     dir: 'auto',
+    value: query,
     oninput: () => {
       clearTimeout(timer)
       timer = setTimeout(() => {

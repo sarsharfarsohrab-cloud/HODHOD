@@ -64,10 +64,10 @@ async function newPage({ language = 'fa', ...options } = {}) {
   return page
 }
 
-const snap = async (page, name) => {
+const snap = async (page, name, options = {}) => {
   shot++
   await page.waitForTimeout(350) // let transitions finish
-  await page.screenshot({ path: join(out, `${String(shot).padStart(2, '0')}-${name}.png`) })
+  await page.screenshot({ path: join(out, `${String(shot).padStart(2, '0')}-${name}.png`), ...options })
 }
 
 async function signUp(page, { email = 'sohrab@example.test', name = 'سهراب' } = {}) {
@@ -1126,6 +1126,22 @@ await test('a wrong card is reported and fixed for everyone from the admin inbox
   await page.getByText('مسدود شد', { exact: true }).waitFor()
   p = await control('platform')
   assert(p.user_limits.some((l) => l.blocked === true), 'the account is blocked for the AI too')
+
+  // accounting: costs per feature and the pricing calculator
+  await page.goto(`${BASE}/#/admin/money`)
+  await page.getByRole('heading', { name: 'هزینه به تفکیک بخش' }).waitFor()
+  await page.getByRole('heading', { name: 'ماشین‌حساب قیمت‌گذاری' }).waitFor()
+  await page.getByLabel('تعداد کاربر پلاس').fill('0')
+  await page.getByText('زیان ماهانه').waitFor()
+  await page.getByLabel('تعداد کاربر پلاس').fill('300')
+  await page.getByText('سود ماهانه').waitFor()
+  await noHorizontalScroll(page, 'admin accounting')
+  await snap(page, 'admin-money', { fullPage: true })
+  // growth
+  await page.goto(`${BASE}/#/admin/growth`)
+  await page.getByRole('heading', { name: 'چند نفر برمی‌گردند؟' }).waitFor()
+  await noHorizontalScroll(page, 'admin growth')
+  await snap(page, 'admin-growth', { fullPage: true })
 
   // announcement: shown once on the home screen
   await page.goto(`${BASE}/#/admin/news`)

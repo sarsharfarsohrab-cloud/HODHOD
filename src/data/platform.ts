@@ -163,6 +163,41 @@ export interface AdminOverview {
   push_subscribers: number
 }
 
+export interface AdminCostKind {
+  kind: string
+  calls: number
+  ok: number
+  cache_hits: number
+  errors: number
+  cost: number
+  avg_cost: number
+  users: number
+}
+
+export interface AdminCosts {
+  days: number
+  total: number
+  by_kind: AdminCostKind[]
+  daily: { day: string; kind: string; cost: number }[]
+  models: { kind: string; model: string | null; calls: number; priced: boolean }[]
+  top_users: { user_id: string; email: string | null; display_name: string | null; cost: number; calls: number }[]
+  active_users: number
+}
+
+export interface AdminGrowth {
+  days: number
+  users: number
+  dau: number
+  wau: number
+  mau: number
+  plus: number
+  push: number
+  daily: { day: string; signups: number; active: number }[]
+  retention: Record<'d1' | 'd7' | 'd30', { base: number; back: number }>
+  native: Record<string, number>
+  learning: Record<string, number>
+}
+
 export interface AdminBudget {
   since: string | null
   credit: number
@@ -276,6 +311,38 @@ export const admin = {
       remaining: num(raw?.remaining),
       avg_card_cost: num(raw?.avg_card_cost),
       daily: ((raw?.daily as { day: string; cost: unknown; calls: unknown }[]) ?? []).map((d) => ({ day: d.day, cost: num(d.cost), calls: num(d.calls) })),
+    }
+  },
+
+  async costs(client: SupabaseClient, days: number): Promise<AdminCosts> {
+    const raw = (await client.rpc<Record<string, unknown>>('admin_costs', { p_days: days })) ?? {}
+    const list = <T,>(v: unknown) => (Array.isArray(v) ? (v as T[]) : [])
+    return {
+      days: num(raw.days),
+      total: num(raw.total),
+      by_kind: list<Record<string, unknown>>(raw.by_kind).map((k) => ({
+        kind: String(k.kind), calls: num(k.calls), ok: num(k.ok), cache_hits: num(k.cache_hits), errors: num(k.errors), cost: num(k.cost), avg_cost: num(k.avg_cost), users: num(k.users),
+      })),
+      daily: list<Record<string, unknown>>(raw.daily).map((d) => ({ day: String(d.day), kind: String(d.kind), cost: num(d.cost) })),
+      models: list<Record<string, unknown>>(raw.models).map((m) => ({ kind: String(m.kind), model: (m.model as string | null) ?? null, calls: num(m.calls), priced: m.priced === true })),
+      top_users: list<Record<string, unknown>>(raw.top_users).map((u) => ({
+        user_id: String(u.user_id), email: (u.email as string | null) ?? null, display_name: (u.display_name as string | null) ?? null, cost: num(u.cost), calls: num(u.calls),
+      })),
+      active_users: num(raw.active_users),
+    }
+  },
+
+  async growth(client: SupabaseClient, days: number): Promise<AdminGrowth> {
+    const raw = (await client.rpc<Record<string, unknown>>('admin_growth', { p_days: days })) ?? {}
+    const counts = (v: unknown) => Object.fromEntries(Object.entries((v as Record<string, unknown>) ?? {}).map(([k, n]) => [k, num(n)]))
+    const ret = (raw.retention as Record<string, { base: unknown; back: unknown }>) ?? {}
+    const r = (k: string) => ({ base: num(ret[k]?.base), back: num(ret[k]?.back) })
+    return {
+      days: num(raw.days), users: num(raw.users), dau: num(raw.dau), wau: num(raw.wau), mau: num(raw.mau), plus: num(raw.plus), push: num(raw.push),
+      daily: ((raw.daily as Record<string, unknown>[]) ?? []).map((d) => ({ day: String(d.day), signups: num(d.signups), active: num(d.active) })),
+      retention: { d1: r('d1'), d7: r('d7'), d30: r('d30') },
+      native: counts(raw.native),
+      learning: counts(raw.learning),
     }
   },
 

@@ -129,7 +129,7 @@ const ROUTES: { pattern: RegExp; keys: string[]; screen: ScreenFactory; tab: str
   { pattern: /^\/stories\/([^/]+)$/, keys: ['id'], screen: storyScreen, tab: 'home' },
   { pattern: /^\/store\/([^/]+)$/, keys: ['id'], screen: packScreen, tab: 'home' },
   { pattern: /^\/admin$/, keys: [], screen: adminScreen, tab: null },
-  { pattern: /^\/admin\/(overview|users|inbox|news|packs)$/, keys: ['tab'], screen: adminScreen, tab: null },
+  { pattern: /^\/admin\/(overview|money|growth|users|inbox|news|packs)$/, keys: ['tab'], screen: adminScreen, tab: null },
   { pattern: /^\/admin\/packs\/([^/]+)$/, keys: ['id'], screen: adminPackScreen, tab: null },
   { pattern: /^\/admin\/packs\/([^/]+)\/items\/([^/]+)$/, keys: ['id', 'item'], screen: adminItemScreen, tab: null },
   { pattern: /^\/admin\/reports\/([^/]+)$/, keys: ['id'], screen: adminReportScreen, tab: null },
