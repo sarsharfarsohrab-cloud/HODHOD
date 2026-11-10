@@ -94,12 +94,13 @@ export const stat = (value: string | Node, label: string, hint?: string) =>
 
 export function adminScreen(ctx: Ctx, params: Record<string, string>): Screen {
   const tab = (TABS.some((x) => x.id === params.tab) ? params.tab : 'overview') as Tab
-  const el = h('main', { class: 'screen wide admin' })
+  // on a computer the panel has its own side menu instead of the app's (see .admin-layout)
+  const el = h('main', { class: 'screen wide admin admin-layout' })
   const body = h('div', { class: 'stack admin-body' })
   const header = () =>
     h(
       'div',
-      { class: 'stack', style: { gap: 'var(--s3)' } },
+      { class: 'stack admin-side', style: { gap: 'var(--s3)' } },
       h('header', { class: 'topbar' }, back(ctx, '/settings'), h('h1', null, a.title)),
       h(
         'nav',
@@ -113,7 +114,7 @@ export function adminScreen(ctx: Ctx, params: Record<string, string>): Screen {
     const views: Record<Tab, (ctx: Ctx, body: HTMLElement, params: Record<string, string>) => void | (() => void)> = { overview, money, growth, users, inbox, news, packs }
     destroy = views[tab](ctx, body, params) ?? undefined
   })
-  return { el, destroy: () => destroy?.() }
+  return { el, nav: false, destroy: () => destroy?.() }
 }
 
 // --- overview & money ------------------------------------------------------------------------
@@ -311,48 +312,7 @@ function users(ctx: Ctx, body: HTMLElement, params: Record<string, string> = {})
   }
 
   const userCard = (u: AdminUser) => {
-    const limitBtn = h('button', { class: 'btn small', type: 'button' }, icon('sparkle', { size: 16 }), a.setLimit)
-    limitBtn.onclick = async () => {
-      const raw = prompt(a.limitPrompt, u.ai_per_day === null ? '' : String(u.ai_per_day))
-      if (raw === null) return
-      const value = raw.trim() === '' ? null : Math.max(0, Math.min(5000, Math.round(Number(raw))))
-      if (value !== null && !Number.isFinite(value)) return
-      if (await act(ctx, limitBtn, () => admin.setLimit(ctx.client, u.user_id, value, u.blocked), a.limitSaved)) {
-        u.ai_per_day = value
-        render()
-      }
-    }
-    const plusBtn = h('button', { class: 'btn small', type: 'button' }, icon('star', { size: 16 }), a.plus)
-    plusBtn.onclick = async () => {
-      const raw = prompt(a.plusPrompt, '30')
-      if (raw === null) return
-      const days = Math.max(0, Math.min(3650, Math.round(Number(raw.trim() || '0'))))
-      if (!Number.isFinite(days)) return
-      await act(ctx, plusBtn, () => admin.setPlus(ctx.client, u.user_id, days), days > 0 ? a.plusGiven(days) : a.plusRemoved)
-    }
     const blocked = u.blocked || u.banned
-    const blockBtn = h('button', { class: `btn small ${blocked ? '' : 'danger'}`, type: 'button' }, icon(blocked ? 'check' : 'lock', { size: 16 }), blocked ? a.unblock : a.block)
-    blockBtn.onclick = async () => {
-      if (!blocked && !(await ctx.confirm({ title: a.block, body: a.blockConfirm(u.email), confirmLabel: a.block, danger: true }))) return
-      const ok = await act(ctx, blockBtn, async () => {
-        await admin.ban(ctx.client, u.user_id, !blocked)
-        await admin.setLimit(ctx.client, u.user_id, u.ai_per_day, !blocked)
-      }, blocked ? a.unblocked : a.blocked)
-      if (ok) {
-        u.blocked = !blocked
-        u.banned = !blocked
-        render()
-      }
-    }
-    const deleteBtn = h('button', { class: 'btn small danger', type: 'button' }, icon('trash', { size: 16 }), a.deleteUser)
-    deleteBtn.onclick = async () => {
-      if (!(await ctx.confirm({ title: a.deleteUser, body: a.deleteConfirm(u.email), confirmLabel: t.common.delete, danger: true }))) return
-      if (await act(ctx, deleteBtn, () => admin.deleteUser(ctx.client, u.user_id), a.deletedUser)) {
-        list = list.filter((x) => x.user_id !== u.user_id)
-        total--
-        render()
-      }
-    }
     const now = ctx.now()
     return h(
       'article',
@@ -360,7 +320,7 @@ function users(ctx: Ctx, body: HTMLElement, params: Record<string, string> = {})
       h(
         'div',
         { class: 'row wrap', style: { gap: 'var(--s2)' } },
-        h('b', { class: 'grow' }, u.display_name || '—'),
+        h('a', { class: 'grow user-name', href: `#/admin/users/${u.user_id}` }, u.display_name || '—'),
         u.is_admin ? h('span', { class: 'chip status-review' }, a.adminBadge) : null,
         blocked ? h('span', { class: 'chip danger' }, a.blockedBadge) : null,
         u.ai_per_day !== null ? h('span', { class: 'chip' }, a.limitBadge(u.ai_per_day)) : null,
@@ -368,7 +328,15 @@ function users(ctx: Ctx, body: HTMLElement, params: Record<string, string> = {})
       h('bdi', { dir: 'ltr', class: 'small user-email' }, u.email),
       h('p', { class: 'small muted' }, `${a.joined(fmtDate(u.created_at))}، ${u.last_active_at ? a.lastActive(fmtRelative(u.last_active_at, now)) : a.neverActive}`),
       h('p', { class: 'small' }, a.userStats(u.words, u.reviews_30d, u.ai_calls_30d, usdText(u.cost_30d, 3), u.packs)),
-      u.is_admin ? null : h('div', { class: 'row wrap' }, limitBtn, plusBtn, blockBtn, deleteBtn),
+      u.is_admin
+        ? null
+        : userActions(ctx, u, (change) => {
+            if (change === 'deleted') {
+              list = list.filter((x) => x.user_id !== u.user_id)
+              total--
+            }
+            render()
+          }),
     )
   }
 
@@ -384,6 +352,51 @@ function users(ctx: Ctx, body: HTMLElement, params: Record<string, string> = {})
   replace(results, h('p', { class: 'muted' }, t.common.loading))
   void load(false)
   return () => clearTimeout(timer)
+}
+
+type ActionUser = Pick<AdminUser, 'user_id' | 'email' | 'ai_per_day' | 'blocked' | 'banned'>
+
+/** Limit, Plus, block and delete for one account (in the list and on the account's own page). */
+export function userActions(ctx: Ctx, u: ActionUser, onChange: (change: 'changed' | 'deleted') => void): HTMLElement {
+  const limitBtn = h('button', { class: 'btn small', type: 'button' }, icon('sparkle', { size: 16 }), a.setLimit)
+  limitBtn.onclick = async () => {
+    const raw = prompt(a.limitPrompt, u.ai_per_day === null ? '' : String(u.ai_per_day))
+    if (raw === null) return
+    const value = raw.trim() === '' ? null : Math.max(0, Math.min(5000, Math.round(Number(raw))))
+    if (value !== null && !Number.isFinite(value)) return
+    if (await act(ctx, limitBtn, () => admin.setLimit(ctx.client, u.user_id, value, u.blocked), a.limitSaved)) {
+      u.ai_per_day = value
+      onChange('changed')
+    }
+  }
+  const plusBtn = h('button', { class: 'btn small', type: 'button' }, icon('star', { size: 16 }), a.plus)
+  plusBtn.onclick = async () => {
+    const raw = prompt(a.plusPrompt, '30')
+    if (raw === null) return
+    const days = Math.max(0, Math.min(3650, Math.round(Number(raw.trim() || '0'))))
+    if (!Number.isFinite(days)) return
+    if (await act(ctx, plusBtn, () => admin.setPlus(ctx.client, u.user_id, days), days > 0 ? a.plusGiven(days) : a.plusRemoved)) onChange('changed')
+  }
+  const blocked = u.blocked || u.banned
+  const blockBtn = h('button', { class: `btn small ${blocked ? '' : 'danger'}`, type: 'button' }, icon(blocked ? 'check' : 'lock', { size: 16 }), blocked ? a.unblock : a.block)
+  blockBtn.onclick = async () => {
+    if (!blocked && !(await ctx.confirm({ title: a.block, body: a.blockConfirm(u.email), confirmLabel: a.block, danger: true }))) return
+    const ok = await act(ctx, blockBtn, async () => {
+      await admin.ban(ctx.client, u.user_id, !blocked)
+      await admin.setLimit(ctx.client, u.user_id, u.ai_per_day, !blocked)
+    }, blocked ? a.unblocked : a.blocked)
+    if (ok) {
+      u.blocked = !blocked
+      u.banned = !blocked
+      onChange('changed')
+    }
+  }
+  const deleteBtn = h('button', { class: 'btn small danger', type: 'button' }, icon('trash', { size: 16 }), a.deleteUser)
+  deleteBtn.onclick = async () => {
+    if (!(await ctx.confirm({ title: a.deleteUser, body: a.deleteConfirm(u.email), confirmLabel: t.common.delete, danger: true }))) return
+    if (await act(ctx, deleteBtn, () => admin.deleteUser(ctx.client, u.user_id), a.deletedUser)) onChange('deleted')
+  }
+  return h('div', { class: 'row wrap' }, limitBtn, plusBtn, blockBtn, deleteBtn)
 }
 
 // --- inbox ------------------------------------------------------------------------------------

@@ -145,6 +145,78 @@ begin
 end;
 $$;
 
+-- Everything about one learner on one page.
+create or replace function public.admin_user(p_user uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v jsonb;
+  v_tz text;
+begin
+  if not public.is_admin() then
+    raise exception 'not allowed' using errcode = '42501';
+  end if;
+  select coalesce(s.time_zone, 'Europe/Berlin') into v_tz from public.user_settings s where s.user_id = p_user;
+  select jsonb_build_object(
+    'user_id', u.id,
+    'email', u.email,
+    'display_name', p.display_name,
+    'created_at', u.created_at,
+    'last_sign_in_at', u.last_sign_in_at,
+    'banned', (u.banned_until is not null and u.banned_until > now()),
+    'is_admin', exists (select 1 from public.admins a where a.user_id = u.id),
+    'native_language', p.native_language,
+    'active_language', p.active_target_language,
+    'languages', (
+      select coalesce(jsonb_agg(jsonb_build_object('language', x.target_language, 'words', x.words) order by x.words desc), '[]'::jsonb)
+      from (
+        select ul.target_language,
+               (select count(*) from public.words w where w.user_id = u.id and w.target_language = ul.target_language and w.deleted_at is null) as words
+        from public.user_languages ul where ul.user_id = u.id
+      ) x
+    ),
+    'words', (select count(*) from public.words w where w.user_id = u.id and w.deleted_at is null),
+    'cards', (
+      select coalesce(jsonb_object_agg(state, n), '{}'::jsonb)
+      from (select k.state, count(*) as n from public.cards k join public.words w on w.id = k.word_id
+            where k.user_id = u.id and w.deleted_at is null and k.card_type = 'recognition' group by k.state) c
+    ),
+    'reviews_7d', (select count(*) from public.review_events e where e.user_id = u.id and e.reviewed_at > now() - interval '7 days'),
+    'reviews_30d', (select count(*) from public.review_events e where e.user_id = u.id and e.reviewed_at > now() - interval '30 days'),
+    'last_active_at', (select max(e.reviewed_at) from public.review_events e where e.user_id = u.id),
+    'streak', public.user_streak(u.id, coalesce(v_tz, 'Europe/Berlin')),
+    'costs_30d', (
+      select coalesce(jsonb_agg(jsonb_build_object('kind', kind, 'calls', calls, 'cost', cost) order by cost desc), '[]'::jsonb)
+      from (
+        select l.kind, count(*) filter (where l.status in ('ok', 'rejected')) as calls,
+               sum(public.ai_cost(l.kind, l.model, l.input_tokens, l.output_tokens)) as cost
+        from public.ai_generation_logs l where l.user_id = u.id and l.created_at > now() - interval '30 days' group by l.kind
+      ) k
+    ),
+    'ai_per_day', (select ul.ai_per_day from public.user_limits ul where ul.user_id = u.id),
+    'blocked', coalesce((select ul.blocked from public.user_limits ul where ul.user_id = u.id), false),
+    'plus_until', (select ul.plus_until from public.user_limits ul where ul.user_id = u.id),
+    'packs', (select count(*) from public.user_packs up where up.user_id = u.id),
+    'friends', (select count(*) from public.friendships f where f.status = 'accepted' and (f.requester = u.id or f.addressee = u.id)),
+    'stories', (select count(*) from public.stories st where st.user_id = u.id)
+  ) into v
+  from auth.users u
+  left join public.profiles p on p.id = u.id
+  where u.id = p_user;
+  if v is null then
+    raise exception 'not found' using errcode = 'P0002';
+  end if;
+  return v;
+end;
+$$;
+
+revoke all on function public.admin_user(uuid) from anon, public;
+grant execute on function public.admin_user(uuid) to authenticated;
+
 revoke all on function public.admin_costs(integer) from anon, public;
 grant execute on function public.admin_costs(integer) to authenticated;
 revoke all on function public.admin_growth(integer) from anon, public;

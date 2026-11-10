@@ -221,6 +221,32 @@ export async function handlePlatform(fake: FakeSupabase, userId: string, name: s
           native: count('native_language'), learning: count('active_target_language'),
         })
       }
+      case 'admin_user': {
+        const denied = adminOnly()
+        if (denied) return denied
+        const u = fake.users.find((x) => x.id === args.p_user)
+        if (!u) return new Response(JSON.stringify({ code: 'P0002', message: 'not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } })
+        const p = t.profiles!.find((x) => x.id === u.id)
+        const limit = t.user_limits!.find((l) => l.user_id === u.id)
+        const words = t.words!.filter((w) => w.user_id === u.id && !w.deleted_at)
+        return json({
+          user_id: u.id, email: u.email, display_name: p?.display_name ?? null, created_at: now(), last_sign_in_at: now(), banned: u.meta.banned === true,
+          is_admin: t.admins!.some((x) => x.user_id === u.id), native_language: p?.native_language ?? 'fa', active_language: p?.active_target_language ?? 'de',
+          languages: [{ language: p?.active_target_language ?? 'de', words: words.length }], words: words.length,
+          cards: { new: t.cards!.filter((c) => c.user_id === u.id && c.state === 'new').length, review: t.cards!.filter((c) => c.user_id === u.id && c.state === 'review').length },
+          reviews_7d: 3, reviews_30d: 9, last_active_at: null, streak: 1, costs_30d: [{ kind: 'analyze_word', calls: 4, cost: 0.0028 }],
+          ai_per_day: limit?.ai_per_day ?? null, blocked: limit?.blocked === true, plus_until: null, packs: 0, friends: 0, stories: 0,
+        })
+      }
+      case 'admin_reminders':
+        return (
+          adminOnly() ??
+          json({
+            settings: { daily: true, time: '20:00', streak: true, time_zone: 'Europe/Berlin' },
+            devices: [{ agent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)', created_at: now(), last_success_at: now(), failures: 0 }],
+            sent: [{ kind: 'daily', sent_at: now() }],
+          })
+        )
       case 'admin_set_limit': {
         const denied = adminOnly()
         if (denied) return denied

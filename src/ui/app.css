@@ -4474,3 +4474,53 @@ html[dir='ltr'] .deck-row .icon {
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: var(--s4);
 }
+
+/* --- admin on a computer: its own side menu ---------------------------------------------- */
+@media (min-width: 900px) {
+  .screen.admin-layout {
+    max-width: 1320px;
+    display: grid;
+    grid-template-columns: 230px minmax(0, 1fr);
+    align-items: start;
+    gap: var(--s6);
+  }
+  .admin-side {
+    position: sticky;
+    top: var(--s6);
+    padding: var(--s4);
+    border-radius: var(--r-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+  .admin-side .topbar {
+    margin: 0;
+  }
+  .admin-side h1 {
+    font-size: var(--text-lg);
+  }
+  .admin-layout .admin-tabs {
+    flex-direction: column;
+    overflow: visible;
+  }
+  .admin-layout .admin-tabs a {
+    border-radius: var(--r-md);
+    border-color: transparent;
+    background: none;
+    justify-content: flex-start;
+  }
+  .admin-layout .admin-tabs a:hover {
+    background: var(--bg);
+  }
+  .admin-layout .admin-tabs a[aria-current='page'] {
+    background: var(--ink);
+    color: var(--bg);
+  }
+  .admin-layout .admin-stats {
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  }
+}
+
+/* chart dates read in the same direction as the columns (oldest on the left) */
+.cost-chart + .row {
+  direction: ltr;
+}

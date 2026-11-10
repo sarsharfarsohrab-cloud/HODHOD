@@ -16,8 +16,10 @@ import { h, icon, replace, type IconName } from './ui/dom.ts'
 import { num } from './ui/format.ts'
 import { mascot, preloadMascot } from './ui/mascot.ts'
 import { adminItemScreen, adminPackScreen, adminReportScreen, adminScreen } from './ui/screens/admin.ts'
+import { adminUserScreen } from './ui/screens/adminUser.ts'
 import { authScreen } from './ui/screens/auth.ts'
 import { languageScreen } from './ui/screens/language.ts'
+import { refreshPush } from './data/push.ts'
 import { createScreen } from './ui/screens/create.ts'
 import { homeScreen } from './ui/screens/home.ts'
 import { deckImportScreen } from './ui/screens/deckImport.ts'
@@ -130,6 +132,7 @@ const ROUTES: { pattern: RegExp; keys: string[]; screen: ScreenFactory; tab: str
   { pattern: /^\/store\/([^/]+)$/, keys: ['id'], screen: packScreen, tab: 'home' },
   { pattern: /^\/admin$/, keys: [], screen: adminScreen, tab: null },
   { pattern: /^\/admin\/(overview|money|growth|users|inbox|news|packs)$/, keys: ['tab'], screen: adminScreen, tab: null },
+  { pattern: /^\/admin\/users\/([^/]+)$/, keys: ['id'], screen: adminUserScreen, tab: null },
   { pattern: /^\/admin\/packs\/([^/]+)$/, keys: ['id'], screen: adminPackScreen, tab: null },
   { pattern: /^\/admin\/packs\/([^/]+)\/items\/([^/]+)$/, keys: ['id', 'item'], screen: adminItemScreen, tab: null },
   { pattern: /^\/admin\/reports\/([^/]+)$/, keys: ['id'], screen: adminReportScreen, tab: null },
@@ -230,6 +233,8 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
   if (stopped) return { stop }
   await adoptChosenLanguage()
   syncLanguages()
+  // keep this device's reminder address fresh on the server (never asks for permission)
+  void refreshPush(client, data.settings.notifyDaily || data.settings.notifyStreak).catch(() => undefined)
 
   // natural voice from the server first; the phone's own voice whenever that is not possible
   const cloudSpeech = new CloudSpeechProvider({

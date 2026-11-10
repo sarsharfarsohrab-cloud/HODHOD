@@ -198,6 +198,38 @@ export interface AdminGrowth {
   learning: Record<string, number>
 }
 
+export interface AdminUserDetail {
+  user_id: string
+  email: string
+  display_name: string | null
+  created_at: string
+  last_sign_in_at: string | null
+  banned: boolean
+  is_admin: boolean
+  native_language: string | null
+  active_language: string | null
+  languages: { language: string; words: number }[]
+  words: number
+  cards: Record<string, number>
+  reviews_7d: number
+  reviews_30d: number
+  last_active_at: string | null
+  streak: number
+  costs_30d: { kind: string; calls: number; cost: number }[]
+  ai_per_day: number | null
+  blocked: boolean
+  plus_until: string | null
+  packs: number
+  friends: number
+  stories: number
+}
+
+export interface AdminReminders {
+  settings: { daily: boolean; time: string; streak: boolean; time_zone: string | null } | null
+  devices: { agent: string | null; created_at: string; last_success_at: string | null; failures: number }[]
+  sent: { kind: string; sent_at: string }[]
+}
+
 export interface AdminBudget {
   since: string | null
   credit: number
@@ -312,6 +344,25 @@ export const admin = {
       avg_card_cost: num(raw?.avg_card_cost),
       daily: ((raw?.daily as { day: string; cost: unknown; calls: unknown }[]) ?? []).map((d) => ({ day: d.day, cost: num(d.cost), calls: num(d.calls) })),
     }
+  },
+
+  async user(client: SupabaseClient, userId: string): Promise<AdminUserDetail> {
+    const r = (await client.rpc<Record<string, unknown>>('admin_user', { p_user: userId })) ?? {}
+    return {
+      ...(r as unknown as AdminUserDetail),
+      words: num(r.words), reviews_7d: num(r.reviews_7d), reviews_30d: num(r.reviews_30d), streak: num(r.streak),
+      packs: num(r.packs), friends: num(r.friends), stories: num(r.stories),
+      ai_per_day: r.ai_per_day === null || r.ai_per_day === undefined ? null : num(r.ai_per_day),
+      blocked: r.blocked === true, banned: r.banned === true, is_admin: r.is_admin === true,
+      languages: ((r.languages as { language: string; words: unknown }[]) ?? []).map((l) => ({ language: l.language, words: num(l.words) })),
+      cards: Object.fromEntries(Object.entries((r.cards as Record<string, unknown>) ?? {}).map(([k, v]) => [k, num(v)])),
+      costs_30d: ((r.costs_30d as { kind: string; calls: unknown; cost: unknown }[]) ?? []).map((c) => ({ kind: c.kind, calls: num(c.calls), cost: num(c.cost) })),
+    }
+  },
+
+  async reminders(client: SupabaseClient, userId: string): Promise<AdminReminders> {
+    const r = (await client.rpc<AdminReminders>('admin_reminders', { p_user: userId })) ?? { settings: null, devices: [], sent: [] }
+    return { settings: r.settings ?? null, devices: (r.devices ?? []).map((d) => ({ ...d, failures: num(d.failures) })), sent: r.sent ?? [] }
   },
 
   async costs(client: SupabaseClient, days: number): Promise<AdminCosts> {

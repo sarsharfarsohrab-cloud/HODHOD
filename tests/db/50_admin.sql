@@ -49,6 +49,15 @@ begin
   assert jsonb_array_length(v -> 'daily') = 30, 'one row per day';
   assert (v -> 'retention' -> 'd1' ->> 'base')::integer >= 1, 'retention has a base';
   assert (v -> 'native') ? 'fa', 'own languages are counted';
+
+  v := public.admin_user('00000000-0000-0000-0000-0000000000f1');
+  assert (v ->> 'email') = 'spender@example.test', 'one learner''s page';
+  assert jsonb_array_length(v -> 'costs_30d') = 2, 'their costs per feature';
+  begin
+    perform public.admin_user('00000000-0000-0000-0000-00000000dead');
+    assert false, 'an unknown account is not found';
+  exception when sqlstate 'P0002' then null;
+  end;
 end $$;
 reset role;
 select 'admin: ok';

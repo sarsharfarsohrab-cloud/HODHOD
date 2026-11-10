@@ -1127,6 +1127,13 @@ await test('a wrong card is reported and fixed for everyone from the admin inbox
   p = await control('platform')
   assert(p.user_limits.some((l) => l.blocked === true), 'the account is blocked for the AI too')
 
+  // one learner's own page, with their reminders
+  await page.locator('.user-card', { hasText: 'nahid@example.test' }).locator('.user-name').click()
+  await page.getByRole('heading', { name: 'یادآورها', exact: true }).waitFor()
+  await page.getByText('یادآور روزانه ساعت 20:00', { exact: false }).waitFor()
+  await noHorizontalScroll(page, 'admin user page')
+  await snap(page, 'admin-user', { fullPage: true })
+
   // accounting: costs per feature and the pricing calculator
   await page.goto(`${BASE}/#/admin/money`)
   await page.getByRole('heading', { name: 'هزینه به تفکیک بخش' }).waitFor()
@@ -1142,6 +1149,14 @@ await test('a wrong card is reported and fixed for everyone from the admin inbox
   await page.getByRole('heading', { name: 'چند نفر برمی‌گردند؟' }).waitFor()
   await noHorizontalScroll(page, 'admin growth')
   await snap(page, 'admin-growth', { fullPage: true })
+  // on a computer the panel has its own side menu
+  await page.setViewportSize({ width: 1280, height: 860 })
+  await page.goto(`${BASE}/#/admin/money`)
+  await page.getByRole('heading', { name: 'ماشین‌حساب قیمت‌گذاری' }).waitFor()
+  assert(await page.locator('.nav').isHidden(), 'the app menu makes room for the admin menu')
+  await noHorizontalScroll(page, 'admin on a computer')
+  await snap(page, 'admin-desktop')
+  await page.setViewportSize({ width: 390, height: 844 })
 
   // announcement: shown once on the home screen
   await page.goto(`${BASE}/#/admin/news`)
