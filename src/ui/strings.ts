@@ -81,6 +81,7 @@ export function setLanguage(code: string | null | undefined): UiLanguage {
   if (typeof document !== 'undefined') {
     document.documentElement.lang = next
     document.documentElement.dir = info.dir
+    document.title = info.appName
   }
   return next
 }
