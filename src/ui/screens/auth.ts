@@ -127,19 +127,7 @@ export function authScreen(
 
   render()
   if (options.notice) show(options.notice, 'error')
-  const languagePicker = options.onLanguage
-    ? h(
-        'label',
-        { class: 'language-picker' },
-        icon('globe', { size: 18 }),
-        h('span', { class: 'visually-hidden' }, t.auth.language),
-        h(
-          'select',
-          { class: 'input', onchange: (e: Event) => options.onLanguage?.((e.target as HTMLSelectElement).value) },
-          UI_LANGUAGES.map((code) => h('option', { value: code, selected: code === currentLanguage(), lang: code }, UI_LANGUAGE_INFO[code].name)),
-        ),
-      )
-    : null
+  const languagePicker = options.onLanguage ? languageMenu(options.onLanguage) : null
   return h(
     'main',
     { class: 'screen no-nav auth' },
@@ -153,5 +141,29 @@ export function authScreen(
       h('p', { class: 'muted' }, t.auth.tagline),
     ),
     form,
+  )
+}
+
+/** A small flag menu: the chosen language's flag and English name; open it to switch. */
+function languageMenu(onLanguage: (code: string) => void): HTMLElement {
+  const current = UI_LANGUAGE_INFO[currentLanguage()]
+  const flag = (code: string) => h('img', { class: 'language-flag', src: `./flags/${code}.svg`, alt: '', width: 24, height: 18, decoding: 'async' })
+  return h(
+    'details',
+    { class: 'language-menu', dir: 'ltr' },
+    h('summary', { 'aria-label': t.auth.language }, flag(current.code), h('span', null, current.english), icon('chevron', { size: 16 })),
+    h(
+      'div',
+      { class: 'language-menu-list', role: 'list' },
+      UI_LANGUAGES.map((code) =>
+        h(
+          'button',
+          { type: 'button', class: code === current.code ? 'current' : '', 'data-language': code, 'aria-current': code === current.code ? 'true' : null, onclick: () => onLanguage(code) },
+          flag(code),
+          h('span', null, UI_LANGUAGE_INFO[code].english),
+          UI_LANGUAGE_INFO[code].name === UI_LANGUAGE_INFO[code].english ? null : h('small', { lang: code, dir: UI_LANGUAGE_INFO[code].dir }, UI_LANGUAGE_INFO[code].name),
+        ),
+      ),
+    ),
   )
 }

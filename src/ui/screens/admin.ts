@@ -3,6 +3,7 @@
  * Tabs: overview with AI credit, users, inbox (reports, messages, errors), announcements,
  * and the pack builder.
  */
+import { parseDecimal } from '../../core/decimal.ts'
 import { assignLessons } from '../../core/packs.ts'
 import { toAppError } from '../../data/errors.ts'
 import {
@@ -153,11 +154,11 @@ function numbers(o: AdminOverview): HTMLElement {
 }
 
 function creditCard(ctx: Ctx, b: AdminBudget, credits: CreditEntry[], reload: () => void): HTMLElement {
-  const amount = h('input', { class: 'input', type: 'number', inputMode: 'decimal', step: '0.01', min: '0', max: '10000', placeholder: '5.00', 'aria-label': a.amount, dir: 'ltr' })
+  const amount = h('input', { class: 'input', type: 'text', inputMode: 'decimal', autocomplete: 'off', placeholder: '5.00', 'aria-label': a.amount, dir: 'ltr' })
   const note = h('input', { class: 'input', type: 'text', maxLength: 300, placeholder: a.note, 'aria-label': a.note })
   const add = (kind: 'topup' | 'balance') => async (e: Event) => {
-    const value = Number(amount.value)
-    if (!Number.isFinite(value) || value < 0 || amount.value === '') return amount.focus()
+    const value = parseDecimal(amount.value)
+    if (!Number.isFinite(value) || value < 0 || value > 10000) return amount.focus()
     if (await act(ctx, e.currentTarget as HTMLButtonElement, () => admin.addCredit(ctx.client, kind, value, note.value.trim() || null), a.creditSaved)) reload()
   }
   const hasCredit = b.since !== null
@@ -233,7 +234,7 @@ export function settingsCard(ctx: Ctx, prices: AiPrices | null, budget: AiBudget
   const p: AiPrices = structuredClone(prices ?? { default: { input: 1.25, output: 10 }, tts: { input: 15, output: 0 } })
   const bud: AiBudgetConfig = { daily_usd: 1.5, new_user_days: 3, new_user_per_day: 30, tts_per_day: 300, stories_per_day: 3, ...(budget ?? {}) }
   const numberInput = (value: number, onChange: (v: number) => void, label: string, step = '0.01') =>
-    h('label', { class: 'field' }, h('span', null, label), h('input', { class: 'input', type: 'number', step, min: '0', value: String(value), dir: 'ltr', oninput: (e: Event) => onChange(Number((e.target as HTMLInputElement).value)) }))
+    h('label', { class: 'field' }, h('span', null, label), h('input', { class: 'input', type: 'text', inputMode: step === '1' ? 'numeric' : 'decimal', autocomplete: 'off', value: String(value), dir: 'ltr', oninput: (e: Event) => { const v = parseDecimal((e.target as HTMLInputElement).value); if (Number.isFinite(v) && v >= 0) onChange(v) } }))
   const priceRow = (key: string, label: string) => {
     p[key] ??= { input: 0, output: 0 }
     return h(

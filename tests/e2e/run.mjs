@@ -830,6 +830,14 @@ await test('a first visit opens in English and asks for the language first', asy
   await noHorizontalScroll(page, 'first language')
   await snap(page, 'first-language')
   await page.getByRole('button', { name: 'English' }).click()
+  // the sign-in page can still switch: a flag menu with English names
+  await page.locator('.language-menu summary').click()
+  await snap(page, 'sign-in-language-menu')
+  await page.locator('.language-menu-list [data-language="de"]').click()
+  await page.locator('.language-menu summary', { hasText: 'German' }).waitFor()
+  await page.locator('.language-menu summary').click()
+  await page.locator('.language-menu-list [data-language="en"]').click()
+  await page.locator('.language-menu summary', { hasText: 'English' }).waitFor()
   await page.getByRole('button', { name: 'Create account', exact: true }).click()
   await page.getByLabel('Name').fill('Mary')
   await page.getByLabel('Email').fill('mary@example.test')
@@ -1014,9 +1022,10 @@ await test('admin builds a pack; a learner takes a lesson from the store', async
 
   // money: a top-up makes the remaining credit known
   await page.getByRole('heading', { name: 'اعتبار هوش مصنوعی' }).waitFor()
-  await page.getByLabel('مبلغ (دلار)').fill('5')
+  // a German keyboard types a comma
+  await page.getByLabel('مبلغ (دلار)').fill('4,90')
   await page.getByRole('button', { name: 'ثبت شارژ' }).click()
-  await page.getByText('$5.00', { exact: true }).first().waitFor()
+  await page.getByText('$4.90', { exact: true }).first().waitFor()
   await noHorizontalScroll(page, 'admin overview')
   await snap(page, 'admin-overview')
 
