@@ -4,8 +4,12 @@
  *   app.apphodhod.com      → www/app   (the app itself)
  *   www.apphodhod.com      → permanent redirect to apphodhod.com
  * Any other host (the *.workers.dev preview address) shows the site.
+ *
+ * Until the introduction site is ready (SITE_LIVE), every address shows the app, so the app
+ * stays where its learners installed it and nothing changes for sign-in links.
  */
 const APEX = 'apphodhod.com'
+const SITE_LIVE = false
 
 export default {
   async fetch(request, env) {
@@ -17,7 +21,7 @@ export default {
       return Response.redirect(url.toString(), 301)
     }
 
-    const folder = host.startsWith('app.') ? '/app' : '/site'
+    const folder = !SITE_LIVE || host.startsWith('app.') ? '/app' : '/site'
     const assetUrl = new URL(url)
     assetUrl.pathname = folder + url.pathname
     const response = await env.ASSETS.fetch(new Request(assetUrl, request))
