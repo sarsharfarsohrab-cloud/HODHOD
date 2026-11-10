@@ -9,7 +9,7 @@ import { burst, mascot, reactMascot, type MascotMood } from '../mascot.ts'
 import { announcements, type Announcement } from '../../data/platform.ts'
 import { appName, t } from '../strings.ts'
 import { learning } from '../learning.ts'
-import { languageName } from '../i18n/names.ts'
+import { languageLabel, languageName } from '../i18n/names.ts'
 import { iconButton } from '../widgets.ts'
 
 /** The bird flies in the first time the home screen is shown in a session, not on every visit. */
@@ -153,7 +153,7 @@ export function homeScreen(ctx: Ctx): Screen {
             'a',
             { class: 'deck-chip', href: '#/decks', 'aria-label': `${t.decks.title}: ${languageName(learning())}` },
             h('span', { class: 'deck-dot', 'aria-hidden': 'true' }),
-            languageName(learning()),
+            languageLabel(learning()),
           ),
           iconButton('settings', t.nav.settings, () => ctx.go('/settings'), 'on-dark'),
         ),

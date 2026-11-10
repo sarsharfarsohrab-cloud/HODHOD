@@ -857,6 +857,34 @@ await test('a first visit opens in English and asks for the language first', asy
   return page
 })
 
+await test('Arabic and Russian: the interface reads well and fits the phone', async () => {
+  const cases = [
+    { name: 'العربية', code: 'ar', dir: 'rtl', signUp: 'إنشاء حساب', submit: 'أنشئ الحساب', nameLabel: 'الاسم', email: 'البريد الإلكتروني', password: 'كلمة المرور', learn: 'أي لغة تريد أن تتعلم؟', skip: 'تخطٍّ' },
+    { name: 'Русский', code: 'ru', dir: 'ltr', signUp: 'Создать аккаунт', submit: 'Создать аккаунт', nameLabel: 'Имя', email: 'Эл. почта', password: 'Пароль', learn: 'Какой язык хочешь учить?', skip: 'Пропустить' },
+  ]
+  let page
+  for (const [i, c] of cases.entries()) {
+    await control('reset', { welcome: true })
+    page = await newPage({ language: null })
+    await page.goto(BASE)
+    await page.getByRole('button', { name: c.name }).click()
+    assert((await page.evaluate(() => document.documentElement.dir)) === c.dir, `${c.code} direction`)
+    await page.getByRole('button', { name: c.signUp, exact: true }).click()
+    await page.getByLabel(c.nameLabel).fill('Sara')
+    await page.getByLabel(c.email).fill(`sara${i}@example.test`)
+    await page.getByLabel(c.password).fill('correct horse battery')
+    await page.getByRole('button', { name: c.submit }).last().click()
+    await page.getByRole('heading', { name: c.learn }).waitFor()
+    await noHorizontalScroll(page, `${c.code} learn page`)
+    await page.getByRole('button', { name: c.skip }).click()
+    await page.locator('.perch').waitFor()
+    await noHorizontalScroll(page, `${c.code} home`)
+    await snap(page, `home-${c.code}`)
+    if (i < cases.length - 1) await page.context().close()
+  }
+  return page
+})
+
 await test('welcome tour for a new account; its answers become the settings', async () => {
   await control('reset', { welcome: true })
   const page = await newPage({ language: null })

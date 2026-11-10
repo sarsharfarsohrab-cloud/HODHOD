@@ -38,7 +38,7 @@ const Ln = () => L().replace(/ий$/, 'ое')
 const Lp = () => L().replace(/ий$/, 'ие')
 
 export const ru: Dictionary = {
-  nav: { home: 'Главная', create: 'Новое слово', words: 'Слова', study: 'Повторение', quiz: 'Тест', settings: 'Настройки', stats: 'Статистика' },
+  nav: { home: 'Главная', create: 'Добавить', words: 'Слова', study: 'Повторение', quiz: 'Тест', settings: 'Настройки', stats: 'Статистика' },
 
   gender: { m: 'мужской', f: 'женский', n: 'средний', c: 'общий (de)' },
 

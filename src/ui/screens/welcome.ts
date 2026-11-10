@@ -10,7 +10,7 @@ import { mascot, type MascotMood } from '../mascot.ts'
 import { t } from '../strings.ts'
 import { enablePush, pushState } from '../../data/push.ts'
 import { TARGET_LANGUAGE_INFO, UI_LANGUAGE_INFO, UI_LANGUAGES, targetsFor } from '../i18n/languages.ts'
-import { languageName } from '../i18n/names.ts'
+import { languageLabel } from '../i18n/names.ts'
 
 type Level = 'beginner' | 'some' | 'intermediate'
 const MINUTES = [5, 10, 20, 30] as const
@@ -137,7 +137,7 @@ export function welcomeScreen(ctx: Ctx, params: Record<string, string> = {}): Sc
           'div',
           { class: 'language-grid', role: 'radiogroup', 'aria-label': w.learnTitle },
           targetsFor(ctx.data.profile.nativeLanguage).map((code) =>
-            languageButton(code, languageName(code), TARGET_LANGUAGE_INFO[code].name, code === target, () => void chooseLanguages({ target: code }, step + 1), TARGET_LANGUAGE_INFO[code].color),
+            languageButton(code, languageLabel(code), TARGET_LANGUAGE_INFO[code].name, code === target, () => void chooseLanguages({ target: code }, step + 1), TARGET_LANGUAGE_INFO[code].color),
           ),
         ),
         next(),

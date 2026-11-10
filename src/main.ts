@@ -288,7 +288,7 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
           'a',
           { class: 'nav-item', href: `#${tab.path}`, 'aria-current': tab.id === activeTab ? 'page' : undefined },
           h('span', { class: 'nav-icon' }, icon(tab.icon)),
-          tab.label(),
+          h('span', { class: 'nav-label' }, tab.label()),
           tab.id === 'study' && counts.total > 0 ? h('span', { class: 'nav-badge', 'aria-label': t.study.remaining(counts.total) }, num(Math.min(counts.total, 999))) : null,
         ),
       ),

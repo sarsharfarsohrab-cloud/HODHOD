@@ -196,6 +196,14 @@ h1 {
   line-height: 1.4;
 }
 
+/* tab names stay on one line in every language */
+.nav-label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 h2 {
   font-size: var(--text-md);
   font-weight: 700;
@@ -351,6 +359,7 @@ a {
 .nav-item {
   position: relative;
   flex: 1;
+  min-width: 0;
   max-width: 120px;
   min-height: 52px;
   display: flex;
@@ -4265,9 +4274,19 @@ html[dir='ltr'] .deck-row .icon {
 
 .language-grid .option-card {
   flex-direction: row;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--s2);
+  column-gap: var(--s2);
+  row-gap: 0;
   min-height: 52px;
+  min-width: 0;
+}
+
+/* long names ("нидерландский") wrap inside the card instead of pushing the page sideways */
+.language-grid .option-card b,
+.language-grid .option-card span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .intro-list {

@@ -7,7 +7,7 @@ import { toAppError } from '../../data/errors.ts'
 import type { Ctx, Screen } from '../context.ts'
 import { h, icon, replace } from '../dom.ts'
 import { TARGET_LANGUAGE_INFO, isTargetLanguage, targetsFor } from '../i18n/languages.ts'
-import { languageName } from '../i18n/names.ts'
+import { languageLabel } from '../i18n/names.ts'
 import { mascot } from '../mascot.ts'
 import { describeError, t } from '../strings.ts'
 
@@ -64,7 +64,7 @@ export function decksScreen(ctx: Ctx): Screen {
               'button',
               { class: `deck-row ${current ? 'current' : ''}`, type: 'button', disabled: busy, 'aria-current': current ? 'true' : undefined, onclick: () => void open(deck.language) },
               dot(deck.language),
-              h('span', { class: 'grow' }, h('b', null, languageName(deck.language)), h('small', { class: 'muted' }, current ? `${d.words(deck.words)} · ${d.current}` : d.words(deck.words))),
+              h('span', { class: 'grow' }, h('b', null, languageLabel(deck.language)), h('small', { class: 'muted' }, current ? `${d.words(deck.words)} · ${d.current}` : d.words(deck.words))),
               icon('back', { size: 18 }),
             ),
           )
@@ -82,7 +82,7 @@ export function decksScreen(ctx: Ctx): Screen {
               h(
                 'div',
                 { class: 'deck-choices' },
-                others.map((code) => h('button', { class: 'option-card deck-choice', type: 'button', disabled: busy, onclick: () => void open(code) }, dot(code), h('b', null, languageName(code)), h('span', { lang: code, dir: 'ltr' }, TARGET_LANGUAGE_INFO[code].name))),
+                others.map((code) => h('button', { class: 'option-card deck-choice', type: 'button', disabled: busy, onclick: () => void open(code) }, dot(code), h('b', null, languageLabel(code)), h('span', { lang: code, dir: 'ltr' }, TARGET_LANGUAGE_INFO[code].name))),
               ),
             )
           : h('button', { class: 'btn block', type: 'button', onclick: () => { adding = true; render() } }, icon('plus', { size: 18 }), d.add)

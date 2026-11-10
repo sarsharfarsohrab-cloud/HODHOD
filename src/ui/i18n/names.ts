@@ -27,3 +27,9 @@ export function languageName(code: string, locale = formatLocale()): string {
 export const L = (): string => languageName(learning())
 /** Name of the learner's own language ("فارسی"). */
 export const O = (): string => languageName(ownLanguage())
+
+/** A language name as a label on its own: "Немецкий", not "немецкий". */
+export function languageLabel(code: string, locale = formatLocale()): string {
+  const name = languageName(code, locale)
+  return name.charAt(0).toLocaleUpperCase(locale) + name.slice(1)
+}

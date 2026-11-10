@@ -38,7 +38,7 @@ const Ln = () => L().replace(/а$/, 'е')
 const Lp = () => L().replace(/а$/, 'і')
 
 export const uk: Dictionary = {
-  nav: { home: 'Головна', create: 'Нове слово', words: 'Слова', study: 'Повторення', quiz: 'Тест', settings: 'Налаштування', stats: 'Статистика' },
+  nav: { home: 'Головна', create: 'Додати', words: 'Слова', study: 'Повторення', quiz: 'Тест', settings: 'Налаштування', stats: 'Статистика' },
 
   gender: { m: 'чоловічий', f: 'жіночий', n: 'середній', c: 'спільний (de)' },
 
