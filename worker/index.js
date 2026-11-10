@@ -5,8 +5,9 @@
  *   www.apphodhod.com      → permanent redirect to apphodhod.com
  * Any other host (the *.workers.dev preview address) shows the site.
  *
- * Until the introduction site is ready (SITE_LIVE), every address shows the app, so the app
- * stays where its learners installed it and nothing changes for sign-in links.
+ * Until the introduction site is ready (SITE_LIVE), apphodhod.com keeps showing the app, so the app
+ * stays where its learners installed it and nothing changes for sign-in links. The *.workers.dev
+ * address shows the site already, as a preview.
  */
 const APEX = 'apphodhod.com'
 const SITE_LIVE = false
@@ -21,7 +22,8 @@ export default {
       return Response.redirect(url.toString(), 301)
     }
 
-    const folder = !SITE_LIVE || host.startsWith('app.') ? '/app' : '/site'
+    const preview = host.endsWith('.workers.dev')
+    const folder = host.startsWith('app.') || (!SITE_LIVE && !preview) ? '/app' : '/site'
     const assetUrl = new URL(url)
     assetUrl.pathname = folder + url.pathname
     const response = await env.ASSETS.fetch(new Request(assetUrl, request))
@@ -39,6 +41,12 @@ export default {
         headers.set('location', target.toString())
         return new Response(response.body, { status: response.status, headers })
       }
+    }
+    if (preview) {
+      // the preview must never compete with apphodhod.com in search engines
+      const headers = new Headers(response.headers)
+      headers.set('x-robots-tag', 'noindex')
+      return new Response(response.body, { status: response.status, headers })
     }
     return response
   },
