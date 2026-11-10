@@ -212,6 +212,14 @@ async function checkAllowance(db, userId, kind, defaultPerDay) {
 // supabase/functions/_shared/tts.ts
 var TTS_DEFAULTS = { baseUrl: "https://api.openai.com/v1", model: "gpt-4o-mini-tts", female: "nova", male: "onyx" };
 var MAX_CHARS = 300;
+var SPEECH_STYLE = {
+  de: "Sprich klares, natürliches Hochdeutsch in ruhigem, deutlichem Tempo, wie eine freundliche Lehrerin.",
+  en: "Speak clear, natural standard British English at a calm, distinct pace, like a friendly teacher.",
+  fr: "Parle un français standard clair et naturel, à un rythme calme et distinct, comme une enseignante bienveillante.",
+  it: "Parla un italiano standard chiaro e naturale, con un ritmo calmo e scandito, come un’insegnante gentile.",
+  es: "Habla un español estándar claro y natural, a un ritmo tranquilo y claro, como una profesora amable.",
+  nl: "Spreek helder, natuurlijk standaard Nederlands in een rustig, duidelijk tempo, zoals een vriendelijke docent."
+};
 var PERSIAN = /[؀-ۿ]/;
 var LATIN = /\p{Script=Latin}/u;
 function normalizeSpeechText(raw) {
@@ -239,10 +247,11 @@ async function handleTts(req, env, fetchImpl = fetch) {
     const body = await readJsonBody(req, 2000);
     const text = normalizeSpeechText(body.text);
     if (!text)
-      throw new HttpError(400, "invalid_input", "Text must be German and at most 300 characters");
+      throw new HttpError(400, "invalid_input", "Text must be in a Latin-script language and at most 300 characters");
+    const language = typeof body.language === "string" && SPEECH_STYLE[body.language] ? body.language : "de";
     const voiceName = body.voice === "male" ? env.voiceMale : env.voiceFemale;
     const db = adminRest(env, fetchImpl);
-    const hash = await sha256Hex(`${env.ttsModel}|${voiceName}|${text}`);
+    const hash = await sha256Hex(language === "de" ? `${env.ttsModel}|${voiceName}|${text}` : `${env.ttsModel}|${voiceName}|${language}|${text}`);
     const publicUrl = (path) => `${env.supabaseUrl}/storage/v1/object/public/tts/${path}`;
     const cached = await db.select(`tts_cache?hash=eq.${hash}&select=path`).catch(() => []);
     if (cached[0])
@@ -262,7 +271,7 @@ async function handleTts(req, env, fetchImpl = fetch) {
           voice: voiceName,
           input: text,
           response_format: "mp3",
-          instructions: "Sprich klares, natürliches Hochdeutsch in ruhigem, deutlichem Tempo, wie eine freundliche Lehrerin."
+          instructions: SPEECH_STYLE[language]
         }),
         signal: controller.signal
       });

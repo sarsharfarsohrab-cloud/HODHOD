@@ -136,6 +136,18 @@ describe('speech (tts)', () => {
     expect(a.url).not.toBe(b.url)
   })
 
+  test('each learned language is spoken in its own language, with its own file', async () => {
+    const de = (await (await handleTts(post('tts', { text: 'la casa' }), TTS_ENV, w.fetch)).json()) as { url: string }
+    const it = (await (await handleTts(post('tts', { text: 'la casa', language: 'it' }), TTS_ENV, w.fetch)).json()) as { url: string }
+    expect(it.url).not.toBe(de.url)
+    const speeches = w.requests.filter((r) => r.url.endsWith('/audio/speech')).map((r) => (r.body as { instructions: string }).instructions)
+    expect(speeches[0]).toContain('Hochdeutsch')
+    expect(speeches[1]).toContain('italiano')
+    // an unknown language falls back to German instead of failing
+    const xx = (await (await handleTts(post('tts', { text: 'la casa', language: 'xx' }), TTS_ENV, w.fetch)).json()) as { url: string }
+    expect(xx.url).toBe(de.url)
+  })
+
   test('limits and provider problems are reported clearly', async () => {
     w.budget.user_today = 300
     w.budget.kind_per_day = 300

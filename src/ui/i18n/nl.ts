@@ -888,7 +888,7 @@ export const nl: Dictionary = {
     tile: 'Verhaal',
     tileHint: 'Met je eigen woorden',
     intro: 'Ik schrijf een kort verhaal met de woorden die je aan het leren bent, met de vertaling van elke zin.',
-    needWords: (n: number) => `Voor een verhaal heb je minstens ${n_(n, 'woord', 'woorden')} nodig die je al herhaalt. Herhaal eerst een paar kaarten.`,
+    needWords: (n: number) => `Voor een verhaal heb je minstens ${n_(n, 'woord', 'woorden')} nodig. Voeg eerst een paar woorden toe.`,
     level: 'Niveau',
     write: 'Verhaal schrijven',
     writing: 'Ik schrijf… (tot een halve minuut)',

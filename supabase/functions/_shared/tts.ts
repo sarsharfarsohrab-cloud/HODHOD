@@ -1,7 +1,7 @@
 /**
- * POST /functions/v1/tts   { text, voice?: "female" | "male" }
+ * POST /functions/v1/tts   { text, voice?: "female" | "male", language?: "de" | "en" | "fr" | "it" | "es" | "nl" }
  *
- * Natural German speech. Every text is synthesised once, stored as an MP3 in the public
+ * Natural speech in the learned language (German when none is given). Every text is synthesised once, stored as an MP3 in the public
  * "tts" storage bucket and shared by everyone afterwards — repeated plays cost nothing.
  */
 import { checkAllowance } from './budget.ts'
@@ -19,6 +19,16 @@ export interface TtsEnv extends FunctionEnv {
 
 export const TTS_DEFAULTS = { baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini-tts', female: 'nova', male: 'onyx' }
 const MAX_CHARS = 300
+
+/** How the voice should speak each learned language: clear standard pronunciation, like a teacher. */
+export const SPEECH_STYLE: Record<string, string> = {
+  de: 'Sprich klares, natürliches Hochdeutsch in ruhigem, deutlichem Tempo, wie eine freundliche Lehrerin.',
+  en: 'Speak clear, natural standard British English at a calm, distinct pace, like a friendly teacher.',
+  fr: 'Parle un français standard clair et naturel, à un rythme calme et distinct, comme une enseignante bienveillante.',
+  it: 'Parla un italiano standard chiaro e naturale, con un ritmo calmo e scandito, come un’insegnante gentile.',
+  es: 'Habla un español estándar claro y natural, a un ritmo tranquilo y claro, como una profesora amable.',
+  nl: 'Spreek helder, natuurlijk standaard Nederlands in een rustig, duidelijk tempo, zoals een vriendelijke docent.',
+}
 const PERSIAN = /[؀-ۿ]/
 const LATIN = /\p{Script=Latin}/u
 
@@ -43,11 +53,13 @@ export async function handleTts(req: Request, env: TtsEnv, fetchImpl: FetchLike 
     const user = await requireUser(req, env, fetchImpl)
     const body = await readJsonBody(req, 2_000)
     const text = normalizeSpeechText(body.text)
-    if (!text) throw new HttpError(400, 'invalid_input', 'Text must be German and at most 300 characters')
+    if (!text) throw new HttpError(400, 'invalid_input', 'Text must be in a Latin-script language and at most 300 characters')
+    const language = typeof body.language === 'string' && SPEECH_STYLE[body.language] ? body.language : 'de'
     const voiceName = body.voice === 'male' ? env.voiceMale : env.voiceFemale
 
     const db = adminRest(env, fetchImpl)
-    const hash = await sha256Hex(`${env.ttsModel}|${voiceName}|${text}`)
+    // German keeps its old cache key, so the recordings made so far stay valid
+    const hash = await sha256Hex(language === 'de' ? `${env.ttsModel}|${voiceName}|${text}` : `${env.ttsModel}|${voiceName}|${language}|${text}`)
     const publicUrl = (path: string) => `${env.supabaseUrl}/storage/v1/object/public/tts/${path}`
 
     const cached = await db.select<{ path: string }>(`tts_cache?hash=eq.${hash}&select=path`).catch(() => [])
@@ -68,7 +80,7 @@ export async function handleTts(req: Request, env: TtsEnv, fetchImpl: FetchLike 
           voice: voiceName,
           input: text,
           response_format: 'mp3',
-          instructions: 'Sprich klares, natürliches Hochdeutsch in ruhigem, deutlichem Tempo, wie eine freundliche Lehrerin.',
+          instructions: SPEECH_STYLE[language],
         }),
         signal: controller.signal,
       })

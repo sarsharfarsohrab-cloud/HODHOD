@@ -59,7 +59,7 @@ export function storiesScreen(ctx: Ctx): Screen {
           )
         : writing
           ? h('div', { class: 'progress indeterminate', role: 'progressbar', 'aria-label': s.writing }, h('span'))
-          : h('a', { class: 'btn block', href: '#/study' }, icon('cards'), t.home.startReview),
+          : h('a', { class: 'btn block', href: '#/create' }, icon('plus'), t.home.addWord),
     )
     const items =
       failed !== null

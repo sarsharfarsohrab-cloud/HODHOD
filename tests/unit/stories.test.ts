@@ -8,10 +8,23 @@ const card = (wordId: string, state: Card['state'], lastReview: string | null): 
   ({ id: `c${wordId}`, wordId, cardType: 'recognition', state, lastReview }) as Card
 
 describe('story words', () => {
-  test('words being learned come first, new cards and sentences are left out', () => {
+  test('words being learned come first, then reviewed ones, new ones last; sentences are left out', () => {
     const words = [word('1', 'Tisch'), word('2', 'Lampe'), word('3', 'Haus'), word('4', 'Wie geht es?', { pos: 'sentence' })]
     const cards = [card('1', 'review', '2026-10-01T00:00:00Z'), card('2', 'learning', '2026-09-01T00:00:00Z'), card('3', 'new', null), card('4', 'review', '2026-10-10T00:00:00Z')]
-    expect(pickStoryWords(words, cards).map((w) => w.lemma)).toEqual(['Lampe', 'Tisch'])
+    expect(pickStoryWords(words, cards).map((w) => w.lemma)).toEqual(['Lampe', 'Tisch', 'Haus'])
+  })
+
+  test('a story can be written right after adding words', () => {
+    const words = [word('1', 'casa'), word('2', 'tavolo'), word('3', 'mela')]
+    const cards = [card('1', 'new', null), card('2', 'new', null), card('3', 'new', null)]
+    expect(pickStoryWords(words, cards)).toHaveLength(3)
+  })
+
+  test('words are found in other languages too, without their article', () => {
+    const it = highlightKnown('Il tavolo è nella casa.', ['il tavolo', 'la casa'])
+    expect(it.filter((p) => p.known).map((p) => p.text)).toEqual(['tavolo', 'casa'])
+    const fr = highlightKnown("L'école est fermée.", ["l'école"])
+    expect(fr.filter((p) => p.known).map((p) => p.text)).toEqual(["L'école"])
   })
 
   test('level follows the words', () => {

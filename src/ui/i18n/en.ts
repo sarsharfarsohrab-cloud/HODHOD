@@ -888,7 +888,7 @@ export const en: Dictionary = {
     tile: 'Story',
     tileHint: 'With your own words',
     intro: "I'll write you a short story with the words you are learning, with a translation of every sentence.",
-    needWords: (n: number) => `A story needs at least ${n_(n, 'word', 'words')} you have started reviewing. Review a few cards first.`,
+    needWords: (n: number) => `A story needs at least ${n_(n, 'word', 'words')}. Add a few words first.`,
     level: 'Level',
     write: 'Write a story',
     writing: "I'm writing… (up to half a minute)",

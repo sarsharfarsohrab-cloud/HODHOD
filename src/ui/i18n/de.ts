@@ -888,7 +888,7 @@ export const de: Dictionary = {
     tile: 'Geschichte',
     tileHint: 'Mit deinen eigenen Wörtern',
     intro: 'Ich schreibe dir eine kurze Geschichte mit den Wörtern, die du gerade lernst – mit Übersetzung jedes Satzes.',
-    needWords: (n: number) => `Für eine Geschichte brauchst du mindestens ${n_(n, 'Wort', 'Wörter')}, die du schon wiederholst. Wiederhole zuerst ein paar Karten.`,
+    needWords: (n: number) => `Für eine Geschichte brauchst du mindestens ${n_(n, 'Wort', 'Wörter')}. Füge zuerst ein paar Wörter hinzu.`,
     level: 'Niveau',
     write: 'Geschichte schreiben',
     writing: 'Ich schreibe… (bis zu einer halben Minute)',
