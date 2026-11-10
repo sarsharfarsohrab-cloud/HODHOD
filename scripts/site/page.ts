@@ -52,7 +52,7 @@ function money(n: number, locale: string): string {
   return new Intl.NumberFormat(locale, { style: 'currency', currency: 'EUR', minimumFractionDigits: n % 1 === 0 ? 0 : 2 }).format(n)
 }
 
-function storeButtons(c: SiteCopy, place: string): string {
+function storeButtons(c: SiteCopy, place: string, app: string): string {
   const store = (kind: 'ios' | 'android', icon: string, label: string) => {
     const url = SITE_CONFIG.stores[kind]
     return url
@@ -62,7 +62,7 @@ function storeButtons(c: SiteCopy, place: string): string {
   return `<div class="stores" data-place="${place}">
       ${store('ios', ICONS.phone, c.stores.ios)}
       ${store('android', ICONS.android, c.stores.android)}
-      <a class="store web" href="${SITE_CONFIG.appUrl}">${ICONS.globe}<span><small>${esc(c.stores.open)}</small><b>${esc(c.stores.web)}</b></span></a>
+      <a class="store web" href="${app}">${ICONS.globe}<span><small>${esc(c.stores.open)}</small><b>${esc(c.stores.web)}</b></span></a>
     </div>`
 }
 
@@ -81,7 +81,7 @@ export function renderHome(lang: SiteLanguage, publishableKey: string): string {
   const c = SITE_COPY[lang]
   const info = INFO[lang]
   const dir = info.rtl ? 'rtl' : 'ltr'
-  const app = SITE_CONFIG.appUrl
+  const app = `${SITE_CONFIG.appUrl}?lang=${lang}`
   const alternates = SITE_LANGUAGES.map((l) => `<link rel="alternate" hreflang="${l}" href="${ORIGIN}${pathOf(l)}">`).join('\n')
   const plus = SITE_CONFIG.plus
   const reviews = SITE_CONFIG.reviews
@@ -127,8 +127,8 @@ ${alternates}
 <script type="application/ld+json">${JSON.stringify(ld)}</script>
 <script>
   // old links and installed copies of the app from when it lived on this address
-  if (location.hash.startsWith('#/') || location.hash.includes('access_token=')) location.replace(${JSON.stringify(app)} + location.hash)
-  else if (matchMedia('(display-mode: standalone)').matches) location.replace(${JSON.stringify(app)})
+  if (location.hash.startsWith('#/') || location.hash.includes('access_token=')) location.replace(${JSON.stringify(SITE_CONFIG.appUrl)} + location.hash)
+  else if (matchMedia('(display-mode: standalone)').matches) location.replace(${JSON.stringify(SITE_CONFIG.appUrl)})
 </script>
 </head>
 <body>
@@ -150,8 +150,6 @@ ${alternates}
   </div>
 </header>
 
-<div class="suggest" hidden></div>
-
 <main id="main">
   <section class="hero">
     <div class="hero-media" aria-hidden="true">
@@ -171,7 +169,7 @@ ${alternates}
           <a class="btn ghost big" href="#how">${esc(c.hero.how)}</a>
         </div>
         <p class="note">${ICONS.check}${esc(c.hero.free)}</p>
-        ${storeButtons(c, 'hero')}
+        ${storeButtons(c, 'hero', app)}
       </div>
     </div>
     <svg class="hero-curve" viewBox="0 0 1440 80" preserveAspectRatio="none" aria-hidden="true"><path d="M0 80V40C240 0 480 0 720 26s480 50 720 10v44Z"/></svg>
@@ -309,7 +307,7 @@ ${alternates}
       <h2>${esc(c.final.title)}</h2>
       <p>${esc(c.final.sub)}</p>
       <a class="btn primary big" href="${app}">${esc(c.hero.start)}</a>
-      ${storeButtons(c, 'final')}
+      ${storeButtons(c, 'final', app)}
     </div>
   </section>
 </main>
@@ -374,24 +372,10 @@ ${alternates}
       stats.hidden = false
     })
     .catch(() => {})
-${
-  lang === 'en'
-    ? `
-  // a visitor whose browser speaks another of our languages gets a gentle offer, never a jump
-  const offers = ${JSON.stringify(Object.fromEntries(SITE_LANGUAGES.filter((l) => l !== 'en').map((l) => [l, SITE_COPY[l].suggest])))}
-  let dismissed = false
-  try { dismissed = localStorage.getItem('hodhod.site.suggest') === 'no' } catch {}
-  const wanted = (navigator.languages || [navigator.language]).map((l) => (l || '').slice(0, 2).toLowerCase()).find((l) => l === 'en' || offers[l])
-  if (!dismissed && wanted && wanted !== 'en') {
-    const box = document.querySelector('.suggest')
-    const rtl = wanted === 'fa' || wanted === 'ar'
-    box.innerHTML = '<div class="wrap" dir="' + (rtl ? 'rtl' : 'ltr') + '" lang="' + wanted + '"><img src="/img/flags/' + wanted + '.svg" alt="" width="24" height="18"><a href="/' + wanted + '/"></a><button type="button" aria-label="Close">×</button></div>'
-    box.querySelector('a').textContent = offers[wanted]
-    box.querySelector('button').onclick = () => { box.hidden = true; try { localStorage.setItem('hodhod.site.suggest', 'no') } catch {} }
-    box.hidden = false
-  }`
-    : ''
-}
+  // a language picked by hand is remembered, so apphodhod.com/ opens in it next time (see worker/index.js)
+  document.querySelectorAll('a[hreflang]').forEach((a) =>
+    a.addEventListener('click', () => (document.cookie = 'site_lang=' + a.getAttribute('hreflang') + '; path=/; max-age=31536000; samesite=lax; secure')),
+  )
 })()
 </script>
 </body>

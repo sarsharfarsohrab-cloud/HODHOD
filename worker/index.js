@@ -12,6 +12,37 @@
  * address shows the site already, as a preview.
  */
 const APEX = 'apphodhod.com'
+
+/** The site's languages besides English (which lives at /). */
+const SITE_LANGUAGES = ['fa', 'de', 'fr', 'tr', 'uk', 'ru', 'ar', 'es', 'nl']
+/** When the browser names none of our languages, the visitor's country gives a hint. */
+const COUNTRY_LANGUAGE = {
+  IR: 'fa', AF: 'fa', TJ: 'fa',
+  DE: 'de', AT: 'de', LI: 'de',
+  FR: 'fr', LU: 'fr', MC: 'fr',
+  TR: 'tr', UA: 'uk', RU: 'ru', BY: 'ru', KZ: 'ru',
+  SA: 'ar', AE: 'ar', EG: 'ar', IQ: 'ar', SY: 'ar', JO: 'ar', LB: 'ar', KW: 'ar', QA: 'ar', BH: 'ar', OM: 'ar', YE: 'ar', LY: 'ar', TN: 'ar', DZ: 'ar', MA: 'ar', SD: 'ar', PS: 'ar',
+  ES: 'es', MX: 'es', AR: 'es', CO: 'es', CL: 'es', PE: 'es', VE: 'es', EC: 'es', GT: 'es', CU: 'es', BO: 'es', DO: 'es', HN: 'es', PY: 'es', SV: 'es', NI: 'es', CR: 'es', PA: 'es', UY: 'es',
+  NL: 'nl', SR: 'nl',
+}
+
+/**
+ * Which language a visitor to apphodhod.com/ should see: the one they picked before (cookie),
+ * else the first of ours their browser asks for, else a guess from their country; null = English.
+ */
+function siteLanguage(request) {
+  const cookie = /(?:^|;\s*)site_lang=([a-z]{2})/.exec(request.headers.get('cookie') ?? '')?.[1]
+  if (cookie) return SITE_LANGUAGES.includes(cookie) ? cookie : null
+  const wanted = (request.headers.get('accept-language') ?? '')
+    .split(',')
+    .map((part) => part.trim().slice(0, 2).toLowerCase())
+    .filter(Boolean)
+  for (const code of wanted) {
+    if (code === 'en') return null
+    if (SITE_LANGUAGES.includes(code)) return code
+  }
+  return COUNTRY_LANGUAGE[request.cf?.country] ?? null
+}
 const SITE_LIVE = true
 
 export default {
@@ -27,6 +58,17 @@ export default {
     const preview = host.endsWith('.workers.dev')
     const appHost = host.startsWith('app.') || host.startsWith('admin.')
     const folder = appHost || (!SITE_LIVE && !preview) ? '/app' : '/site'
+    // the site's front door opens in the visitor's language (search engines get English)
+    if (folder === '/site' && url.pathname === '/' && request.method === 'GET' && !url.search) {
+      const lang = siteLanguage(request)
+      if (lang) {
+        return new Response(null, {
+          status: 302,
+          headers: { location: `/${lang}/`, vary: 'Accept-Language, Cookie', 'cache-control': 'private, no-store' },
+        })
+      }
+    }
+
     const assetUrl = new URL(url)
     assetUrl.pathname = folder + url.pathname
     const response = await env.ASSETS.fetch(new Request(assetUrl, request))
