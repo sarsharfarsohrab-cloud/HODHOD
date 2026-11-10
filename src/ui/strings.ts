@@ -1,6 +1,7 @@
 /**
- * Every user-visible text of the interface, in one place.
- * Adding another interface language means adding another object of this shape.
+ * The interface text in the current language. `t` always holds the full dictionary of the
+ * language chosen with setLanguage(); every dictionary in i18n/ has the shape of i18n/fa.ts.
+ * `t` is updated in place, so objects taken from it (const s = t.store) stay current.
  */
 import type { InputErrorCode } from '../../supabase/functions/_shared/inputRules.ts'
 import type { Cefr, ExampleLevel, PartOfSpeech, Register, ValidationIssue } from '../../supabase/functions/_shared/wordSchema.ts'
@@ -8,1031 +9,83 @@ import type { WordStatus } from '../core/cards.ts'
 import type { GradeNote, QuestionType, QuizKind } from '../core/quiz.ts'
 import type { Rating } from '../core/types.ts'
 import type { AppError } from '../data/errors.ts'
-import { fa } from './format.ts'
+import { num, setFormatLocale } from './format.ts'
+import { fa as faStrings } from './i18n/fa.ts'
+import { en as enStrings } from './i18n/en.ts'
+import { de as deStrings } from './i18n/de.ts'
+import { ar as arStrings } from './i18n/ar.ts'
+import { tr as trStrings } from './i18n/tr.ts'
+import { uk as ukStrings } from './i18n/uk.ts'
+import { ru as ruStrings } from './i18n/ru.ts'
+import { fr as frStrings } from './i18n/fr.ts'
+import { es as esStrings } from './i18n/es.ts'
+import { nl as nlStrings } from './i18n/nl.ts'
+import { isUiLanguage, UI_LANGUAGE_INFO, type UiLanguage } from './i18n/languages.ts'
 
-export const APP_NAME = 'هدهد'
+export type Strings = typeof faStrings
 
-export const t = {
-  nav: { home: 'خانه', create: 'کلمهٔ تازه', words: 'واژه‌ها', study: 'مرور', quiz: 'آزمون', settings: 'تنظیمات', stats: 'آمار' },
+/** A dictionary of another language; the admin panel is only in Persian. */
+export type Dictionary = Omit<Strings, 'admin'>
 
-  common: {
-    cancel: 'انصراف',
-    retry: 'دوباره امتحان کن',
-    save: 'ذخیره',
-    edit: 'ویرایش',
-    delete: 'حذف',
-    close: 'بستن',
-    back: 'برگشت',
-    yes: 'بله',
-    no: 'نه',
-    add: 'افزودن',
-    remove: 'برداشتن',
-    loading: 'در حال بارگذاری…',
-    offline: 'آفلاین هستی',
-    play: 'پخش تلفظ',
-    optional: 'اختیاری',
-  },
+/** Dictionaries that ship with the app; a language without one would fall back to English. */
+const DICTIONARIES: Partial<Record<UiLanguage, Dictionary>> = { fa: faStrings, en: enStrings, de: deStrings, ar: arStrings, tr: trStrings, uk: ukStrings, ru: ruStrings, fr: frStrings, es: esStrings, nl: nlStrings }
 
-  auth: {
-    tagline: 'واژه‌های آلمانی، هر روز کمی بیشتر',
-    hello: 'سلام! من هدهدم.',
-    signIn: 'ورود',
-    signUp: 'ساخت حساب',
-    name: 'نام',
-    namePlaceholder: 'اسمت را چطور صدا بزنیم؟',
-    email: 'ایمیل',
-    password: 'رمز عبور',
-    passwordHint: 'دست‌کم ۸ نویسه',
-    submitSignIn: 'وارد شو',
-    submitSignUp: 'حساب بساز',
-    forgot: 'رمزم را فراموش کرده‌ام',
-    resetSent: 'اگر این ایمیل ثبت شده باشد، پیوند تغییر رمز برایش فرستاده شد.',
-    resetNeedsEmail: 'اول ایمیلت را بنویس، بعد دوباره همین‌جا بزن.',
-    confirmSent: 'یک ایمیل تأیید برایت فرستادیم. روی پیوند داخلش بزن تا حسابت فعال شود.',
-    newPasswordTitle: 'رمز تازه',
-    newPasswordSubmit: 'رمز را عوض کن',
-    passwordChanged: 'رمزت عوض شد.',
-    errors: {
-      invalid_credentials: 'ایمیل یا رمز درست نیست.',
-      invalid_grant: 'ایمیل یا رمز درست نیست.',
-      email_not_confirmed: 'هنوز ایمیلت را تأیید نکرده‌ای. روی پیوند داخل ایمیل تأیید بزن.',
-      user_already_exists: 'با این ایمیل قبلاً حساب ساخته شده. از «ورود» استفاده کن.',
-      email_exists: 'با این ایمیل قبلاً حساب ساخته شده. از «ورود» استفاده کن.',
-      weak_password: 'این رمز کوتاه یا ساده است. یک رمز بلندتر انتخاب کن.',
-      signup_disabled: 'ساخت حساب تازه فعلاً بسته است.',
-      otp_expired: 'این پیوند منقضی شده. یک پیوند تازه بگیر.',
-      same_password: 'رمز تازه باید با رمز قبلی فرق داشته باشد.',
-      email_invalid: 'این ایمیل درست به نظر نمی‌رسد.',
-      password_short: 'رمز باید دست‌کم ۸ نویسه باشد.',
-      captcha_failed: 'بررسی «آدم هستی؟» انجام نشد. صفحه را تازه کن و دوباره امتحان کن.',
-      user_banned: 'این حساب مسدود شده است.',
-      over_request_rate_limit: 'تلاش‌ها زیاد بود. چند دقیقه صبر کن و دوباره امتحان کن.',
-      over_email_send_rate_limit: 'سرور فعلاً نمی‌تواند ایمیل تأیید بفرستد (سقف ایمیل در ساعت پر شده). یک ساعت بعد دوباره امتحان کن.',
-      fallback: 'ورود انجام نشد. دوباره امتحان کن.',
-    } as Record<string, string>,
-  },
+/** The language a first-time visitor sees: English, the international one. */
+export const DEFAULT_LANGUAGE: UiLanguage = 'en'
 
-  setup: {
-    title: 'اپ هنوز به سرور وصل نشده',
-    body: 'نشانی و کلید عمومی Supabase در فایل config.js تنظیم نشده است.',
-    backendMissing: 'پایگاه داده هنوز آماده نشده. جدول‌های اپ در Supabase ساخته نشده‌اند.',
-  },
+type Plain = Record<string, unknown>
+const isPlain = (v: unknown): v is Plain => typeof v === 'object' && v !== null && !Array.isArray(v)
 
-  home: {
-    greeting(hour: number, name: string | null) {
-      const part = hour < 4 ? 'شب بخیر' : hour < 11 ? 'صبح بخیر' : hour < 16 ? 'روز بخیر' : hour < 20 ? 'عصر بخیر' : 'شب بخیر'
-      return name ? `${part}، ${name}` : part
-    },
-    today: 'برنامهٔ امروز',
-    newCards: 'تازه',
-    reviews: 'مرور',
-    learning: 'در جریان',
-    minutesLabel: 'دقیقه',
-    startReview: 'ادامهٔ مرور',
-    startNew: 'یادگیری کلمه‌های تازه',
-    startMixed: 'شروع یادگیری',
-    addFirst: 'اولین کلمه‌ات را اضافه کن',
-    addWord: 'افزودن کلمه',
-    allDone: 'کار امروز تمام شد',
-    allDoneBody: 'همهٔ کارت‌های امروز را دیدی. فردا دوباره سر می‌زنیم.',
-    waitingLater: (when: string) => `کارت بعدی ${when} برمی‌گردد.`,
-    nothingDue: 'امروز کارتی برای مرور نداری.',
-    newWaiting: (n: number) => `${fa(n)} کلمهٔ ذخیره‌شده در صف روزهای بعد است.`,
-    goal: 'هدف روزانه',
-    goalProgress: (done: number, goal: number) => `${fa(done)} از ${fa(goal)} دقیقه`,
-    goalDone: 'هدف امروز کامل شد',
-    streak: (n: number) => `${fa(n)} روز پیاپی`,
-    streakNone: 'امروز را شروع کن',
-    streakKeep: 'امروز هنوز مرور نکرده‌ای',
-    statsHint: 'پیشرفت و لغت‌های سخت',
-    bank: 'بانک واژه',
-    bankCount: (n: number) => `${fa(n)} کلمه`,
-    week: 'هفت روز گذشته',
-    weekReviews: (n: number) => `${fa(n)} مرور`,
-    planMinutes: (minutes: number) => `حدود ${fa(Math.max(1, minutes))} دقیقه`,
-    planNew: (n: number) => `${fa(n)} کلمهٔ تازه`,
-    goalRing: (done: number, goal: number) => `${fa(done)} از ${fa(goal)} دقیقه`,
-    goalLeft: (left: number) => `${fa(left)} دقیقهٔ دیگر تا هدف امروز`,
-    dayDone: 'کار امروز تمام شد',
-    todayCard: 'امروز: هدف، روزهای پیاپی و آمار',
-    statsLink: 'آمار',
-    more: 'بخش‌های دیگر',
-    streakDays: 'روز پیاپی',
-    streakBest: (n: number) => `بهترین: ${fa(n)} روز`,
-    streakTodayDone: 'امروز را هم مرور کردی',
-    weekTitle: '۷ روز اخیر',
-    weekDone: (n: number) => `${fa(n)} روز از ۷ روز`,
-    mascot: {
-      first: 'سلام! من هدهدم. یک کلمهٔ آلمانی بده تا با هم شروع کنیم.',
-      morning: 'صبح بخیر! با چند کارت روزت را شروع کنیم؟',
-      due: 'کارت‌های امروز آماده‌اند. هر وقت تو آماده بودی.',
-      goalDone: 'هدف امروزت را زدی. آفرین!',
-      allDone: 'برای امروز کافی است. خسته نباشی!',
-      back: 'خوش برگشتی. از همین‌جا ادامه می‌دهیم.',
-      idle: 'کلمهٔ تازه‌ای شنیده‌ای؟ اضافه‌اش کن.',
-    },
-  },
-
-  celebrate: {
-    title: (n: number) => `${fa(n)} روز پشت سر هم!`,
-    body: (n: number) =>
-      n >= 100 ? 'باورنکردنی است. تو حالا یک یادگیرندهٔ واقعی هستی.' : n >= 30 ? 'یک ماه تمام! کلمه‌ها دارند در ذهنت می‌مانند.' : n >= 7 ? 'یک هفتهٔ کامل. عادت دارد شکل می‌گیرد!' : 'شروع فوق‌العاده‌ای است. فردا هم منتظرت هستم.',
-    continue: 'ادامه',
-  },
-
-  welcome: {
-    progress: (n: number, total: number) => `قدم ${fa(n)} از ${fa(total)}`,
-    skip: 'رد شدن',
-    next: 'ادامه',
-    start: 'شروع کنیم',
-    hello: (name: string | null) => (name ? `سلام ${name}، خوش آمدی!` : 'سلام، خوش آمدی!'),
-    helloAgain: (name: string | null) => (name ? `${name}، هدهد تازه شد!` : 'هدهد تازه شد!'),
-    helloAgainBody: 'چیزهای تازه‌ای آورده‌ام. بعد دو سؤال کوتاه می‌پرسم تا برنامهٔ روزانه‌ات را دوباره بچینم؛ کارت‌ها و پیشرفتت سر جایشان می‌مانند.',
-    whatsNew: [
-      ['🔊', 'صدای طبیعی برای واژه‌ها و جمله‌ها'],
-      ['📦', 'بسته‌های آمادهٔ واژه و جمله، درس‌به‌درس'],
-      ['💬', 'کارت برای جمله‌ها و اصطلاح‌ها'],
-      ['🎧', 'تمرین شنیداری و گفتاری در آزمون'],
-      ['📖', 'داستان کوتاه با واژه‌های خودت'],
-      ['👥', 'یادگیری با دوستان'],
-      ['🔔', 'یادآوری روی گوشی'],
-    ] as [string, string][],
-    reminderTitle: 'یادآوری هم بخواهی؟',
-    reminderOn: 'روشن کردن یادآوری',
-    reminderDone: 'یادآوری روشن شد',
-    helloBody: 'من هدهدم. کمکت می‌کنم هر روز چند کلمهٔ آلمانی یاد بگیری و دیگر فراموششان نکنی. دو سؤال کوتاه می‌پرسم تا برنامه‌ات را بچینم.',
-    timeTitle: 'هر روز چقدر وقت داری؟',
-    timeBody: 'کم ولی هر روز، بهتر از زیاد و گاه‌به‌گاه است.',
-    minutes: (n: number) => `${fa(n)} دقیقه`,
-    timeHint: { 5: 'سر صبحانه یا توی صف', 10: 'یک استراحت کوتاه', 20: 'یک تمرین درست‌وحسابی', 30: 'برای کسی که جدی است' } as Record<number, string>,
-    levelTitle: 'آلمانی‌ات چطور است؟',
-    levelBody: 'بر اساس جوابت تعداد کلمهٔ تازهٔ هر روز را پیشنهاد می‌دهم.',
-    levels: { beginner: 'تازه شروع کرده‌ام', some: 'کمی بلدم', intermediate: 'متوسط هستم' },
-    levelHints: { beginner: 'A1، چند کلمه بلدم', some: 'A2، جمله‌های ساده می‌گویم', intermediate: 'B1 یا بالاتر' },
-    perDay: 'کلمهٔ تازه در روز',
-    perDayHelp: 'هر کلمهٔ تازه در روزهای بعد چند بار مرور می‌شود. اگر عدد زیاد باشد، مرورهای هفته‌های بعد سنگین می‌شود.',
-    less: 'کمتر',
-    more: 'بیشتر',
-    readyTitle: 'برنامه‌ات آماده است!',
-    readyBody: (minutes: number, perDay: number) => `هر روز ${fa(minutes)} دقیقه، با ${fa(perDay)} کلمهٔ تازه. هر وقت آمدی، من کارت‌های همان روز را آماده کرده‌ام.`,
-    changeLater: 'هر وقت خواستی، این‌ها را در تنظیمات عوض کن.',
-    firstWord: 'اولین کلمه‌ام را اضافه کنم',
-    toHome: 'برو به صفحهٔ اصلی',
-  },
-
-  create: {
-    title: 'کلمهٔ تازه',
-    label: 'کلمه یا عبارت آلمانی',
-    placeholder: 'مثلاً aufgeben',
-    help: 'یک کلمه، یک عبارت یا یک جملهٔ کوتاه بنویس، مثل der Tisch، Bescheid sagen یا Wie geht\'s dir?',
-    importLink: 'وارد کردن گروهی از روی لیست',
-    submit: 'ساخت کارت',
-    loading: 'دارم کارت این کلمه را آماده می‌کنم…',
-    loadingHint: 'معمولاً ۱۰ تا ۲۰ ثانیه طول می‌کشد.',
-    failed: 'فعلاً نتوانستم این کلمه را آماده کنم.',
-    notAWord: (w: string) => `«${w}» را به‌عنوان یک کلمه یا عبارت آلمانی نشناختم. املایش را نگاه کن.`,
-    wrongLanguage: (w: string) => `«${w}» آلمانی نیست. فعلاً فقط کلمهٔ آلمانی می‌سازم.`,
-    didYouMean: 'منظورت این بود؟',
-    useSuggestion: 'بله، همین',
-    duplicateTitle: 'این کلمه در بانک واژه‌ات هست',
-    duplicateOpen: 'باز کردن کلمه',
-    duplicateRegenerate: 'ساخت دوبارهٔ اطلاعات',
-    inputErrors: {
-      empty: 'یک کلمه بنویس.',
-      too_long: 'این خیلی بلند است. یک کلمه، عبارت یا جملهٔ کوتاه (حداکثر ۲۰ کلمه) بنویس.',
-      multiple_words: 'این خیلی بلند است. جمله‌ها حداکثر ۲۰ کلمه می‌توانند باشند.',
-      wrong_script: 'کلمه را به آلمانی بنویس، نه فارسی.',
-      invalid_characters: 'فقط حروف آلمانی بنویس؛ عدد و علامت نه.',
-    } satisfies Record<InputErrorCode, string>,
-  },
-
-  draft: {
-    banner: 'پیش‌نویس است و هنوز ذخیره نشده. نگاهش کن، اگر لازم بود ویرایش کن و بعد ذخیره کن.',
-    inputNote: 'دربارهٔ چیزی که نوشتی',
-    confirm: 'تأیید و ذخیره',
-    saveChanges: 'ذخیرهٔ تغییرها',
-    discard: 'دور بریز',
-    discardConfirm: 'این پیش‌نویس ذخیره نشده. دور ریخته شود؟',
-    saved: 'در بانک واژه ذخیره شد',
-    updated: 'تغییرها ذخیره شد',
-    fromCache: 'از حافظهٔ مشترک',
-    hasProblems: 'چند جا باید درست شود:',
-    conflict: 'این کلمه روی دستگاه دیگری تغییر کرده بود. نسخهٔ تازه‌تر بارگذاری شد؛ تغییرهایت را دوباره وارد کن.',
-    aiCefrNote: 'سطح را هوش مصنوعی تخمین زده و ممکن است دقیق نباشد.',
-    derivedTenses: 'Perfekt، Plusquamperfekt و Futur از روی فعل کمکی و Partizip II ساخته می‌شوند.',
-    fields: {
-      word: 'کلمه',
-      pos: 'نوع کلمه',
-      cefr: 'سطح',
-      ipa: 'تلفظ (IPA)',
-      meaning: (n: number) => `معنی ${fa(n)}`,
-      translation: 'ترجمهٔ فارسی',
-      meaningNote: 'توضیح کوتاه',
-      examples: 'مثال‌ها',
-      exampleDe: 'جملهٔ آلمانی',
-      exampleFa: 'ترجمهٔ جمله',
-      addMeaning: 'افزودن معنی',
-      addExample: 'افزودن مثال',
-      article: 'حرف تعریف',
-      plural: 'جمع',
-      genitive: 'حالت Genitiv',
-      pluralOnly: 'فقط به شکل جمع به کار می‌رود',
-      auxiliary: 'فعل کمکی',
-      partizip2: 'Partizip II',
-      separable: 'جداشدنی',
-      irregular: 'بی‌قاعده',
-      reflexive: 'انعکاسی',
-      reflexiveNone: 'نیست',
-      reflexiveAcc: 'با Akkusativ (mich)',
-      reflexiveDat: 'با Dativ (mir)',
-      government: 'حرف اضافه و حالت',
-      comparative: 'صفت برتر',
-      superlative: 'صفت برترین',
-      synonyms: 'مترادف‌ها',
-      antonyms: 'متضادها',
-      listHint: 'با ویرگول جدا کن',
-      collocations: 'ترکیب‌های رایج',
-      addCollocation: 'افزودن ترکیب',
-      notes: 'نکته',
-      favorite: 'علاقه‌مندی',
-      tags: 'دسته‌ها',
-      expression: 'جزئیات عبارت و جمله',
-      literal: 'ترجمهٔ تحت‌اللفظی',
-      register: 'سبک گفتار',
-      frequency: 'رایج بودن',
-      alternatives: 'شکل‌های دیگر گفتن',
-      reply: 'جواب رایج',
-      replyDe: 'جواب به آلمانی',
-      replyFa: 'ترجمهٔ جواب',
-    },
-    issue(issue: ValidationIssue): string {
-      const where = describePath(issue.path)
-      switch (issue.code) {
-        case 'required':
-          return `${where} خالی است.`
-        case 'too_long':
-          return `${where} خیلی بلند است.`
-        case 'too_many':
-          return `${where} بیش از حد مجاز است.`
-        case 'wrong_script':
-          return `${where} به خط درست نوشته نشده (آلمانی با حروف لاتین، ترجمه با حروف فارسی).`
-        case 'missing_levels':
-          return `${where} کامل نیست.`
-        default:
-          return `${where} درست نیست.`
-      }
-    },
-  },
-
-  tags: {
-    title: 'دسته‌ها',
-    none: 'هنوز در دسته‌ای نیست.',
-    add: 'افزودن به دسته',
-    placeholder: 'مثلاً درس ۳ یا سفر',
-    newTag: 'دستهٔ تازه',
-    existing: 'دسته‌های موجود',
-    remove: (name: string) => `برداشتن از دستهٔ ${name}`,
-    all: 'همهٔ دسته‌ها',
-    help: 'با دسته‌ها می‌توانی لغت‌های یک درس یا یک موضوع را کنار هم نگه داری.',
-  },
-
-  import: {
-    title: 'وارد کردن گروهی',
-    intro: 'لغت‌ها را اینجا بنویس یا بچسبان؛ هر لغت در یک خط، یا با ویرگول از هم جدا.',
-    scanTip: 'روی آیفون: انگشتت را روی کادر نگه دار و «Scan Text» را بزن تا لغت‌ها را از روی کاغذ بخواند.',
-    placeholder: 'der Tisch\naufgeben\nBescheid sagen',
-    listLabel: 'لیست لغت‌ها',
-    tagLabel: 'دسته برای این لیست (اختیاری)',
-    check: 'بررسی لیست',
-    nothing: 'لغتی در این متن پیدا نکردم.',
-    tooMany: (max: number) => `هر بار حداکثر ${fa(max)} لغت. بقیه را در دور بعد وارد کن.`,
-    reviewTitle: (n: number) => `${fa(n)} لغت برای ساختن`,
-    statusNew: 'ساخته می‌شود',
-    statusExists: 'از قبل در بانک هست',
-    statusInvalid: 'قابل ساخت نیست',
-    removeItem: (w: string) => `برداشتن ${w} از لیست`,
-    start: (n: number) => `ساخت ${fa(n)} کارت`,
-    nothingToBuild: 'لغت تازه‌ای برای ساختن در لیست نیست.',
-    editList: 'اصلاح لیست',
-    progress: (done: number, total: number) => `${fa(done)} از ${fa(total)} کارت آماده شد`,
-    position: (i: number, total: number) => `کارت ${fa(i)} از ${fa(total)}`,
-    waiting: 'کارت بعدی در حال ساخته شدن است…',
-    confirm: 'تأیید و ذخیره',
-    skip: 'رد کن',
-    failed: (w: string, why: string) => `«${w}» ساخته نشد: ${why}`,
-    retryFailed: 'دوباره تلاش کن',
-    paused: 'ساختن متوقف شد.',
-    limitWait: 'برای جلوگیری از مصرف زیاد، چند لحظه صبر می‌کنم و ادامه می‌دهم…',
-    doneTitle: 'لیست تمام شد',
-    doneSummary: (saved: number, skipped: number, failed: number) =>
-      [`${fa(saved)} لغت ذخیره شد`, skipped ? `${fa(skipped)} رد شد` : '', failed ? `${fa(failed)} ساخته نشد` : ''].filter(Boolean).join('، ') + '.',
-    again: 'وارد کردن یک لیست دیگر',
-    toBank: 'دیدن بانک واژه',
-    leaveConfirm: 'هنوز کارت‌هایی مانده که تأیید نکرده‌ای. بیرون بروی از بین می‌روند.',
-    leave: 'بیرون برو',
-    suggestion: (from: string, to: string) => `«${from}» را «${to}» در نظر گرفتم.`,
-  },
-
-  words: {
-    title: 'بانک واژه',
-    search: 'جست‌وجو در آلمانی یا فارسی',
-    count: (shown: number, total: number) => (shown === total ? `${fa(total)} کلمه` : `${fa(shown)} از ${fa(total)} کلمه`),
-    empty: 'اولین کلمه‌ات را اضافه کن 🌱',
-    emptyBody: 'هر کلمه‌ای که ذخیره کنی اینجا می‌ماند و به‌نوبت وارد مرور روزانه می‌شود.',
-    noMatch: 'کلمه‌ای با این مشخصات پیدا نشد.',
-    clearFilters: 'پاک کردن فیلترها',
-    filters: 'فیلتر و ترتیب',
-    all: 'همه',
-    favorites: 'علاقه‌مندی‌ها',
-    difficult: 'دشوار',
-    dueToday: 'موعد امروز',
-    sort: 'ترتیب',
-    sortNewest: 'تازه‌ترین',
-    sortAlpha: 'الفبایی',
-    sortReviewed: 'آخرین مرور',
-    sortDue: 'نزدیک‌ترین موعد',
-    posGroup: 'نوع کلمه',
-    cefrGroup: 'سطح',
-    tagGroup: 'دسته',
-    statusGroup: 'وضعیت',
-    select: 'انتخاب',
-    selected: (n: number) => `${fa(n)} انتخاب شد`,
-    archiveSelected: 'حذف از بانک',
-    favoriteSelected: 'علاقه‌مندی',
-    archiveConfirm: (n: number) => `${fa(n)} کلمه از بانک واژه حذف شود؟ تاریخچهٔ مرورشان نگه داشته می‌شود.`,
-    showMore: 'نمایش بیشتر',
-  },
-
-  detail: {
-    notFound: 'این کلمه پیدا نشد. شاید حذف شده باشد.',
-    meanings: 'معنی',
-    translation: 'ترجمه',
-    literal: 'ترجمهٔ تحت‌اللفظی',
-    alternatives: 'شکل‌های دیگر گفتن',
-    reply: 'جواب رایج',
-    grammar: 'دستور زبان',
-    conjugation: 'صرف فعل',
-    synonyms: 'مترادف',
-    antonyms: 'متضاد',
-    collocations: 'ترکیب‌های رایج',
-    notes: 'نکته',
-    learning: 'وضعیت یادگیری',
-    status: 'وضعیت',
-    nextReview: 'مرور بعدی',
-    lastReview: 'آخرین مرور',
-    reviewCount: 'تعداد مرور',
-    lapses: 'دفعات فراموشی',
-    recall: 'احتمال یادآوری الان',
-    stability: 'ماندگاری در حافظه',
-    difficulty: 'سختی',
-    notStarted: 'هنوز وارد مرور نشده؛ در صف کلمه‌های تازه است.',
-    reverseCard: 'کارت معکوس (فارسی به آلمانی)',
-    reverseWaiting: 'بعد از یاد گرفتن خود لغت شروع می‌شود.',
-    never: 'هنوز نه',
-    difficultyWords: ['خیلی آسان', 'آسان', 'متوسط', 'سخت', 'خیلی سخت'],
-    regenerate: 'ساخت دوباره با هوش مصنوعی',
-    regenerateConfirm: 'اطلاعات این کلمه دوباره ساخته می‌شود و به‌صورت پیش‌نویس نشانت می‌دهم. تا ذخیره نکنی چیزی عوض نمی‌شود.',
-    archive: 'حذف از بانک واژه',
-    archiveConfirm: 'این کلمه از بانک واژه و مرور روزانه حذف شود؟ تاریخچهٔ مرورش نگه داشته می‌شود.',
-    archived: 'از بانک واژه حذف شد',
-    favoriteOn: 'به علاقه‌مندی‌ها اضافه شد',
-    favoriteOff: 'از علاقه‌مندی‌ها برداشته شد',
-    addedOn: 'افزوده شده در',
-    plural: 'جمع',
-    genitive: 'Genitiv',
-    pluralOnly: 'فقط جمع',
-    noPlural: 'جمع ندارد',
-    auxiliary: 'فعل کمکی',
-    separable: 'جداشدنی',
-    inseparable: 'جدانشدنی',
-    irregular: 'بی‌قاعده',
-    regular: 'باقاعده',
-    reflexive: 'انعکاسی',
-    government: 'همراه با',
-    traits: 'ویژگی',
-    overdue: (since: string) => `موعدش رسیده (${since})`,
-    comparative: 'برتر',
-    superlative: 'برترین',
-  },
-
-  study: {
-    title: 'مرور',
-    showAnswer: 'نمایش جواب',
-    recallPrompt: 'معنی‌اش را به یاد بیاور، بعد جواب را ببین.',
-    reversePrompt: 'آلمانی‌اش را به یاد بیاور (اسم‌ها با حرف تعریف).',
-    reverseBadge: 'فارسی به آلمانی',
-    undo: 'برگرداندن جواب قبلی',
-    undone: 'جواب قبلی برگشت.',
-    streak: (n: number) => `${fa(n)} تا پشت سر هم!`,
-    newBadge: 'کلمهٔ تازه',
-    // what the learner says about their memory; the time until the card comes back is shown small underneath
-    ratings: { 1: 'یادم نیامد', 2: 'به‌سختی', 3: 'یادم آمد', 4: 'خیلی راحت' } satisfies Record<Rating, string>,
-    ratingHelp: {
-      1: 'به‌زودی دوباره می‌آید',
-      2: 'یادم آمد ولی سخت بود؛ کمی زودتر برمی‌گردد',
-      3: 'به‌موقع دوباره می‌آید',
-      4: 'دیرتر برمی‌گردد',
-    } satisfies Record<Rating, string>,
-    ratingGuide: 'چطور جواب بدهم؟',
-    nextQuiz: 'آزمون',
-    nextStory: 'داستان',
-    undoLast: 'برگرداندن آخرین جواب',
-    fullDetail: 'جزئیات کامل کلمه',
-    remaining: (n: number) => `${fa(n)} کارت مانده`,
-    exit: 'خروج از مرور',
-    emptyTitle: 'امروز کارت مروری نداری. عالیه! 🎉',
-    emptyBody: 'کلمه‌های تازه که اضافه کنی، به‌نوبت اینجا می‌آیند.',
-    emptyNoWords: 'هنوز کلمه‌ای برای مرور نداری.',
-    waitTitle: 'یک نفس تازه کن',
-    waitBody: (n: number, when: string) => `${fa(n)} کارت در حال یادگیری ${when} برمی‌گردد.`,
-    waitNow: 'همین حالا مرورشان کن',
-    doneTitle: 'این دور تمام شد',
-    doneCards: 'کارت دیده‌شده',
-    doneCorrect: 'یادآوری درست',
-    doneTime: 'زمان',
-    doneNew: 'کلمهٔ تازه',
-    doneDuration: (ms: number) => (ms < 60_000 ? `${fa(Math.max(1, Math.round(ms / 1000)))} ثانیه` : `${fa(Math.round(ms / 60_000))} دقیقه`),
-    doneHome: 'برگشت به خانه',
-    doneGoal: 'هدف امروزت هم کامل شد.',
-    encourage: 'اشکالی ندارد، دوباره امتحانش می‌کنیم.',
-    proud: 'این یکی سخت بود و یادت آمد!',
-    saveFailed: 'جوابت روی این دستگاه ذخیره شد و با وصل شدن اینترنت فرستاده می‌شود.',
-  },
-
-  quiz: {
-    title: 'آزمون',
-    intro: 'آزمون از واژه‌های خودت ساخته می‌شود. این فقط تمرین است؛ برنامهٔ مرور روزانه‌ات عوض نمی‌شود.',
-    kinds: {
-      mixed: { title: 'مخلوط', body: 'همهٔ نوع‌ها با هم' },
-      choice: { title: 'چهارگزینه‌ای', body: 'معنی درست را انتخاب کن' },
-      typing: { title: 'نوشتاری', body: 'آلمانی‌اش را خودت بنویس' },
-      article: { title: 'der / die / das', body: 'حرف تعریف اسم‌ها' },
-      listening: { title: 'شنیداری', body: 'بشنو و بنویس (دیکته)' },
-      speaking: { title: 'گفتاری', body: 'بلند بگو و تلفظت را بسنج' },
-    } satisfies Record<QuizKind, { title: string; body: string }>,
-    needSound: 'این دستگاه صدای آلمانی ندارد.',
-    listen: 'پخش',
-    listenSlow: 'آهسته‌تر',
-    dictationHelp: 'هر چه شنیدی به آلمانی بنویس. برای اسم‌ها حرف تعریف را هم بنویس.',
-    speakNow: 'بزن و بگو',
-    listening: 'گوش می‌دهم…',
-    heard: (text: string) => `شنیدم: «${text}»`,
-    heardNothing: 'چیزی نشنیدم. دوباره امتحان کن، کمی بلندتر.',
-    micDenied: 'اجازهٔ میکروفون داده نشد. می‌توانی خودت قضاوت کنی.',
-    selfCheckHelp: 'اول تلفظ درست را بشنو، بلند تکرار کن، بعد خودت بگو درست گفتی یا نه.',
-    selfYes: 'درست گفتم',
-    selfNo: 'هنوز نه',
-    speakingHelp: 'دکمهٔ میکروفون را بزن و بلند بگو. گوش می‌دهم و می‌گویم درست بود یا نه.',
-    length: 'تعداد سؤال',
-    questions: (n: number) => `${fa(n)} سؤال`,
-    start: 'شروع آزمون',
-    needWords: 'برای آزمون اول چند لغت اضافه کن.',
-    needFour: 'برای چهارگزینه‌ای دست‌کم چهار لغت با معنی‌های مختلف لازم است.',
-    needNouns: 'برای این تمرین باید چند اسم در بانک واژه‌ات باشد.',
-    prompts: {
-      choice_de_fa: 'معنی این کلمه چیست؟',
-      choice_fa_de: 'آلمانی‌اش کدام است؟',
-      typing_fa_de: 'آلمانی‌اش را بنویس',
-      article: 'حرف تعریفش کدام است؟',
-      dictation: 'گوش بده و بنویس',
-      speaking: 'بلند بگو',
-    } satisfies Record<QuestionType, string>,
-    typePlaceholder: 'به آلمانی بنویس',
-    typeHelp: 'برای اسم‌ها می‌توانی حرف تعریف را هم بنویسی.',
-    check: 'بررسی',
-    dontKnow: 'نمی‌دانم',
-    next: 'بعدی',
-    finish: 'دیدن نتیجه',
-    position: (i: number, total: number) => `سؤال ${fa(i)} از ${fa(total)}`,
-    correct: 'درست است!',
-    wrong: 'درست نبود.',
-    answerIs: 'جواب درست:',
-    notes: {
-      case: 'درست است؛ فقط حواست به حرف بزرگ و کوچک باشد.',
-      spelling: 'درست است؛ املای دقیقش را ببین.',
-      wrong_article: 'خود کلمه درست بود، ولی حرف تعریفش نه.',
-    } satisfies Record<GradeNote, string>,
-    exit: 'خروج از آزمون',
-    exitConfirm: 'آزمون نیمه‌تمام است. بیرون بروی جواب‌های تا اینجا ذخیره می‌شود.',
-    resultTitle: 'نتیجهٔ آزمون',
-    score: (correct: number, total: number) => `${fa(correct)} از ${fa(total)}`,
-    resultGreat: 'عالی بود! این لغت‌ها را خوب بلدی.',
-    resultGood: 'خوب بود. چند لغت هنوز تمرین می‌خواهد.',
-    resultKeepGoing: 'اشکالی ندارد؛ همین که فهمیدی کدام‌ها سخت‌اند، یک قدم جلو رفته‌ای.',
-    missed: 'این‌ها را دوباره ببین',
-    correctLabel: 'جواب درست',
-    accuracyLabel: 'درصد درست',
-    again: 'یک آزمون دیگر',
-    studyHint: 'لغت‌هایی که اشتباه شدند در آزمون‌های بعدی بیشتر می‌آیند.',
-  },
-
-  stats: {
-    title: 'آمار',
-    empty: 'هنوز آماری نیست. چند لغت اضافه کن و مرور را شروع کن.',
-    insightStart: 'هر مروری که انجام بدهی اینجا دیده می‌شود.',
-    insightStreak: (n: number) => `${fa(n)} روز است که پشت سر هم مرور می‌کنی. همین‌طور ادامه بده!`,
-    insightRetention: (p: string) => `موقع مرور ${p} لغت‌ها یادت مانده بود.`,
-    insightMastered: (n: number) => `${fa(n)} لغت در حافظه‌ات تثبیت شده.`,
-    words: 'لغت‌ها',
-    wordsTotal: (n: number) => `${fa(n)} لغت در بانک`,
-    periodTitle: 'مرور',
-    today: 'امروز',
-    week: '۷ روز',
-    month: '۳۰ روز',
-    reviews: 'مرور',
-    minutes: 'دقیقه',
-    newWords: 'لغت تازه',
-    activeDays: 'روز فعال',
-    retention: 'یادآوری',
-    retentionHelp: 'یادآوری یعنی از لغت‌هایی که قبلاً یاد گرفته بودی، چند درصد را موقع مرور به یاد آوردی.',
-    streakNow: 'روز پیاپی',
-    streakBest: 'بهترین رکورد',
-    activity: 'مرور در ۳۰ روز گذشته',
-    activityNone: 'در این ۳۰ روز مروری انجام نشده.',
-    forecast: 'مرورهای ۱۴ روز آینده',
-    forecastToday: 'امروز',
-    forecastHelp: 'تعداد کارت‌هایی که هر روز موعدشان می‌رسد، اگر لغت تازه‌ای اضافه نشود.',
-    forecastNone: 'در دو هفتهٔ آینده کارتی موعد ندارد.',
-    levels: 'سطح لغت‌ها',
-    noLevel: 'بدون سطح',
-    difficult: 'لغت‌های سخت',
-    difficultNone: 'لغتی نیست که مدام فراموش شود.',
-    lapses: (n: number) => `${fa(n)} بار فراموش شده`,
-    quiz: 'آزمون‌ها (۹۰ روز)',
-    quizAnswersLabel: 'جواب در آزمون',
-    quizNone: 'هنوز آزمونی نداده‌ای.',
-    perDay: (key: string, n: number) => `${key}: ${fa(n)} مرور`,
-    weekTitle: 'هفتی که گذشت',
-    weekNone: 'این هفته هنوز مروری نکرده‌ای. با چند کارت شروع کن.',
-    saidReviews: (minutes: number) => `کارت مرور کردی، در ${fa(minutes)} دقیقه`,
-    saidNew: 'کلمهٔ تازه یاد گرفتی',
-    saidRetention: 'از کلمه‌های قبلی را درست به یاد آوردی',
-    saidDays: 'روز از هفت روز درس خواندی',
-    journey: 'مسیر کلمه‌ها',
-    journeyHelp: 'هر کلمه از «تازه» شروع می‌کند و با هر مرور درست یک قدم جلو می‌رود تا «تثبیت‌شده»؛ یعنی دیگر به‌سختی فراموشش می‌کنی.',
-    calendar: 'پنج هفتهٔ اخیر',
-    streakLine: (now: number, best: number) => `${fa(now)} روز پیاپی، بهترین ${fa(best)}`,
-    less: 'کمتر',
-    more: 'بیشتر',
-  },
-
-  settings: {
-    title: 'تنظیمات',
-    account: 'حساب',
-    displayName: 'نام',
-    email: 'ایمیل',
-    signOut: 'خروج از حساب',
-    signOutConfirm: 'از حساب خارج می‌شوی و داده‌های این دستگاه پاک می‌شود. اطلاعاتت روی سرور می‌ماند.',
-    signOutPending: (n: number) => `${fa(n)} تغییر هنوز به سرور نرسیده و با خروج از بین می‌رود. اول به اینترنت وصل شو.`,
-    learning: 'یادگیری',
-    newPerDay: 'کلمهٔ تازه در روز',
-    newPerDayHelp: 'هر کلمهٔ تازه در روزهای بعد چند بار مرور می‌شود.',
-    newPerDayWarn: 'عدد بالا یعنی مرور روزانهٔ خیلی بیشتر در هفته‌های بعد.',
-    newPerDayZero: 'با صفر، فقط کلمه‌های قبلی مرور می‌شوند.',
-    dailyGoal: 'هدف روزانه',
-    dailyGoalHelp: 'هدف زمانی جدا از تعداد کلمهٔ تازه است.',
-    minutes: (n: number) => `${fa(n)} دقیقه`,
-    advanced: 'تنظیمات پیشرفتهٔ یادگیری',
-    reviewLimit: 'سقف مرور روزانه',
-    reviewLimitAuto: 'خودکار (بدون سقف)',
-    reviewLimitCustom: 'سقف مشخص',
-    reviewLimitHelp: 'در حالت خودکار همهٔ کارت‌های موعددار نشان داده می‌شوند. سقف گذاشتن بقیه را به روزهای بعد می‌برد.',
-    retention: 'دقت هدف',
-    retentionHelp: 'یعنی می‌خواهی موقع مرور چند درصد کلمه‌ها یادت بیاید. عدد بالاتر یعنی مرور بیشتر.',
-    learningSteps: 'گام‌های یادگیری کلمهٔ تازه: ۱ دقیقه و ۱۰ دقیقه. گام یادگیری دوباره: ۱۰ دقیقه.',
-    reverseCards: 'کارت معکوس (فارسی به آلمانی)',
-    reverseCardsHelp: 'برای هر لغت یک کارت دوم ساخته می‌شود که معنی فارسی را نشان می‌دهد و آلمانی‌اش را می‌پرسد. این کارت چند روز بعد از یاد گرفتن خود لغت می‌آید و مرور روزانه را بیشتر می‌کند.',
-    audio: 'صدا',
-    speechRate: 'سرعت تلفظ',
-    speechSlow: 'آهسته',
-    speechNormal: 'عادی',
-    autoplay: 'پخش خودکار تلفظ روی کارت',
-    audioTest: 'امتحان صدا',
-    aiVoice: 'صدای طبیعی (هوش مصنوعی)',
-    aiVoiceHelp: 'با اینترنت، واژه‌ها و جمله‌ها با صدای طبیعی خوانده می‌شوند. هر متن فقط یک بار ساخته و بعد ذخیره می‌شود. بدون اینترنت، صدای خود گوشی پخش می‌شود.',
-    voiceFemale: 'صدای زن',
-    voiceMale: 'صدای مرد',
-    audioUnavailable: 'این مرورگر صدای آلمانی ندارد.',
-    appearance: 'ظاهر',
-    themes: { system: 'هماهنگ با دستگاه', light: 'روشن', dark: 'تیره' },
-    data: 'داده و همگام‌سازی',
-    syncNow: 'همگام‌سازی',
-    syncing: 'در حال همگام‌سازی…',
-    synced: (when: string) => `آخرین همگام‌سازی: ${when}`,
-    neverSynced: 'هنوز همگام نشده',
-    pending: (n: number) => `${fa(n)} تغییر در انتظار ارسال`,
-    export: 'دریافت فایل داده‌ها',
-    exportHelp: 'همهٔ کلمه‌ها، کارت‌ها و تاریخچهٔ مرورت در یک فایل JSON.',
-    exportFailed: 'فایل ساخته نشد. اتصال اینترنت را نگاه کن.',
-    privacy: 'حریم خصوصی',
-    privacyBody:
-      'کلمه‌ها و تاریخچهٔ مرور تو فقط برای خودت قابل دیدن است. هر کلمه‌ای که می‌سازی برای تحلیل به OpenAI فرستاده می‌شود؛ ایمیل و نام تو فرستاده نمی‌شود. تحلیل آمادهٔ هر کلمه بین کاربران مشترک است، ولی ویرایش‌های تو نه.',
-    deleteAccount: 'حذف کامل حساب',
-    deleteHelp: 'حساب، همهٔ کلمه‌ها و تاریخچهٔ مرور برای همیشه پاک می‌شود و قابل برگشت نیست.',
-    deleteConfirmLabel: 'برای تأیید، ایمیلت را بنویس',
-    deleteConfirmButton: 'حسابم را برای همیشه پاک کن',
-    deleted: 'حسابت پاک شد.',
-    about: 'دربارهٔ هدهد',
-    version: 'نسخه',
-    scheduler: 'الگوریتم مرور',
-    aboutBody: 'زمان‌بندی مرور با FSRS انجام می‌شود (پیاده‌سازی متن‌باز ts-fsrs). قلم فارسی: وزیرمتن.',
-    saved: 'ذخیره شد',
-  },
-
-  sync: {
-    offlineBanner: 'آفلاین هستی. مرور کار می‌کند و با وصل شدن اینترنت ذخیره می‌شود.',
-    firstLoad: 'در حال آوردن کلمه‌هایت…',
-    firstLoadFailed: 'نتوانستم اطلاعاتت را بیاورم.',
-  },
-
-  pos: {
-    noun: 'اسم',
-    verb: 'فعل',
-    adjective: 'صفت',
-    adverb: 'قید',
-    preposition: 'حرف اضافه',
-    conjunction: 'حرف ربط',
-    pronoun: 'ضمیر',
-    article: 'حرف تعریف',
-    numeral: 'عدد',
-    interjection: 'صوت',
-    particle: 'ادات',
-    phrase: 'عبارت',
-    sentence: 'جمله',
-    other: 'سایر',
-  } satisfies Record<PartOfSpeech, string>,
-
-  register: {
-    neutral: 'معمولی',
-    informal: 'خودمانی',
-    formal: 'رسمی',
-    slang: 'عامیانه',
-    vulgar: 'بی‌ادبانه',
-  } satisfies Record<Register, string>,
-
-  frequency: { 1: 'کم‌کاربرد', 2: 'رایج', 3: 'خیلی رایج' } as Record<1 | 2 | 3, string>,
-
-  status: {
-    new: 'تازه',
-    learning: 'در حال یادگیری',
-    review: 'در حال تکرار',
-    mastered: 'تثبیت‌شده',
-  } satisfies Record<WordStatus, string>,
-
-  levels: { easy: 'ساده', medium: 'متوسط', hard: 'پیشرفته' } satisfies Record<ExampleLevel, string>,
-
-  cefr: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] satisfies Cefr[],
-
-  store: {
-    title: 'بسته‌های واژه',
-    intro: 'بسته‌های آماده و رایگان. هر بسته چند درس کوتاه دارد؛ هر درس را که شروع کنی، واژه‌هایش به مرور روزانه‌ات اضافه می‌شود.',
-    tile: 'بسته‌های واژه',
-    tileHint: 'واژه‌ها و جمله‌های آماده',
-    mine: 'بسته‌های من',
-    all: 'همه',
-    kinds: { words: 'واژه', sentences: 'جمله', expressions: 'اصطلاح', mixed: 'ترکیبی' } as Record<'words' | 'sentences' | 'expressions' | 'mixed', string>,
-    levels: { basic: 'پایه', advanced: 'پیشرفته' } as Record<'basic' | 'advanced', string>,
-    size: (items: number, lessons: number) => `${fa(items)} واژه، ${fa(lessons)} درس`,
-    learning: 'در حال یادگیری',
-    empty: 'هنوز بسته‌ای منتشر نشده. به‌زودی!',
-    emptyFilter: 'در این دسته بسته‌ای نیست.',
-    unavailable: 'فروشگاه هنوز روی سرور راه نیفتاده.',
-    notFound: 'این بسته پیدا نشد.',
-    progress: (learned: number, total: number) => `${fa(learned)} از ${fa(total)} یاد گرفته‌شده`,
-    lesson: (n: number) => `درس ${fa(n)}`,
-    lessonDone: 'سبز شد',
-    lessonActive: 'در حال یادگیری',
-    lessonOpen: 'آمادهٔ شروع',
-    lessonLocked: 'قفل',
-    lessonWords: (n: number) => `${fa(n)} واژه`,
-    lessonProgress: (done: number, total: number) => `${fa(done)} از ${fa(total)} یاد گرفته`,
-    continueLesson: (n: number) => `ادامهٔ درس ${fa(n)}`,
-    continueHint: 'واژه‌های این درس در مرور روزانه هم می‌آیند.',
-    lockedHint: 'این درس وقتی باز می‌شود که همهٔ واژه‌های درس قبل را دست‌کم یک بار درست جواب داده باشی.',
-    start: (n: number) => `شروع درس ${fa(n)}`,
-    starting: 'در حال اضافه کردن…',
-    started: (n: number) => `${fa(n)} مورد به بانک واژه اضافه شد`,
-    startedNone: 'همهٔ موردهای این درس را از قبل در بانک واژه داشتی.',
-    studyPack: 'مرور همین بسته',
-    studyPackHint: 'فقط کارت‌های این بسته؛ زمان‌بندی همان مرور روزانه است.',
-    nothingToStudy: 'الان کارتی از این بسته برای مرور نیست.',
-    preview: 'نگاهی به موردها',
-    packOnly: (title: string) => `فقط بستهٔ «${title}»`,
-  },
-
-  report: {
-    button: 'گزارش اشکال این کارت',
-    title: 'چه چیزی درست نیست؟',
-    reasons: { meaning: 'معنی', example: 'مثال‌ها', grammar: 'دستور زبان', audio: 'تلفظ', other: 'چیز دیگر' } as Record<'meaning' | 'example' | 'grammar' | 'audio' | 'other', string>,
-    message: 'توضیح (اختیاری)',
-    messagePlaceholder: 'مثلاً: معنی دوم اشتباه است، باید «…» باشد.',
-    send: 'فرستادن گزارش',
-    sent: 'ممنون! گزارشت رسید و بررسی می‌شود.',
-  },
-
-  feedback: {
-    button: 'گزارش مشکل یا پیشنهاد',
-    hint: 'هر چیزی که خراب است یا دوست داری اضافه شود، بنویس.',
-    title: 'به ما بگو',
-    kinds: { bug: 'مشکل', idea: 'پیشنهاد', other: 'چیز دیگر' } as Record<'bug' | 'idea' | 'other', string>,
-    placeholder: 'چه اتفاقی افتاد؟ یا چه چیزی دوست داری اضافه شود؟',
-    send: 'فرستادن',
-    sent: 'ممنون! پیامت رسید.',
-    empty: 'اول چند کلمه بنویس.',
-  },
-
-  friends: {
-    title: 'با دوستان',
-    tile: 'با دوستان',
-    tileHint: 'جدول هفته',
-    myCode: 'کد دوستی من',
-    share: 'فرستادن کد',
-    shareText: (code: string, url: string) => `با هم آلمانی یاد بگیریم! در هدهد کد دوستی من را وارد کن: ${code}\n${url}`,
-    copied: 'کد کپی شد',
-    addTitle: 'افزودن دوست',
-    addLabel: 'کد دوستی',
-    add: 'افزودن',
-    badCode: 'کد دوستی ۸ حرف و عدد است، مثل ABCD2345.',
-    privacy: 'دوستانت فقط اسم، روزهای پیاپی، تعداد جواب‌های این هفته و تعداد واژه‌های یادگرفته‌ات را می‌بینند؛ خود واژه‌ها را نه.',
-    results: {
-      sent: 'درخواست فرستاده شد. وقتی دوستت قبول کند، اینجا می‌آید.',
-      accepted: 'حالا با هم دوستید!',
-      not_found: 'کسی با این کد پیدا نشد.',
-      self: 'این کد خودت است 🙂',
-      exists: 'با این نفر از قبل دوست هستی یا درخواست فرستاده‌ای.',
-      too_many: 'درخواست‌های بی‌جواب زیاد است؛ کمی صبر کن.',
-    } as Record<'sent' | 'accepted' | 'not_found' | 'self' | 'exists' | 'too_many', string>,
-    incoming: 'درخواست‌های دوستی',
-    accept: 'قبول',
-    decline: 'نه',
-    board: 'جدول این هفته',
-    thisWeek: 'از دوشنبه',
-    alone: 'هنوز دوستی اضافه نکرده‌ای. کدت را بفرست تا با هم یاد بگیرید.',
-    me: 'تو',
-    noName: 'بی‌نام',
-    learned: (n: number) => `${fa(n)} واژهٔ یادگرفته`,
-    answers: 'جواب هفته',
-    days: 'روز پیاپی',
-    streak: 'روزهای پیاپی',
-    rank: (n: number) => `رتبهٔ ${fa(n)}`,
-    waiting: (names: string) => `منتظر جواب: ${names}`,
-    remove: 'حذف دوست',
-    removeConfirm: (name: string) => `${name} از فهرست دوستانت حذف شود؟`,
-    unavailable: 'بخش دوستان هنوز روی سرور راه نیفتاده.',
-  },
-
-  stories: {
-    title: 'داستان کوتاه',
-    tile: 'داستان',
-    tileHint: 'با واژه‌های خودت',
-    intro: 'با واژه‌هایی که داری یاد می‌گیری یک داستان کوتاه برایت می‌نویسم، با ترجمهٔ هر جمله.',
-    needWords: (n: number) => `برای داستان دست‌کم ${fa(n)} واژه لازم است که مرورشان را شروع کرده باشی. اول چند کارت مرور کن.`,
-    level: 'سطح',
-    write: 'نوشتن داستان',
-    writing: 'دارم می‌نویسم… (تا نیم دقیقه)',
-    limitHelp: 'روزی حداکثر ۳ داستان.',
-    limit: 'سهم داستان امروز تمام شد. فردا دوباره سر بزن.',
-    unavailable: 'داستان‌ها هنوز روی سرور راه نیفتاده.',
-    mine: 'داستان‌های من',
-    unread: 'تازه',
-    notFound: 'این داستان پیدا نشد.',
-    playAll: 'پخش صدای همه',
-    showAll: 'نمایش همهٔ ترجمه‌ها',
-    hideAll: 'پنهان کردن ترجمه‌ها',
-    tapHelp: 'روی هر جمله بزن تا ترجمه‌اش را ببینی. واژه‌های خودت رنگی‌اند.',
-    yourWords: (n: number) => `${fa(n)} واژهٔ تو در این داستان`,
-    another: 'یک داستان دیگر',
-  },
-
-  deck: {
-    title: 'از Anki یا Quizlet',
-    entry: 'وارد کردن از Anki یا Quizlet',
-    intro: 'فایل متنی کارت‌هایت را از Anki یا Quizlet انتخاب کن. هر خط یک کارت: آلمانی و فارسی (ترتیبشان مهم نیست).',
-    pickFile: 'انتخاب فایل',
-    howTitle: 'چطور فایل بگیرم؟',
-    how: [
-      'Anki: روی دسته ← Export ← «Notes in Plain Text (.txt)».',
-      'Quizlet: مجموعه ← ⋯ ← Export ← متن را کپی کن و پایین همین صفحه بچسبان.',
-      'هر فایل متنی که در هر خط یک واژهٔ آلمانی و معنی فارسی‌اش (با Tab یا ویرگول جدا) دارد هم کار می‌کند.',
-    ],
-    paste: 'یا متن را اینجا بچسبان',
-    read: 'خواندن متن',
-    found: (n: number) => `${fa(n)} کارت پیدا شد`,
-    countNew: ' کارت تازه',
-    countExisting: ' از قبل در بانک واژه هست',
-    countSkipped: ' خط قابل خواندن نبود',
-    andMore: (n: number) => `و ${fa(n)} کارت دیگر`,
-    nothingNew: 'کارت تازه‌ای در این فایل نیست.',
-    importQuick: (n: number) => `وارد کردن ${fa(n)} کارت`,
-    importing: (done: number, total: number) => `${fa(done)} از ${fa(total)}…`,
-    quickHelp: 'همان‌طور که هست، بدون هوش مصنوعی: سریع و رایگان. بعداً روی هر کارت می‌توانی «ساخت دوباره با هوش مصنوعی» را بزنی تا مثال و صرف فعل هم بگیرد.',
-    withAi: (n: number) => `ساختن ${fa(n)} کارت کامل با هوش مصنوعی`,
-    aiHelp: (max: number) => `با مثال، تلفظ و دستور زبان؛ هر بار حداکثر ${fa(max)} کارت و هر کارت را خودت تأیید می‌کنی.`,
-    imported: (n: number) => `${fa(n)} کارت به بانک واژه اضافه شد`,
-    other: 'یک فایل دیگر',
-    export: 'خروجی برای Anki',
-    exportHelp: 'خروجی برای Anki یک فایل متنی است که در Anki با «Import File» باز می‌شود.',
-  },
-
-  reminders: {
-    title: 'یادآوری‌ها',
-    offBody: 'می‌توانم وقت مرور، یا وقتی روزهای پیاپی‌ات در خطر است، روی گوشی خبرت کنم. روزی حداکثر دو پیام.',
-    turnOn: 'روشن کردن یادآوری‌ها',
-    turnOff: 'خاموش کردن روی این دستگاه',
-    enabled: 'یادآوری‌ها روشن شد',
-    denied: 'اجازهٔ اعلان داده نشد.',
-    deniedHelp: 'اجازهٔ اعلان برای هدهد بسته است. از تنظیمات گوشی یا مرورگر، اعلان‌های هدهد را دوباره مجاز کن.',
-    unsupported: 'این مرورگر اعلان پشتیبانی نمی‌کند.',
-    needsInstall: 'روی آیفون، اعلان فقط برای هدهدِ نصب‌شده کار می‌کند: در Safari دکمهٔ اشتراک‌گذاری ← «Add to Home Screen»، بعد هدهد را از صفحهٔ اصلی باز کن و دوباره اینجا بیا.',
-    daily: 'یادآوری روزانهٔ مرور',
-    dailyTime: 'ساعت یادآوری',
-    dailyHelp: 'فقط وقتی می‌آید که آن روز هنوز مرور نکرده باشی و کارتی منتظرت باشد.',
-    streak: 'هشدار روزهای پیاپی (ساعت ۲۰:۳۰)',
-    updates: 'خبرهای هدهد (بسته‌های تازه، نسخهٔ تازه)',
-    limitHelp: 'روزی حداکثر دو یادآوری.',
-    test: 'فرستادن یک اعلان آزمایشی',
-    testSent: 'فرستاده شد؛ چند ثانیه صبر کن.',
-    testNone: 'اعلانی فرستاده نشد. یادآوری‌ها را یک بار خاموش و روشن کن.',
-  },
-
-  staging: 'نسخهٔ آزمایشی',
-
-  update: {
-    title: 'نسخهٔ تازهٔ هدهد آمد!',
-    body: 'برای دیدن تغییرها یک بار تازه‌اش کن.',
-    reload: 'تازه کن',
-  },
-
-  news: {
-    title: 'خبر تازه',
-    dismiss: 'دیدم',
-  },
-
-  admin: {
-    title: 'پنل مدیریت',
-    entry: 'پنل مدیریت',
-    notAllowed: 'این بخش فقط برای مدیر است.',
-    notReady: 'بخش مدیریت هنوز روی سرور نصب نشده (فایل پایگاه داده شمارهٔ ۳).',
-    tabs: { overview: 'خلاصه', users: 'کاربران', inbox: 'صندوق', news: 'اطلاعیه', packs: 'بسته‌ها' },
-    // overview
-    usersTotal: 'کاربر',
-    usersNew: (n: number) => `${fa(n)} نفر در ۷ روز اخیر`,
-    activeToday: 'فعال امروز',
-    active7: (n: number) => `${fa(n)} نفر در ۷ روز`,
-    wordsTotal: 'واژهٔ ساخته‌شده',
-    reviewsToday: 'مرور امروز',
-    reviews7: (n: number) => `${fa(n)} در ۷ روز`,
-    aiToday: 'ساخت کارت با هوش مصنوعی امروز',
-    inboxNew: (f: number, r: number, e: number) => `${fa(f)} پیام تازه، ${fa(r)} گزارش کارت، ${fa(e)} خطا در ۲۴ ساعت`,
-    // money
-    credit: 'اعتبار هوش مصنوعی',
-    remaining: 'باقی‌مانده (تخمینی)',
-    lowCredit: 'اعتبار کم شده؛ به‌زودی شارژ کن.',
-    spent: (usd: string, since: string) => `خرج‌شده از ${since}: ${usd}`,
-    noCredit: 'هنوز مبلغی ثبت نکرده‌ای. مبلغ شارژ را وارد کن تا باقی‌مانده حساب شود.',
-    costToday: 'هزینهٔ امروز',
-    cost7: 'هزینهٔ ۷ روز',
-    cost30: 'هزینهٔ ۳۰ روز',
-    perCard: (usd: string) => `هر کارت تازه حدوداً ${usd}`,
-    cardsLeft: (n: number) => `با این اعتبار حدوداً ${fa(n)} کارت تازه ساخته می‌شود.`,
-    costChart: 'هزینهٔ روزانه (۳۰ روز)',
-    addTopup: 'ثبت شارژ',
-    setBalance: 'ثبت موجودی',
-    amount: 'مبلغ (دلار)',
-    note: 'یادداشت',
-    creditHelp: '«شارژ» به اعتبار اضافه می‌شود. «موجودی واقعی» عدد صفحهٔ OpenAI است و حساب را از نو شروع می‌کند.',
-    creditSaved: 'ثبت شد',
-    history: 'سابقهٔ شارژ',
-    kindTopup: 'شارژ',
-    kindBalance: 'موجودی',
-    prices: 'قیمت‌ها و سقف‌ها',
-    pricesHelp: 'قیمت‌ها به دلار برای هر یک میلیون توکن است (مطابق صفحهٔ قیمت OpenAI).',
-    priceInput: 'ورودی',
-    priceOutput: 'خروجی',
-    priceDefault: 'مدل متن',
-    priceTts: 'صدا',
-    dailyUsd: 'سقف خرج روزانه (دلار)',
-    newUserDays: 'روزهای اول هر حساب تازه',
-    newUserPerDay: 'سقف کارت در روز برای حساب تازه',
-    ttsPerDay: 'سقف صدا در روز برای هر نفر',
-    storiesPerDay: 'سقف داستان در روز',
-    saveSettings: 'ذخیرهٔ قیمت‌ها و سقف‌ها',
-    // users
-    search: 'جست‌وجوی ایمیل یا نام',
-    joined: (when: string) => `عضو از ${when}`,
-    lastActive: (when: string) => `آخرین مرور ${when}`,
-    neverActive: 'هنوز مروری نکرده',
-    userStats: (words: number, reviews: number, ai: number, cost: string, packs: number) =>
-      `${fa(words)} واژه، ${fa(reviews)} مرور در ۳۰ روز، ${fa(ai)} کارت هوش مصنوعی (${cost})، ${fa(packs)} بسته`,
-    adminBadge: 'مدیر',
-    blockedBadge: 'مسدود',
-    limitBadge: (n: number) => `سقف ${fa(n)} در روز`,
-    setLimit: 'سقف هوش مصنوعی',
-    limitPrompt: 'چند کارت در روز؟ خالی بگذار تا سقف عادی برگردد.',
-    limitSaved: 'سقف ذخیره شد',
-    block: 'مسدود کردن',
-    unblock: 'رفع مسدودی',
-    blockConfirm: (email: string) => `حساب ${email} مسدود شود؟ دیگر نمی‌تواند وارد شود یا کارت بسازد.`,
-    blocked: 'مسدود شد',
-    unblocked: 'آزاد شد',
-    deleteUser: 'حذف حساب',
-    deleteConfirm: (email: string) => `حساب ${email} و همهٔ داده‌هایش برای همیشه پاک شود؟`,
-    deletedUser: 'حساب پاک شد',
-    more: 'بیشتر',
-    noUsers: 'کاربری پیدا نشد.',
-    // inbox
-    feedbackTitle: 'پیام‌ها',
-    reportsTitle: 'گزارش کارت‌ها',
-    errorsTitle: 'خطاهای برنامه',
-    nothing: 'خبری نیست.',
-    markSeen: 'دیدم',
-    markDone: 'انجام شد',
-    statusNew: 'تازه',
-    statusSeen: 'دیده‌شده',
-    statusDone: 'انجام‌شده',
-    statusFixed: 'درست شد',
-    statusRejected: 'رد شد',
-    fix: 'درست کردن کارت',
-    reject: 'رد کردن',
-    fixTitle: 'درست کردن کارت مشترک',
-    fixHelp: 'این نسخهٔ درست‌شده برای همهٔ کسانی که از این به بعد این کلمه را بسازند استفاده می‌شود. کارت‌هایی که قبلاً ساخته شده تغییر نمی‌کنند.',
-    fixSave: 'ذخیره برای همه',
-    fixed: (n: number) => (n > 0 ? 'کارت مشترک درست شد' : 'کارت مشترکی با این نام پیدا نشد؛ گزارش بسته شد.'),
-    // news
-    newsTitle: 'عنوان',
-    newsBody: 'متن (اختیاری)',
-    newsAdd: 'انتشار اطلاعیه',
-    newsHelp: 'اطلاعیه یک بار در صفحهٔ خانهٔ همه نشان داده می‌شود. می‌توانی آن را به صورت اعلان هم بفرستی.',
-    newsAdded: 'منتشر شد',
-    newsPush: 'فرستادن اعلان',
-    newsPushConfirm: 'این اطلاعیه برای همهٔ کسانی که اعلان را روشن کرده‌اند فرستاده شود؟ فقط یک بار ممکن است.',
-    newsPushed: (n: number) => `برای ${fa(n)} دستگاه فرستاده شد`,
-    newsSent: 'اعلان فرستاده شده',
-    newsHide: 'پنهان کردن',
-    newsShow: 'نمایش دوباره',
-    newsHidden: 'پنهان',
-    // packs
-    newPack: 'بستهٔ تازه',
-    importFile: 'وارد کردن فایل بسته‌ها',
-    importHelp: 'فایل‌های JSON پوشهٔ content/packs. بسته‌ها منتشرنشده ساخته می‌شوند؛ بسته‌ای که همین نشانی را دارد کنار گذاشته می‌شود.',
-    imported: (packs: number, items: number) => `${fa(packs)} بسته با ${fa(items)} مورد ساخته شد`,
-    badFile: 'این فایل بستهٔ هدهد نیست.',
-    draftCount: (ready: number, total: number) => `${fa(ready)} از ${fa(total)} آماده`,
-    published: 'منتشرشده',
-    unpublished: 'پیش‌نویس',
-    packTitle: 'عنوان',
-    packSlug: 'نشانی (حروف انگلیسی کوچک و خط تیره)',
-    packDescription: 'توضیح',
-    packEmoji: 'ایموجی',
-    packTopic: 'موضوع',
-    packKind: 'نوع',
-    packLevel: 'سطح',
-    levelNone: 'بدون سطح',
-    lessonSize: 'تعداد مورد در هر درس',
-    sortOrder: 'ترتیب نمایش',
-    publish: 'انتشار در فروشگاه',
-    unpublish: 'برگرداندن به پیش‌نویس',
-    publishNeedsReady: 'اول دست‌کم یک مورد آماده لازم است.',
-    savePack: 'ذخیرهٔ مشخصات',
-    packSaved: 'ذخیره شد',
-    deletePack: 'حذف بسته',
-    deletePackConfirm: 'این بسته و همهٔ موردهایش حذف شود؟ واژه‌هایی که کاربران از آن برداشته‌اند می‌مانند.',
-    items: 'موردها',
-    paste: 'افزودن فهرست',
-    pasteHelp: 'هر خط یک واژه، اصطلاح یا جمله. برای راهنمایی هوش مصنوعی دربارهٔ معنی، بعد از «|» بنویس؛ مثلاً: die Bank | نیمکت',
-    pasteAdd: 'افزودن به فهرست',
-    added: (n: number) => `${fa(n)} مورد اضافه شد`,
-    generate: (n: number) => `ساختن ${fa(n)} کارت با هوش مصنوعی`,
-    generating: (done: number, total: number) => `در حال ساختن… ${fa(done)} از ${fa(total)}`,
-    stop: 'توقف',
-    generated: (ok: number, failed: number) => `${fa(ok)} کارت ساخته شد${failed ? `، ${fa(failed)} ناموفق` : ''}`,
-    estimate: (usd: string) => `هزینهٔ تقریبی: ${usd}`,
-    itemStatus: { draft: 'پیش‌نویس', ready: 'آماده', failed: 'ناموفق' } as Record<'draft' | 'ready' | 'failed', string>,
-    retry: 'دوباره',
-    hint: 'راهنمای معنی',
-    editItem: 'ویرایش کارت',
-    removeItem: 'حذف مورد',
-    itemSaved: 'کارت ذخیره شد',
-    relesson: 'تقسیم دوباره به درس‌ها',
-    relessoned: 'درس‌ها از نو تقسیم شد',
-  },
-
-  errors: {
-    offline: 'به اینترنت وصل نیستی.',
-    timeout: 'خیلی طول کشید و جوابی نیامد.',
-    auth: 'باید دوباره وارد حسابت شوی.',
-    duplicate: 'این کلمه از قبل در بانک واژه‌ات هست.',
-    conflict: 'این مورد جای دیگری تغییر کرده است.',
-    rate_limit: 'تعداد درخواست‌ها زیاد شد. کمی بعد دوباره امتحان کن.',
-    rate_limit_day: 'سقف ساخت کلمه برای امروز پر شده. فردا دوباره امتحان کن.',
-    validation: 'ورودی پذیرفته نشد.',
-    not_configured: 'سرویس هوش مصنوعی هنوز راه‌اندازی نشده است.',
-    ai_quota: 'اعتبار حساب هوش مصنوعی تمام شده است.',
-    not_found: 'پیدا نشد.',
-    server: 'سرور جواب درستی نداد. کمی بعد دوباره امتحان کن.',
-    ai_invalid: 'جوابی که هوش مصنوعی داد قابل استفاده نبود. دوباره امتحان کن.',
-  },
+function deepCopy<T>(value: T): T {
+  if (Array.isArray(value)) return value.map(deepCopy) as T
+  if (!isPlain(value)) return value
+  const out: Plain = {}
+  deepAssign(out, value)
+  return out as T
 }
+
+/**
+ * Copies a dictionary into `t` in place. Getters stay getters, so texts that name a language
+ * ("کلمهٔ آلمانی") follow the deck that is open at the moment they are read.
+ */
+function deepAssign(target: Plain, source: Plain): void {
+  for (const [k, d] of Object.entries(Object.getOwnPropertyDescriptors(source))) {
+    if (d.get) {
+      Object.defineProperty(target, k, { get: d.get, enumerable: true, configurable: true })
+      continue
+    }
+    const v = d.value as unknown
+    const current = Object.getOwnPropertyDescriptor(target, k)
+    if (isPlain(v) && current && !current.get && isPlain(current.value)) deepAssign(current.value as Plain, v)
+    else Object.defineProperty(target, k, { value: deepCopy(v), writable: true, enumerable: true, configurable: true })
+  }
+}
+
+export const t: Strings = deepCopy(faStrings)
+
+let current: UiLanguage = 'fa'
+
+export const currentLanguage = (): UiLanguage => current
+export const hasDictionary = (code: UiLanguage): boolean => !!DICTIONARIES[code]
+
+/** The app's name as written in the interface language (هدهد / Hodhod). */
+export const appName = (): string => UI_LANGUAGE_INFO[current].appName
+
+/** Switches the whole interface: texts, number and date formats, and the page direction. */
+export function setLanguage(code: string | null | undefined): UiLanguage {
+  const next: UiLanguage = isUiLanguage(code) ? code : DEFAULT_LANGUAGE
+  current = next
+  deepAssign(t as unknown as Plain, (DICTIONARIES[next] ?? enStrings) as unknown as Plain)
+  const info = UI_LANGUAGE_INFO[next]
+  setFormatLocale(info.intl)
+  if (typeof document !== 'undefined') {
+    document.documentElement.lang = next
+    document.documentElement.dir = info.dir
+    document.title = info.appName
+  }
+  return next
+}
+
 
 /** A sentence a person can act on, for any error from the data layer. */
 export function describeError(error: AppError): string {
@@ -1047,42 +100,42 @@ export function describeError(error: AppError): string {
   return t.errors[error.kind] ?? t.errors.server
 }
 
-function describePath(path: string): string {
+export function describePath(path: string): string {
   const f = t.draft.fields
   const parts = path.split('.')
-  const n = (i: number) => fa(Number(parts[i]) + 1)
+  const n = (i: number) => Number(parts[i]) + 1
   if (parts[0] === 'lemma') return f.word
   if (parts[0] === 'pos') return f.pos
   if (parts[0] === 'cefr') return f.cefr
   if (parts[0] === 'ipa') return f.ipa
   if (parts[0] === 'meanings') {
-    if (parts.length === 1) return 'معنی‌ها'
-    if (parts[2] === 'translation') return `${f.translation}ِ معنی ${n(1)}`
-    if (parts[2] === 'note') return `${f.meaningNote}ِ معنی ${n(1)}`
+    if (parts.length === 1) return f.meaningsAll
+    if (parts[2] === 'translation') return f.ofMeaning(f.translation, n(1))
+    if (parts[2] === 'note') return f.ofMeaning(f.meaningNote, n(1))
     if (parts[2] === 'examples') {
-      if (parts.length === 3) return `مثال‌های معنی ${n(1)}`
-      const which = parts[4] === 'de' ? f.exampleDe : parts[4] === 'fa' ? f.exampleFa : 'مثال'
-      return `${which} (معنی ${n(1)}، مثال ${n(3)})`
+      if (parts.length === 3) return f.examplesOf(n(1))
+      const which = parts[4] === 'de' ? f.exampleDe : parts[4] === 'fa' ? f.exampleFa : f.example
+      return f.exampleOf(which, n(1), n(3))
     }
-    return `معنی ${n(1)}`
+    return f.meaningN(n(1))
   }
-  if (parts[0] === 'noun') return parts[1] === 'article' ? f.article : parts[1] === 'plural' ? f.plural : 'اطلاعات اسم'
+  if (parts[0] === 'noun') return parts[1] === 'article' ? f.article : parts[1] === 'plural' ? f.plural : f.nounInfo
   if (parts[0] === 'verb') {
     const tenses: Record<string, string> = {
       praesens: 'Präsens', praeteritum: 'Präteritum', konjunktiv1: 'Konjunktiv I', konjunktiv2: 'Konjunktiv II',
       imperativ: 'Imperativ', partizip2: 'Partizip II', auxiliary: f.auxiliary, reflexive: f.reflexive, government: f.government,
     }
-    return parts[1] && tenses[parts[1]] ? `صرف ${tenses[parts[1]]}` : 'اطلاعات فعل'
+    return parts[1] && tenses[parts[1]] ? f.tenseOf(tenses[parts[1]]!) : f.verbInfo
   }
-  if (parts[0] === 'adjective') return 'صفت برتر و برترین'
+  if (parts[0] === 'adjective') return f.adjectiveForms
   if (parts[0] === 'synonyms') return f.synonyms
   if (parts[0] === 'antonyms') return f.antonyms
-  if (parts[0] === 'collocations') return parts.length > 1 ? `ترکیب ${n(1)}` : f.collocations
+  if (parts[0] === 'collocations') return parts.length > 1 ? f.collocationN(n(1)) : f.collocations
   if (parts[0] === 'literal') return f.literal
   if (parts[0] === 'register') return f.register
   if (parts[0] === 'frequency') return f.frequency
   if (parts[0] === 'alternatives') return f.alternatives
   if (parts[0] === 'reply') return f.reply
   if (parts[0] === 'notes') return f.notes
-  return 'یک بخش'
+  return f.somePart
 }

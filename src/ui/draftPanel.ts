@@ -114,8 +114,8 @@ export function draftPanel(ctx: Ctx, draft: Draft, options: DraftPanelOptions): 
       {
         class: `btn big ${options.compactToggle ? 'square' : ''}`,
         type: 'button',
-        'aria-label': draft.editing ? 'پیش‌نمایش' : t.common.edit,
-        title: draft.editing ? 'پیش‌نمایش' : t.common.edit,
+        'aria-label': draft.editing ? t.common.preview : t.common.edit,
+        title: draft.editing ? t.common.preview : t.common.edit,
         onclick: () => {
           if (draft.editing && !commit()) return
           draft.editing = !draft.editing
@@ -124,7 +124,7 @@ export function draftPanel(ctx: Ctx, draft: Draft, options: DraftPanelOptions): 
         },
       },
       icon(draft.editing ? 'check' : 'edit'),
-      options.compactToggle ? null : draft.editing ? 'پیش‌نمایش' : t.common.edit,
+      options.compactToggle ? null : draft.editing ? t.common.preview : t.common.edit,
     )
 
     el.replaceChildren(

@@ -1,4 +1,5 @@
 /** Tiny DOM helpers. Screens build real elements; text is always set as text, never as HTML. */
+import { learning } from './learning.ts'
 
 type Child = Node | string | number | null | undefined | false
 type Props = {
@@ -39,7 +40,7 @@ export function replace(parent: Element, ...children: (Child | Child[])[]): void
 
 /** German text inside the Persian interface: isolated, left-to-right, with the right font and language. */
 export function de(text: string, className = ''): HTMLElement {
-  return h('bdi', { class: `de ${className}`.trim(), lang: 'de', dir: 'ltr' }, text)
+  return h('bdi', { class: `de ${className}`.trim(), lang: learning(), dir: 'ltr' }, text)
 }
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
@@ -91,9 +92,15 @@ const ICONS = {
   share: '<path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 12v7h14v-7"/>',
   mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>',
   ear: '<path d="M7 9a5 5 0 0 1 10 0c0 3-3 4-3 7a3 3 0 0 1-6 0"/><path d="M10 9a2 2 0 0 1 4 0"/>',
+  wallet: '<path d="M4 7a2 2 0 0 1 2-2h12v4"/><path d="M4 7v11a2 2 0 0 0 2 2h14V9H6a2 2 0 0 1-2-2z"/><circle cx="16" cy="14.5" r="1.2"/>',
+  trend: '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/>',
 } as const
 
 export type IconName = keyof typeof ICONS
+
+/** Icons that point along the reading direction; they are mirrored in left-to-right languages. */
+const DIRECTIONAL = new Set<string>(['back'])
 
 export function icon(name: IconName, options: { filled?: boolean; size?: number } = {}): SVGSVGElement {
   const size = String(options.size ?? 22)
@@ -107,6 +114,6 @@ export function icon(name: IconName, options: { filled?: boolean; size?: number 
     'stroke-linecap': 'round',
     'stroke-linejoin': 'round',
     'aria-hidden': 'true',
-    class: 'icon',
+    class: DIRECTIONAL.has(name) ? 'icon icon-directional' : 'icon',
   })
 }

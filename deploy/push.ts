@@ -278,17 +278,31 @@ async function sendPush(subscription, message, keys, subject, fetchImpl = fetch)
 }
 
 // supabase/functions/_shared/push.ts
-var fa = (n) => new Intl.NumberFormat("fa-IR").format(n);
-function reminderMessage(kind, dueCount, streak) {
-  if (kind === "streak") {
-    return {
-      title: "روزهای پیاپی‌ات را نگه دار \uD83D\uDD25",
-      body: `${fa(streak)} روز پشت سر هم مرور کرده‌ای. امروز هم چند دقیقه وقت بگذار.`,
-      url: "#/study",
-      tag: "streak"
-    };
-  }
-  return { title: "وقت مرور است \uD83D\uDC26", body: `${fa(dueCount)} کارت منتظرت است.`, url: "#/study", tag: "daily" };
+var TEXTS = {
+  fa: { locale: "fa-IR", dailyTitle: "وقت مرور است \uD83D\uDC26", daily: (n) => `${n} کارت منتظرت است.`, nudge: "چند دقیقه با واژه‌هایت وقت بگذار.", streakTitle: "روزهای پیاپی‌ات را نگه دار \uD83D\uDD25", streak: (n) => `${n} روز پشت سر هم مرور کرده‌ای. امروز هم چند دقیقه وقت بگذار.`, testTitle: "هدهد \uD83D\uDC26", test: "یادآوری‌ها روشن است. همین‌طوری خبرت می‌کنم." },
+  ar: { locale: "ar", dailyTitle: "حان وقت المراجعة \uD83D\uDC26", daily: (n) => `${n} بطاقة بانتظارك.`, nudge: "خصّص بضع دقائق لكلماتك.", streakTitle: "حافظ على سلسلة أيامك \uD83D\uDD25", streak: (n) => `راجعت ${n} يومًا متتاليًا. خصّص بضع دقائق اليوم أيضًا.`, testTitle: "هدهد \uD83D\uDC26", test: "التذكيرات مفعّلة. هكذا سأخبرك." },
+  de: { locale: "de-DE", dailyTitle: "Zeit zum Wiederholen \uD83D\uDC26", daily: (n) => `${n} Karten warten auf dich.`, nudge: "Nimm dir ein paar Minuten für deine Wörter.", streakTitle: "Halte deine Serie \uD83D\uDD25", streak: (n) => `Du hast ${n} Tage in Folge geübt. Nimm dir heute auch ein paar Minuten.`, testTitle: "Hodhod \uD83D\uDC26", test: "Erinnerungen sind an. So melde ich mich bei dir." },
+  en: { locale: "en-GB", dailyTitle: "Time to review \uD83D\uDC26", daily: (n) => `${n} cards are waiting for you.`, nudge: "Take a few minutes for your words.", streakTitle: "Keep your streak \uD83D\uDD25", streak: (n) => `You have reviewed ${n} days in a row. Take a few minutes today too.`, testTitle: "Hodhod \uD83D\uDC26", test: "Reminders are on. This is how I will let you know." },
+  fr: { locale: "fr-FR", dailyTitle: "C’est l’heure de réviser \uD83D\uDC26", daily: (n) => `${n} cartes t’attendent.`, nudge: "Prends quelques minutes pour tes mots.", streakTitle: "Garde ta série \uD83D\uDD25", streak: (n) => `Tu as révisé ${n} jours d’affilée. Prends quelques minutes aujourd’hui aussi.`, testTitle: "Hodhod \uD83D\uDC26", test: "Les rappels sont activés. C’est ainsi que je te préviendrai." },
+  tr: { locale: "tr-TR", dailyTitle: "Tekrar zamanı \uD83D\uDC26", daily: (n) => `${n} kart seni bekliyor.`, nudge: "Kelimelerine birkaç dakika ayır.", streakTitle: "Serini koru \uD83D\uDD25", streak: (n) => `${n} gündür arka arkaya tekrar yapıyorsun. Bugün de birkaç dakika ayır.`, testTitle: "Hodhod \uD83D\uDC26", test: "Hatırlatmalar açık. Sana böyle haber vereceğim." },
+  uk: { locale: "uk-UA", dailyTitle: "Час повторити \uD83D\uDC26", daily: (n) => `На тебе чекають картки: ${n}.`, nudge: "Приділи кілька хвилин своїм словам.", streakTitle: "Не перервай серію \uD83D\uDD25", streak: (n) => `Ти повторюєш уже ${n} дн. поспіль. Приділи кілька хвилин і сьогодні.`, testTitle: "Hodhod \uD83D\uDC26", test: "Нагадування увімкнено. Ось так я тобі повідомлятиму." },
+  ru: { locale: "ru-RU", dailyTitle: "Время повторить \uD83D\uDC26", daily: (n) => `Тебя ждут карточки: ${n}.`, nudge: "Удели несколько минут своим словам.", streakTitle: "Сохрани серию \uD83D\uDD25", streak: (n) => `Ты повторяешь уже ${n} дн. подряд. Удели несколько минут и сегодня.`, testTitle: "Hodhod \uD83D\uDC26", test: "Напоминания включены. Вот так я буду тебе сообщать." },
+  es: { locale: "es-ES", dailyTitle: "Hora de repasar \uD83D\uDC26", daily: (n) => `${n} tarjetas te esperan.`, nudge: "Dedica unos minutos a tus palabras.", streakTitle: "Mantén tu racha \uD83D\uDD25", streak: (n) => `Llevas ${n} días seguidos repasando. Dedica unos minutos también hoy.`, testTitle: "Hodhod \uD83D\uDC26", test: "Los recordatorios están activados. Así te avisaré." },
+  nl: { locale: "nl-NL", dailyTitle: "Tijd om te herhalen \uD83D\uDC26", daily: (n) => `Er wachten ${n} kaarten op je.`, nudge: "Neem een paar minuten voor je woorden.", streakTitle: "Houd je reeks vast \uD83D\uDD25", streak: (n) => `Je hebt ${n} dagen op rij herhaald. Neem vandaag ook een paar minuten.`, testTitle: "Hodhod \uD83D\uDC26", test: "Herinneringen staan aan. Zo laat ik het je weten." }
+};
+var textsFor = (language) => TEXTS[language ?? "fa"] ?? TEXTS.fa;
+function reminderMessage(kind, dueCount, streak, language = "fa") {
+  const x = textsFor(language);
+  const n = (v) => new Intl.NumberFormat(x.locale).format(v);
+  if (kind === "streak")
+    return { title: x.streakTitle, body: x.streak(n(streak)), url: "#/study", tag: "streak" };
+  return { title: x.dailyTitle, body: dueCount > 0 ? x.daily(n(dueCount)) : x.nudge, url: dueCount > 0 ? "#/study" : "#/home", tag: "daily" };
+}
+async function languagesOf(db, userIds) {
+  if (userIds.length === 0)
+    return new Map;
+  const rows = await db.select(`profiles?id=in.(${userIds.join(",")})&select=id,native_language`).catch(() => []);
+  return new Map(rows.map((r) => [r.id, r.native_language]));
 }
 async function loadKeys(db) {
   const rows = await db.select("push_secrets?id=eq.1&select=vapid_public,vapid_private,cron_secret");
@@ -348,12 +362,13 @@ async function handlePush(req, env, fetchImpl = fetch) {
         throw new HttpError(401, "unauthorized", "Wrong scheduler secret");
       const candidates = await db.rpc("push_candidates", { p_now: new Date().toISOString() }) ?? [];
       let sent = 0;
+      const languages = await languagesOf(db, [...new Set(candidates.map((c) => c.user_id))]);
       for (const c of candidates) {
         const subs = await subsOf(db, `user_id=eq.${c.user_id}`);
-        const n = await deliver(db, subs, reminderMessage(c.kind, c.due_count, c.streak), keys, env, fetchImpl);
+        const n = await deliver(db, subs, reminderMessage(c.kind, c.due_count, c.streak, languages.get(c.user_id)), keys, env, fetchImpl);
         if (n > 0) {
           sent += n;
-          await db.insert("notification_log", { user_id: c.user_id, kind: c.kind }).catch(() => {
+          await db.insert("notification_log", { user_id: c.user_id, kind: c.kind, ref: c.ref ?? null }).catch(() => {
             return;
           });
         }
@@ -368,7 +383,8 @@ async function handlePush(req, env, fetchImpl = fetch) {
     if (action === "test") {
       const { keys } = await loadKeys(db);
       const subs = await subsOf(db, `user_id=eq.${user.id}`);
-      const sent = await deliver(db, subs, { title: "هدهد \uD83D\uDC26", body: "یادآوری‌ها روشن است. همین‌طوری خبرت می‌کنم.", url: "#/home", tag: "test" }, keys, env, fetchImpl);
+      const x = textsFor((await languagesOf(db, [user.id])).get(user.id));
+      const sent = await deliver(db, subs, { title: x.testTitle, body: x.test, url: "#/home", tag: "test" }, keys, env, fetchImpl);
       if (sent > 0)
         await db.insert("notification_log", { user_id: user.id, kind: "test" }).catch(() => {
           return;

@@ -75,8 +75,13 @@ export class AppData {
   readonly userId: string
   profile: Profile = DEFAULT_PROFILE
   settings: Settings = DEFAULT_SETTINGS
-  /** Words in the bank (archived ones are not kept in memory). */
+  /**
+   * Words of the deck on screen — the language being learned now (archived ones are not kept
+   * in memory). Words of the account's other languages wait in `allWords`.
+   */
   readonly words = new Map<string, Word>()
+  /** Every word of every language. */
+  private readonly allWords = new Map<string, Word>()
   /** The German → Persian card of each word, by word id. */
   readonly cards = new Map<string, Card>()
   /** The optional Persian → German card of each word, by word id. */
@@ -143,12 +148,13 @@ export class AppData {
       this.db.getMeta<string>('lastSyncedAt'),
       this.db.getMeta<[string, WordQuizStat][]>('quizStats'),
     ])
-    for (const word of words) if (!word.deletedAt) this.words.set(word.id, { ...word, tags: word.tags ?? [] })
+    for (const word of words) if (!word.deletedAt) this.putWord({ ...word, tags: word.tags ?? [] })
     for (const card of cards) this.remember(card)
     for (const [id, stat] of quizStats ?? []) this.quizStats.set(id, stat)
     this.outbox = outbox.sort((a, b) => (a.id < b.id ? -1 : 1))
     if (settings) this.settings = { ...DEFAULT_SETTINGS, ...settings }
     if (profile) this.profile = profile
+    this.rebuildDeck()
     for (const [key, day] of activity ?? []) this.activity.set(key, { ...day, matureReviews: day.matureReviews ?? 0, matureAgain: day.matureAgain ?? 0 })
     this.hasSyncedOnce = Boolean(lastSyncedAt)
     this.sync = { ...this.sync, lastSyncedAt: lastSyncedAt ?? null }
@@ -239,7 +245,11 @@ export class AppData {
       this.client.select<ProfileRow>('profiles', { select: 'display_name,native_language,active_target_language', id: `eq.${this.userId}` }),
       this.client.select<SettingsRow>('user_settings', { select: '*', user_id: `eq.${this.userId}` }),
     ])
-    if (profileRows[0]) this.profile = profileFromRow(profileRows[0])
+    if (profileRows[0]) {
+      const before = this.profile.activeTargetLanguage
+      this.profile = profileFromRow(profileRows[0])
+      if (before !== this.profile.activeTargetLanguage) this.rebuildDeck()
+    }
     if (settingsRows[0]) this.settings = settingsFromRow(settingsRows[0])
 
     await this.pullWords()
@@ -282,8 +292,8 @@ export class AppData {
       const words = rows.map(wordFromRow)
       await this.db.putMany('words', words)
       for (const word of words) {
-        if (word.deletedAt) this.words.delete(word.id)
-        else this.words.set(word.id, word)
+        if (word.deletedAt) this.dropWord(word.id)
+        else this.putWord(word)
       }
     })
   }
@@ -447,9 +457,54 @@ export class AppData {
     await this.db.putMany('cards', [card])
   }
 
+  private putWord(word: Word): void {
+    this.allWords.set(word.id, word)
+    if ((word.targetLanguage || 'de') === this.profile.activeTargetLanguage) this.words.set(word.id, word)
+    else this.words.delete(word.id)
+  }
+
+  private dropWord(id: string): void {
+    this.allWords.delete(id)
+    this.words.delete(id)
+  }
+
+  /** Puts the words of the active language on screen. */
+  private rebuildDeck(): void {
+    this.words.clear()
+    for (const word of this.allWords.values()) if ((word.targetLanguage || 'de') === this.profile.activeTargetLanguage) this.words.set(word.id, word)
+  }
+
+  /** Languages the account has words in, with their word counts (the active one always included). */
+  decks(): { language: string; words: number }[] {
+    const counts = new Map<string, number>([[this.profile.activeTargetLanguage, 0]])
+    for (const word of this.allWords.values()) counts.set(word.targetLanguage || 'de', (counts.get(word.targetLanguage || 'de') ?? 0) + 1)
+    return [...counts.entries()].map(([language, words]) => ({ language, words }))
+  }
+
+  /**
+   * Switches the account's languages: the language being learned (the deck on screen) and,
+   * optionally, the learner's own language (the interface language). Stored on the server.
+   */
+  async setLanguages(patch: { target?: string; native?: string }): Promise<void> {
+    const next = {
+      activeTargetLanguage: patch.target ?? this.profile.activeTargetLanguage,
+      nativeLanguage: patch.native ?? this.profile.nativeLanguage,
+    }
+    if (next.activeTargetLanguage === this.profile.activeTargetLanguage && next.nativeLanguage === this.profile.nativeLanguage) return
+    const rows = await this.client.update<ProfileRow>(
+      'profiles',
+      { id: `eq.${this.userId}` },
+      { active_target_language: next.activeTargetLanguage, native_language: next.nativeLanguage },
+    )
+    this.profile = rows[0] ? profileFromRow(rows[0]) : { ...this.profile, ...next }
+    await this.db.setMeta('profile', this.profile)
+    this.rebuildDeck()
+    this.emit()
+  }
+
   private async storeWord(word: Word): Promise<void> {
-    if (word.deletedAt) this.words.delete(word.id)
-    else this.words.set(word.id, word)
+    if (word.deletedAt) this.dropWord(word.id)
+    else this.putWord(word)
     await this.db.putMany('words', [word])
   }
 

@@ -240,9 +240,11 @@ begin
   insert into public.push_subscriptions (user_id, endpoint, p256dh, auth)
   values ('00000000-0000-0000-0000-0000000000d3', 'https://push.example.test/1', 'k', 'a');
   select count(*) into n from public.push_candidates((date_trunc('day', now() at time zone 'UTC') at time zone 'UTC') + interval '9 hours 5 minutes') where kind = 'daily';
-  assert n = 1, 'reminder due inside the 15-minute window';
-  select count(*) into n from public.push_candidates((date_trunc('day', now() at time zone 'UTC') at time zone 'UTC') + interval '9 hours 20 minutes') where kind = 'daily';
-  assert n = 0, 'not outside the window';
+  assert n = 1, 'reminder due right after the chosen time';
+  select count(*) into n from public.push_candidates((date_trunc('day', now() at time zone 'UTC') at time zone 'UTC') + interval '11 hours 40 minutes') where kind = 'daily';
+  assert n = 1, 'a missed run is made up later the same morning (migration 0006)';
+  select count(*) into n from public.push_candidates((date_trunc('day', now() at time zone 'UTC') at time zone 'UTC') + interval '12 hours 10 minutes') where kind = 'daily';
+  assert n = 0, 'not more than three hours late';
   select count(*) into n from public.push_candidates((date_trunc('day', now() at time zone 'UTC') at time zone 'UTC') + interval '20 hours 35 minutes') where kind = 'streak';
   assert n = 1, 'streak reminder in the evening when today was not studied';
   insert into public.notification_log (user_id, kind) values ('00000000-0000-0000-0000-0000000000d3', 'daily');

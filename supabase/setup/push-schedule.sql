@@ -1,4 +1,4 @@
--- Hodhod: send reminders every 15 minutes.
+-- Hodhod: check for reminders every 5 minutes (each learner chooses their own times).
 -- Run once in Supabase → SQL Editor, AFTER migration 0003 and after deploying the "push"
 -- function with "Verify JWT" switched OFF (the function checks its own secret).
 -- Contains no secret: the scheduler password is read from the database itself.
@@ -14,7 +14,7 @@ select cron.unschedule(jobid) from cron.job where jobname = 'hodhod-reminders';
 
 select cron.schedule(
   'hodhod-reminders',
-  '*/15 * * * *',
+  '*/5 * * * *',
   $job$
   select net.http_post(
     url := 'https://arhmdxtclovgfwokrxob.supabase.co/functions/v1/push',

@@ -13,10 +13,13 @@ import { openLocalDb } from './data/localDb.ts'
 import { SupabaseClient, type KeyValueStore, type Session, type SupabaseConfig } from './data/supabase.ts'
 import type { Ctx, Screen, ScreenFactory } from './ui/context.ts'
 import { h, icon, replace, type IconName } from './ui/dom.ts'
-import { fa } from './ui/format.ts'
+import { num } from './ui/format.ts'
 import { mascot, preloadMascot } from './ui/mascot.ts'
 import { adminItemScreen, adminPackScreen, adminReportScreen, adminScreen } from './ui/screens/admin.ts'
+import { adminUserScreen } from './ui/screens/adminUser.ts'
 import { authScreen } from './ui/screens/auth.ts'
+import { languageScreen } from './ui/screens/language.ts'
+import { refreshPush } from './data/push.ts'
 import { createScreen } from './ui/screens/create.ts'
 import { homeScreen } from './ui/screens/home.ts'
 import { deckImportScreen } from './ui/screens/deckImport.ts'
@@ -30,8 +33,11 @@ import { storiesScreen, storyScreen } from './ui/screens/stories.ts'
 import { studyScreen } from './ui/screens/study.ts'
 import { wordDetailScreen, wordEditScreen } from './ui/screens/wordDetail.ts'
 import { welcomeScreen } from './ui/screens/welcome.ts'
+import { decksScreen } from './ui/screens/decks.ts'
 import { wordsScreen } from './ui/screens/words.ts'
-import { APP_NAME, describeError, t } from './ui/strings.ts'
+import { appName, currentLanguage, describeError, setLanguage, t } from './ui/strings.ts'
+import { setLearningPair } from './ui/learning.ts'
+import { isUiLanguage, targetsFor } from './ui/i18n/languages.ts'
 import { confirmSheet, emptyState, toast } from './ui/widgets.ts'
 
 declare global {
@@ -87,6 +93,14 @@ function applyTheme(theme: Settings['theme']): void {
   storage.setItem(THEME_KEY, theme) // read by the inline script in index.html before first paint
 }
 
+const LANGUAGE_KEY = 'hodhod.language'
+
+/** Switches the interface language and remembers it on this device (used before sign-in, too). */
+function applyLanguage(code: string | null | undefined): void {
+  const applied = setLanguage(code)
+  storage.setItem(LANGUAGE_KEY, applied)
+}
+
 function readConfig(): SupabaseConfig | null {
   const raw = window.HODHOD_CONFIG
   const url = raw?.supabaseUrl?.trim().replace(/\/+$/, '')
@@ -110,24 +124,27 @@ const ROUTES: { pattern: RegExp; keys: string[]; screen: ScreenFactory; tab: str
   { pattern: /^\/stats$/, keys: [], screen: statsScreen, tab: 'home' },
   { pattern: /^\/settings$/, keys: [], screen: settingsScreen, tab: null },
   { pattern: /^\/welcome$/, keys: [], screen: welcomeScreen, tab: null },
+  { pattern: /^\/decks$/, keys: [], screen: decksScreen, tab: 'home' },
   { pattern: /^\/store$/, keys: [], screen: storeScreen, tab: 'home' },
   { pattern: /^\/stories$/, keys: [], screen: storiesScreen, tab: 'home' },
   { pattern: /^\/friends$/, keys: [], screen: friendsScreen, tab: 'home' },
   { pattern: /^\/stories\/([^/]+)$/, keys: ['id'], screen: storyScreen, tab: 'home' },
   { pattern: /^\/store\/([^/]+)$/, keys: ['id'], screen: packScreen, tab: 'home' },
   { pattern: /^\/admin$/, keys: [], screen: adminScreen, tab: null },
-  { pattern: /^\/admin\/(overview|users|inbox|news|packs)$/, keys: ['tab'], screen: adminScreen, tab: null },
+  { pattern: /^\/admin\/(overview|money|growth|users|inbox|news|packs)$/, keys: ['tab'], screen: adminScreen, tab: null },
+  { pattern: /^\/admin\/users\/([^/]+)$/, keys: ['id'], screen: adminUserScreen, tab: null },
   { pattern: /^\/admin\/packs\/([^/]+)$/, keys: ['id'], screen: adminPackScreen, tab: null },
   { pattern: /^\/admin\/packs\/([^/]+)\/items\/([^/]+)$/, keys: ['id', 'item'], screen: adminItemScreen, tab: null },
   { pattern: /^\/admin\/reports\/([^/]+)$/, keys: ['id'], screen: adminReportScreen, tab: null },
 ]
 
-const TABS: { id: string; path: string; label: string; icon: IconName }[] = [
-  { id: 'home', path: '/home', label: t.nav.home, icon: 'home' },
-  { id: 'create', path: '/create', label: t.nav.create, icon: 'plus' },
-  { id: 'words', path: '/words', label: t.nav.words, icon: 'book' },
-  { id: 'study', path: '/study', label: t.nav.study, icon: 'cards' },
-  { id: 'quiz', path: '/quiz', label: t.nav.quiz, icon: 'quiz' },
+// labels are read at render time: the interface language can change
+const TABS: { id: string; path: string; label: () => string; icon: IconName }[] = [
+  { id: 'home', path: '/home', label: () => t.nav.home, icon: 'home' },
+  { id: 'create', path: '/create', label: () => t.nav.create, icon: 'plus' },
+  { id: 'words', path: '/words', label: () => t.nav.words, icon: 'book' },
+  { id: 'study', path: '/study', label: () => t.nav.study, icon: 'cards' },
+  { id: 'quiz', path: '/quiz', label: () => t.nav.quiz, icon: 'quiz' },
 ]
 
 function parseHash(): { path: string; params: Record<string, string> } {
@@ -155,6 +172,35 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
   cleanups.push(() => data.close())
   await data.load()
   applyTheme(data.settings.theme)
+  /** The account's languages decide the interface language and the deck on screen. Returns true when the interface language changed. */
+  const syncLanguages = (): boolean => {
+    setLearningPair({ target: data.profile.activeTargetLanguage, native: data.profile.nativeLanguage })
+    if (data.profile.nativeLanguage === currentLanguage()) return false
+    applyLanguage(data.profile.nativeLanguage)
+    return true
+  }
+  // a new account takes over the language chosen on this device before signing up
+  const adoptChosenLanguage = async () => {
+    const chosen = storage.getItem(LANGUAGE_KEY)
+    if (!data.settings.onboarded && isUiLanguage(chosen) && chosen !== data.profile.nativeLanguage) {
+      const target = data.profile.activeTargetLanguage === chosen ? targetsFor(chosen)[0]! : data.profile.activeTargetLanguage
+      await data.setLanguages({ native: chosen, target }).catch(() => undefined)
+    }
+  }
+  // until the account has arrived from the server, its settings are not known: keep the device's language
+  if (data.hasSyncedOnce) {
+    await adoptChosenLanguage()
+    syncLanguages()
+  }
+  // someone learning several languages picks today's one when the app opens (once per visit)
+  try {
+    if (data.settings.onboarded && data.decks().length > 1 && /^#?\/?(home)?$/.test(location.hash.replace(/^#/, '')) && !sessionStorage.getItem('hodhod.deckAsked')) {
+      sessionStorage.setItem('hodhod.deckAsked', '1')
+      history.replaceState(null, '', `${location.pathname}${location.search}#/decks`)
+    }
+  } catch {
+    // storage unavailable: just open the home screen
+  }
 
   // First visit on this device: the Word Bank has to arrive before there is anything to show.
   while (!data.hasSyncedOnce && !stopped) {
@@ -185,6 +231,10 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
     })
   }
   if (stopped) return { stop }
+  await adoptChosenLanguage()
+  syncLanguages()
+  // keep this device's reminder address fresh on the server (never asks for permission)
+  void refreshPush(client, data.settings.notifyDaily || data.settings.notifyStreak).catch(() => undefined)
 
   // natural voice from the server first; the phone's own voice whenever that is not possible
   const cloudSpeech = new CloudSpeechProvider({
@@ -222,7 +272,7 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
 
   // --- shell ---
   const banner = h('div', { class: 'banner', role: 'status', hidden: true })
-  const nav = h('nav', { class: 'nav', 'aria-label': APP_NAME })
+  const nav = h('nav', { class: 'nav', 'aria-label': appName() })
   const outlet = h('div', { class: 'grow', style: { display: 'flex', flexDirection: 'column', minWidth: '0' } })
   const shell = h('div', { class: 'shell' }, nav, outlet)
   replace(root, banner, shell)
@@ -237,14 +287,14 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
     const counts = queueCounts(data.activeCards(), { settings: data.settings, now: ctx.now() })
     replace(
       nav,
-      h('div', { class: 'nav-brand' }, mascot('idle', { size: 44, enter: 'none' }), APP_NAME),
+      h('div', { class: 'nav-brand' }, mascot('idle', { size: 44, enter: 'none' }), appName()),
       TABS.map((tab) =>
         h(
           'a',
           { class: 'nav-item', href: `#${tab.path}`, 'aria-current': tab.id === activeTab ? 'page' : undefined },
           h('span', { class: 'nav-icon' }, icon(tab.icon)),
-          tab.label,
-          tab.id === 'study' && counts.total > 0 ? h('span', { class: 'nav-badge', 'aria-label': t.study.remaining(counts.total) }, fa(Math.min(counts.total, 999))) : null,
+          h('span', { class: 'nav-label' }, tab.label()),
+          tab.id === 'study' && counts.total > 0 ? h('span', { class: 'nav-badge', 'aria-label': t.study.remaining(counts.total) }, num(Math.min(counts.total, 999))) : null,
         ),
       ),
     )
@@ -257,13 +307,14 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
     renderNav()
   }
 
-  async function route() {
+  /** Shows the screen of the current address; `force` rebuilds it even when the address is unchanged (new language). */
+  async function route(force = false) {
     if (stopped) return
     if (restoring) {
       restoring = false
       return
     }
-    if (location.hash === currentHash && screen) return
+    if (!force && location.hash === currentHash && screen) return
     if (screen?.canLeave && !(await screen.canLeave())) {
       restoring = true
       location.hash = currentHash // stay where we are
@@ -313,6 +364,11 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
 
   cleanups.push(
     data.subscribe(() => {
+      if (syncLanguages()) {
+        renderChrome()
+        void route(true)
+        return
+      }
       renderChrome()
       screen?.onData?.()
       maybeWelcome()
@@ -363,6 +419,10 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
 // --- boot -------------------------------------------------------------------------------
 
 async function boot() {
+  // a new device has no language yet: it opens in English and asks first (see languageScreen)
+  let languageChosen = isUiLanguage(storage.getItem(LANGUAGE_KEY))
+  if (languageChosen) applyLanguage(storage.getItem(LANGUAGE_KEY))
+  else setLanguage(null)
   if (STAGING) document.body.append(h('div', { class: 'staging-ribbon', 'aria-hidden': 'true' }, t.staging))
   applyTheme((storage.getItem(THEME_KEY) as Settings['theme'] | null) ?? 'system')
   const config = readConfig()
@@ -400,7 +460,28 @@ async function boot() {
     if (!session) {
       applyTheme('system')
       if (!/^#\/(home)?$/.test(location.hash)) history.replaceState(null, '', `${location.pathname}${location.search}#/home`)
-      replace(root, authScreen(client, { notice: linkProblem }))
+      const signIn = () =>
+        replace(
+          root,
+          authScreen(client, {
+            notice: linkProblem,
+            // the language can be chosen before an account exists; the new account takes it over
+            onLanguage: (code) => {
+              applyLanguage(code)
+              signIn()
+            },
+          }),
+        )
+      if (languageChosen) signIn()
+      else
+        replace(
+          root,
+          languageScreen((code) => {
+            languageChosen = true
+            applyLanguage(code)
+            signIn()
+          }),
+        )
       linkProblem = undefined
       return
     }

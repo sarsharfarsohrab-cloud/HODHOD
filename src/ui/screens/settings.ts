@@ -3,14 +3,16 @@ import { SETTINGS_LIMITS, type Settings } from '../../core/types.ts'
 import { toAppError } from '../../data/errors.ts'
 import type { Ctx, Screen } from '../context.ts'
 import { h, icon, replace } from '../dom.ts'
-import { fa, faDateTime, faPercent } from '../format.ts'
-import { APP_NAME, describeError, t } from '../strings.ts'
+import { num, fmtDateTime, fmtPercent } from '../format.ts'
+import { appName, describeError, t } from '../strings.ts'
+import { learningInfo } from '../learning.ts'
 import { openSheet, saveFile, segmented } from '../widgets.ts'
 import { exportDeck } from '../../core/deckImport.ts'
 import { isAdmin } from '../../data/platform.ts'
 import { openFeedbackSheet } from '../reportSheet.ts'
 import { disablePush, enablePush, pushState, sendTestPush } from '../../data/push.ts'
 import { localTimeZone } from '../../core/time.ts'
+import { UI_LANGUAGE_INFO, UI_LANGUAGES } from '../i18n/languages.ts'
 
 declare const __APP_VERSION__: string
 
@@ -61,13 +63,53 @@ export function settingsScreen(ctx: Ctx): Screen {
     else if (state === 'denied') parts.push(h('p', { class: 'notice warn' }, icon('info', { size: 18 }), h('span', null, r.deniedHelp)))
     else if (state === 'off') parts.push(h('p', { class: 'small' }, r.offBody), turnOn)
     else {
-      const time = h('input', {
-        class: 'input', type: 'time', value: settings.notifyTime, dir: 'ltr', step: '900', 'aria-label': r.dailyTime, disabled: !settings.notifyDaily,
-        onchange: (e: Event) => {
-          const value = (e.target as HTMLInputElement).value
-          if (/^\d{2}:\d{2}$/.test(value)) update({ notifyTime: value, timeZone: localTimeZone() }, false)
-        },
-      })
+      // the learner's own reminder times, like alarms; at most eight a day
+      let times = settings.notifyDaily ? [...settings.notifyTimes] : []
+      const timesList = h('ul', { class: 'reminder-times' })
+      const addTime = h('button', { class: 'btn small', type: 'button' }, icon('plus', { size: 16 }), r.addTime)
+      const saveTimes = () => {
+        times = [...new Set(times)].sort()
+        update({ notifyTimes: times, notifyDaily: times.length > 0, timeZone: localTimeZone() }, false)
+      }
+      const renderTimes = () => {
+        replace(
+          timesList,
+          ...times.map((value, i) =>
+            h(
+              'li',
+              { class: 'row' },
+              icon('bell', { size: 18 }),
+              h('input', {
+                class: 'input grow', type: 'time', value, dir: 'ltr', 'aria-label': `${r.dailyTime} ${i + 1}`,
+                onchange: (e: Event) => {
+                  const next = (e.target as HTMLInputElement).value
+                  if (!/^\d{2}:\d{2}$/.test(next)) return
+                  times[i] = next
+                  saveTimes()
+                  renderTimes()
+                },
+              }),
+              h('button', { class: 'icon-btn', type: 'button', 'aria-label': r.removeTime(value), title: r.removeTime(value), onclick: () => { times.splice(i, 1); saveTimes(); renderTimes() } }, icon('close', { size: 18 })),
+            ),
+          ),
+        )
+        addTime.disabled = times.length >= 8
+        addTime.title = times.length >= 8 ? r.timesFull : ''
+      }
+      addTime.onclick = () => {
+        // a sensible next time: an hour after the last one, or the old single time
+        const last = times.at(-1)
+        let next = settings.notifyTime || '20:00'
+        if (last) {
+          const [hh, mm] = last.split(':').map(Number)
+          next = `${String(((hh ?? 0) + 1) % 24).padStart(2, '0')}:${String(mm ?? 0).padStart(2, '0')}`
+        }
+        if (!times.includes(next)) times.push(next)
+        saveTimes()
+        renderTimes()
+        timesList.querySelector<HTMLInputElement>(`input[value="${next}"]`)?.focus()
+      }
+      renderTimes()
       const test = h('button', { class: 'btn small', type: 'button' }, icon('bell', { size: 16 }), r.test)
       test.onclick = async () => {
         test.disabled = true
@@ -86,9 +128,12 @@ export function settingsScreen(ctx: Ctx): Screen {
         void renderReminders()
       }
       parts.push(
-        toggle(r.daily, settings.notifyDaily, (v) => { update({ notifyDaily: v, timeZone: localTimeZone() }, false); time.disabled = !v }),
-        h('label', { class: 'field' }, h('span', null, r.dailyTime), time),
+        h('h3', null, r.daily),
         h('p', { class: 'help' }, r.dailyHelp),
+        timesList,
+        addTime,
+        toggle(r.onlyPending, settings.notifyOnlyPending, (v) => update({ notifyOnlyPending: v }, false)),
+        h('p', { class: 'help' }, r.onlyPendingHelp),
         toggle(r.streak, settings.notifyStreak, (v) => update({ notifyStreak: v }, false)),
         toggle(r.updates, settings.notifyUpdates, (v) => update({ notifyUpdates: v }, false)),
         h('p', { class: 'help' }, r.limitHelp),
@@ -112,8 +157,8 @@ export function settingsScreen(ctx: Ctx): Screen {
       h(
         'p',
         { class: 'small muted', 'aria-live': 'polite' },
-        sync.syncing ? s.syncing : sync.lastSyncedAt ? s.synced(faDateTime(sync.lastSyncedAt)) : s.neverSynced,
-        sync.pending > 0 ? `، ${s.pending(sync.pending)}` : '',
+        sync.syncing ? s.syncing : sync.lastSyncedAt ? s.synced(fmtDateTime(sync.lastSyncedAt)) : s.neverSynced,
+        sync.pending > 0 ? `${t.common.listSep}${s.pending(sync.pending)}` : '',
       ),
       !sync.online ? h('p', { class: 'notice warn' }, icon('offline', { size: 18 }), t.sync.offlineBanner) : null,
       h('button', { class: 'btn block', type: 'button', disabled: sync.syncing || !sync.online, onclick: () => void ctx.data.syncNow() }, icon('refresh', { size: 18 }), s.syncNow),
@@ -145,7 +190,7 @@ export function settingsScreen(ctx: Ctx): Screen {
       'div',
       { class: 'stepper', role: 'group', 'aria-label': label },
       h('button', { class: 'icon-btn', type: 'button', 'aria-label': `${label}: −`, disabled: value <= min, onclick: () => onChange(Math.max(min, value - 1)) }, '−'),
-      h('output', { 'aria-live': 'polite' }, fa(value)),
+      h('output', { 'aria-live': 'polite' }, num(value)),
       h('button', { class: 'icon-btn', type: 'button', 'aria-label': `${label}: +`, disabled: value >= max, onclick: () => onChange(Math.min(max, value + 1)) }, '+'),
     )
 
@@ -165,8 +210,8 @@ export function settingsScreen(ctx: Ctx): Screen {
       }
     }
 
-    const retentionLabel = h('output', null, faPercent(settings.desiredRetention))
-    const rateLabel = h('output', null, `${fa(Math.round(settings.speechRate * 100))}٪`)
+    const retentionLabel = h('output', null, fmtPercent(settings.desiredRetention))
+    const rateLabel = h('output', null, fmtPercent(settings.speechRate))
 
     replace(
       el,
@@ -241,7 +286,7 @@ export function settingsScreen(ctx: Ctx): Screen {
               min: SETTINGS_LIMITS.desiredRetention.min, max: SETTINGS_LIMITS.desiredRetention.max, step: 0.01, value: String(settings.desiredRetention),
               oninput: (e: Event) => {
                 const value = Number((e.target as HTMLInputElement).value)
-                retentionLabel.textContent = faPercent(value)
+                retentionLabel.textContent = fmtPercent(value)
                 updateSoon({ desiredRetention: value })
               },
             }),
@@ -266,11 +311,11 @@ export function settingsScreen(ctx: Ctx): Screen {
                   min: SETTINGS_LIMITS.speechRate.min, max: SETTINGS_LIMITS.speechRate.max, step: 0.05, value: String(settings.speechRate),
                   oninput: (e: Event) => {
                     const value = Number((e.target as HTMLInputElement).value)
-                    rateLabel.textContent = `${fa(Math.round(value * 100))}٪`
+                    rateLabel.textContent = fmtPercent(value)
                     updateSoon({ speechRate: value })
                   },
                 }),
-                h('button', { class: 'btn small', type: 'button', onclick: () => void ctx.audio.speak('Guten Tag! Wie geht es Ihnen?', data.profile.activeTargetLanguage, ctx.data.settings.speechRate) }, icon('speaker', { size: 18 }), s.audioTest),
+                h('button', { class: 'btn small', type: 'button', onclick: () => void ctx.audio.speak(learningInfo().sample, data.profile.activeTargetLanguage, ctx.data.settings.speechRate) }, icon('speaker', { size: 18 }), s.audioTest),
               ),
               h(
                 'div',
@@ -283,7 +328,7 @@ export function settingsScreen(ctx: Ctx): Screen {
                       settings.aiVoiceGender,
                       (aiVoiceGender) => {
                         update({ aiVoiceGender }, false)
-                        void ctx.audio.speak('Guten Tag! Wie geht es Ihnen?', data.profile.activeTargetLanguage, ctx.data.settings.speechRate)
+                        void ctx.audio.speak(learningInfo().sample, data.profile.activeTargetLanguage, ctx.data.settings.speechRate)
                       },
                       s.aiVoice,
                     )
@@ -300,6 +345,34 @@ export function settingsScreen(ctx: Ctx): Screen {
         'section',
         { class: 'card stack' },
         h('h2', null, s.appearance),
+        h(
+          'label',
+          { class: 'field' },
+          h('span', null, t.auth.language),
+          h(
+            'select',
+            {
+              class: 'input',
+              onchange: async (e: Event) => {
+                const select = e.target as HTMLSelectElement
+                select.disabled = true
+                try {
+                  // the screen is rebuilt in the new language as soon as the account changes
+                  await ctx.data.setLanguages({ native: select.value })
+                } catch {
+                  select.value = ctx.data.profile.nativeLanguage
+                  ctx.toast(t.welcome.languageFailed, 'error')
+                } finally {
+                  select.disabled = false
+                }
+              },
+            },
+            // the language being learned cannot also be the own language
+            UI_LANGUAGES.filter((code) => code !== ctx.data.profile.activeTargetLanguage).map((code) =>
+              h('option', { value: code, selected: code === ctx.data.profile.nativeLanguage, lang: code }, UI_LANGUAGE_INFO[code].name),
+            ),
+          ),
+        ),
         segmented(
           (['system', 'light', 'dark'] as const).map((value) => ({ value, label: s.themes[value] })),
           settings.theme,
@@ -343,7 +416,7 @@ export function settingsScreen(ctx: Ctx): Screen {
         h(
           'dl',
           { class: 'facts' },
-          h('dt', null, s.version), h('dd', null, h('bdi', { dir: 'ltr' }, `${APP_NAME} ${typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev'}`)),
+          h('dt', null, s.version), h('dd', null, h('bdi', { dir: 'ltr' }, `${appName()} ${typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev'}`)),
           h('dt', null, s.scheduler), h('dd', null, h('bdi', { dir: 'ltr', class: 'de' }, FSRS_SCHEDULER_VERSION)),
         ),
         h('p', { class: 'small muted' }, s.aboutBody),

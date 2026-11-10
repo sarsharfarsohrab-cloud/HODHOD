@@ -217,7 +217,7 @@ describe('creating words', () => {
     const card = d.data.cards.get(word.id)!
     expect(card.state).toBe('new')
     expect(card.introducedAt).toBe(null)
-    expect(backend.tables.words![0]).toMatchObject({ ai_prompt_version: 'word_analysis_v3', ai_model: 'fake-model', normalized_lemma: 'aufgeben', pos: 'verb' })
+    expect(backend.tables.words![0]).toMatchObject({ ai_prompt_version: 'word_analysis_v4', ai_model: 'fake-model', normalized_lemma: 'aufgeben', pos: 'verb' })
   })
   test('an edited draft is saved as edited', async () => {
     const d = await signedIn()

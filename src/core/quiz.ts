@@ -6,6 +6,7 @@
  */
 import { isDifficult } from './cards.ts'
 import { foldGerman, foldGermanLoose, foldPersian } from './text.ts'
+import { ARTICLES } from '../../supabase/functions/_shared/wordSchema.ts'
 import type { Card, Word } from './types.ts'
 
 export type QuestionType = 'choice_de_fa' | 'choice_fa_de' | 'typing_fa_de' | 'article' | 'dictation' | 'speaking'
@@ -14,7 +15,17 @@ export type QuizKind = 'mixed' | 'choice' | 'typing' | 'article' | 'listening' |
 export const QUIZ_LENGTHS = [5, 10, 20] as const
 export const DEFAULT_QUIZ_LENGTH = 10
 export const CHOICE_OPTIONS = 4
-const ARTICLES = ['der', 'die', 'das'] as const
+/** Articles to choose from in the article question: the language's own, without elided forms (l'). */
+const articleChoices = (lang: string): string[] => Object.keys(ARTICLES[lang] ?? {}).filter((a) => !a.endsWith("'"))
+
+/** The article asked for: for "l'arbre" it is the full article of the noun's gender ("le"). */
+function expectedArticle(word: Word): string | null {
+  const noun = word.content.noun
+  if (!noun?.article) return null
+  if (!noun.article.endsWith("'")) return noun.article
+  const table = ARTICLES[word.targetLanguage || 'de'] ?? {}
+  return Object.keys(table).find((a) => !a.endsWith("'") && table[a] === noun.gender) ?? null
+}
 
 export interface Question {
   type: QuestionType
@@ -44,7 +55,7 @@ export interface QuizCandidate {
 export type Rng = () => number
 
 const display = (word: Word) => (word.content.noun?.article ? `${word.content.noun.article} ${word.lemma}` : word.lemma)
-const hasArticle = (word: Word) => word.pos === 'noun' && Boolean(word.content.noun?.article) && !word.content.noun?.pluralOnly
+const hasArticle = (word: Word) => word.pos === 'noun' && expectedArticle(word) !== null && !word.content.noun?.pluralOnly
 
 function shuffle<T>(items: readonly T[], rng: Rng): T[] {
   const out = [...items]
@@ -117,8 +128,8 @@ export function buildQuestion(type: QuestionType, word: Word, all: readonly Word
       if (!hasArticle(word)) return null
       return {
         type, wordId: word.id, prompt: word.lemma, promptLanguage: 'de',
-        options: ARTICLES.map((label) => ({ label, language: 'de' as const })),
-        expected: word.content.noun!.article!,
+        options: articleChoices(word.targetLanguage || 'de').map((label) => ({ label, language: 'de' as const })),
+        expected: expectedArticle(word)!,
       }
     case 'choice_de_fa': {
       const wrong = distractors(word, all, (w) => foldPersian(w.primaryMeaning), (w) => w.primaryMeaning, rng)
@@ -204,12 +215,17 @@ const squeeze = (text: string) => text.normalize('NFC').replace(/\s+/g, ' ').tri
 export function gradeTyped(input: string, word: Word): Grade {
   const answer = squeeze(input)
   if (!answer) return { correct: false, note: null }
-  const article = hasArticle(word) ? word.content.noun!.article! : null
+  const article = word.pos === 'noun' && !word.content.noun?.pluralOnly ? (word.content.noun?.article ?? null) : null
 
   let body = answer
   let givenArticle: string | null = null
   const first = answer.split(' ')[0]!.toLowerCase()
-  if (article && answer.includes(' ') && (ARTICLES as readonly string[]).includes(first)) {
+  const known = Object.keys(ARTICLES[word.targetLanguage || 'de'] ?? {})
+  const elided = /^(l)['’]/i.exec(answer)
+  if (article && elided && known.includes("l'")) {
+    givenArticle = "l'"
+    body = answer.slice(2).trim()
+  } else if (article && answer.includes(' ') && known.includes(first)) {
     givenArticle = first
     body = answer.slice(first.length + 1)
   }
@@ -224,6 +240,9 @@ export function gradeTyped(input: string, word: Word): Grade {
   return { correct: true, note }
 }
 
+/** Articles of every learned language: a leading article may be left out when speaking. */
+const ANY_ARTICLE = new Set(Object.values(ARTICLES).flatMap((table) => Object.keys(table)))
+
 const words = (text: string) =>
   foldGermanLoose(text)
     .replace(/[^\p{L}\p{N}\s]/gu, ' ')
@@ -233,7 +252,7 @@ const words = (text: string) =>
 /** Share of the expected words found, in order (a forgiving word-level match). */
 export function wordOverlap(heard: string, expected: string): number {
   const a = words(heard)
-  const b = words(expected).filter((w, i, all) => !(i === 0 && all.length > 1 && (ARTICLES as readonly string[]).includes(w)))
+  const b = words(expected).filter((w, i, all) => !(i === 0 && all.length > 1 && ANY_ARTICLE.has(w)))
   if (b.length === 0) return 0
   // longest common subsequence of words
   const dp = Array.from({ length: a.length + 1 }, () => new Array<number>(b.length + 1).fill(0))

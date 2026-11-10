@@ -20,7 +20,10 @@ export interface AudioProvider {
   prefetch?(text: string): void
 }
 
-export const LANGUAGE_TAGS: Record<string, string> = { de: 'de-DE', en: 'en-US', fr: 'fr-FR', fa: 'fa-IR' }
+export const LANGUAGE_TAGS: Record<string, string> = {
+  de: 'de-DE', en: 'en-GB', fr: 'fr-FR', it: 'it-IT', es: 'es-ES', nl: 'nl-NL',
+  fa: 'fa-IR', ar: 'ar', tr: 'tr-TR', uk: 'uk-UA', ru: 'ru-RU',
+}
 
 /** Tries providers in order; when one fails (offline, no credit), the next one speaks instead. */
 export class AudioPlayer {

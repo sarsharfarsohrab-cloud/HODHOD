@@ -4,7 +4,7 @@ import { toAppError } from '../../data/errors.ts'
 import type { Ctx, Screen } from '../context.ts'
 import { h, icon, replace } from '../dom.ts'
 import { createEditor } from '../editor.ts'
-import { fa, faDate, faDuration, faPercent, faRelative } from '../format.ts'
+import { num, fmtDate, fmtDuration, fmtPercent, fmtRelative } from '../format.ts'
 import { describeError, t } from '../strings.ts'
 import { openReportSheet } from '../reportSheet.ts'
 import { emptyState, iconButton, statusChip, tagEditor } from '../widgets.ts'
@@ -57,12 +57,12 @@ export function wordDetailScreen(ctx: Ctx, params: Record<string, string>): Scre
         h(
           'dl',
           { class: 'facts' },
-          h('dt', null, d.nextReview), h('dd', null, new Date(card.due) <= now ? d.overdue(faRelative(card.due, now)) : faRelative(card.due, now)),
-          h('dt', null, d.lastReview), h('dd', null, card.lastReview ? faRelative(card.lastReview, now) : d.never),
-          h('dt', null, d.reviewCount), h('dd', null, fa(card.reps)),
-          h('dt', null, d.lapses), h('dd', null, fa(card.lapses)),
-          recall !== null ? h('dt', null, d.recall) : null, recall !== null ? h('dd', null, faPercent(recall)) : null,
-          h('dt', null, d.stability), h('dd', null, faDuration(card.stability * 86_400_000)),
+          h('dt', null, d.nextReview), h('dd', null, new Date(card.due) <= now ? d.overdue(fmtRelative(card.due, now)) : fmtRelative(card.due, now)),
+          h('dt', null, d.lastReview), h('dd', null, card.lastReview ? fmtRelative(card.lastReview, now) : d.never),
+          h('dt', null, d.reviewCount), h('dd', null, num(card.reps)),
+          h('dt', null, d.lapses), h('dd', null, num(card.lapses)),
+          recall !== null ? h('dt', null, d.recall) : null, recall !== null ? h('dd', null, fmtPercent(recall)) : null,
+          h('dt', null, d.stability), h('dd', null, fmtDuration(card.stability * 86_400_000)),
           h('dt', null, d.difficulty), h('dd', null, difficultyWord),
         ),
       )
@@ -73,7 +73,7 @@ export function wordDetailScreen(ctx: Ctx, params: Record<string, string>): Scre
     if (reverse) {
       learning.append(
         h('div', { class: 'row spread', style: { borderTop: '1px solid var(--line)', paddingTop: 'var(--s3)' } }, h('span', { class: 'label' }, d.reverseCard), statusChip(wordStatus(reverse))),
-        h('p', { class: 'small muted' }, reverse.state === 'new' ? d.reverseWaiting : `${d.nextReview}: ${new Date(reverse.due) <= now ? d.overdue(faRelative(reverse.due, now)) : faRelative(reverse.due, now)}`),
+        h('p', { class: 'small muted' }, reverse.state === 'new' ? d.reverseWaiting : `${d.nextReview}: ${new Date(reverse.due) <= now ? d.overdue(fmtRelative(reverse.due, now)) : fmtRelative(reverse.due, now)}`),
       )
     }
 
@@ -98,7 +98,7 @@ export function wordDetailScreen(ctx: Ctx, params: Record<string, string>): Scre
       h(
               'section',
               { class: 'card stack' },
-              h('p', { class: 'small muted' }, `${d.addedOn} ${faDate(word.createdAt)}`),
+              h('p', { class: 'small muted' }, `${d.addedOn} ${fmtDate(word.createdAt)}`),
               h('a', { class: 'btn block', href: `#/words/${id}/edit` }, icon('edit', { size: 18 }), t.common.edit),
               h(
                 'button',

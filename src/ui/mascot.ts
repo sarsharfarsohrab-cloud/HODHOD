@@ -6,6 +6,7 @@
  * pops to the new pose), and can arrive flying in with flapping wings.
  */
 import { h } from './dom.ts'
+import { appName } from './strings.ts'
 
 export type MascotMood =
   | 'idle'
@@ -78,7 +79,7 @@ export function mascot(mood: MascotMood, options: MascotOptions = {}): MascotEl 
   const img = h('img', { src: src(PICTURE[mood]), alt: '', draggable: false, decoding: 'async', width: size, height: size })
   const el = h(
     'span',
-    { class: `mascot mood-${mood}`, role: 'img', 'aria-label': options.label ?? 'هدهد', style: { width: `${size}px`, height: `${size}px` } },
+    { class: `mascot mood-${mood}`, role: 'img', 'aria-label': options.label ?? appName(), style: { width: `${size}px`, height: `${size}px` } },
     h('span', { class: 'm-body' }, img),
     h('span', { class: 'm-wings', 'aria-hidden': 'true', style: { backgroundImage: 'url(./mascot/fly-sprite.webp)' } }),
   )

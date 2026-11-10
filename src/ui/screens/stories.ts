@@ -4,10 +4,11 @@ import { toAppError } from '../../data/errors.ts'
 import { stories, type StoryRow } from '../../data/platform.ts'
 import type { Ctx, Screen } from '../context.ts'
 import { de, h, icon, replace } from '../dom.ts'
-import { faDate } from '../format.ts'
+import { fmtDate } from '../format.ts'
 import { mascot } from '../mascot.ts'
 import { describeError, t } from '../strings.ts'
 import { emptyState, segmented, speakButton } from '../widgets.ts'
+import { learning } from '../learning.ts'
 
 const LEVELS: StoryLevel[] = ['A1', 'A2', 'B1', 'B2']
 const MIN_WORDS = 3
@@ -29,7 +30,7 @@ export function storiesScreen(ctx: Ctx): Screen {
     writing = true
     render()
     try {
-      const story = await stories.create(ctx.client, chosen.map(storyForm), level)
+      const story = await stories.create(ctx.client, chosen.map(storyForm), level, { target: ctx.data.profile.activeTargetLanguage, native: ctx.data.profile.nativeLanguage })
       ctx.go(`/stories/${story.id}`)
     } catch (err) {
       const error = toAppError(err)
@@ -81,8 +82,8 @@ export function storiesScreen(ctx: Ctx): Screen {
                       h(
                         'a',
                         { class: `story-item ${story.read_at ? 'read' : 'unread'}`, href: `#/stories/${story.id}` },
-                        h('span', { class: 'story-item-text' }, h('b', { class: 'de', lang: 'de', dir: 'ltr' }, story.title_de), h('span', null, story.title_fa)),
-                        h('span', { class: 'small muted' }, [story.level, faDate(story.created_at)].filter(Boolean).join('، ')),
+                        h('span', { class: 'story-item-text' }, h('b', { class: 'de', lang: learning(), dir: 'ltr' }, story.title_de), h('span', null, story.title_fa)),
+                        h('span', { class: 'small muted' }, [story.level, fmtDate(story.created_at)].filter(Boolean).join(t.common.listSep)),
                         story.read_at ? null : h('span', { class: 'chip status-new' }, s.unread),
                       ),
                     ),
@@ -140,7 +141,7 @@ export function storyScreen(ctx: Ctx, params: Record<string, string>): Screen {
     replace(
       el,
       header,
-      h('section', { class: 'story-head' }, h('h1', { class: 'de', lang: 'de', dir: 'ltr' }, story.title_de), h('p', { class: 'muted' }, story.title_fa)),
+      h('section', { class: 'story-head' }, h('h1', { class: 'de', lang: learning(), dir: 'ltr' }, story.title_de), h('p', { class: 'muted' }, story.title_fa)),
       h(
         'div',
         { class: 'row wrap story-tools' },
@@ -161,7 +162,7 @@ export function storyScreen(ctx: Ctx, params: Record<string, string>): Screen {
               {
                 class: 'story-de',
                 type: 'button',
-                lang: 'de',
+                lang: learning(),
                 dir: 'ltr',
                 'aria-expanded': String(open),
                 onclick: () => {

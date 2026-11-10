@@ -39,8 +39,16 @@ function assert(condition, message) {
   if (!condition) throw new Error(`assertion failed: ${message}`)
 }
 
-async function newPage(options = {}) {
+/** A fresh phone. `language` is the interface language this device already chose (null: a first visit). */
+async function newPage({ language = 'fa', ...options } = {}) {
   const context = await browser.newContext({ ...PHONE, ...options })
+  if (language) {
+    await context.addInitScript((code) => {
+      try {
+        if (!localStorage.getItem('hodhod.language')) localStorage.setItem('hodhod.language', code)
+      } catch {}
+    }, language)
+  }
   const page = await context.newPage()
   const problems = []
   page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`))
@@ -56,10 +64,10 @@ async function newPage(options = {}) {
   return page
 }
 
-const snap = async (page, name) => {
+const snap = async (page, name, options = {}) => {
   shot++
   await page.waitForTimeout(350) // let transitions finish
-  await page.screenshot({ path: join(out, `${String(shot).padStart(2, '0')}-${name}.png`) })
+  await page.screenshot({ path: join(out, `${String(shot).padStart(2, '0')}-${name}.png`), ...options })
 }
 
 async function signUp(page, { email = 'sohrab@example.test', name = 'سهراب' } = {}) {
@@ -813,11 +821,82 @@ await test('the bird is on every main screen and reacts', async () => {
   return page
 })
 
+await test('a first visit opens in English and asks for the language first', async () => {
+  await control('reset', { welcome: true })
+  const page = await newPage({ language: null })
+  await page.goto(BASE)
+  await page.getByRole('heading', { name: 'Choose your language' }).waitFor()
+  assert((await page.evaluate(() => document.documentElement.dir)) === 'ltr', 'English is left to right')
+  await noHorizontalScroll(page, 'first language')
+  await snap(page, 'first-language')
+  await page.getByRole('button', { name: 'English' }).click()
+  await page.getByRole('button', { name: 'Create account', exact: true }).click()
+  await page.getByLabel('Name').fill('Mary')
+  await page.getByLabel('Email').fill('mary@example.test')
+  await page.getByLabel('Password').fill('correct horse battery')
+  await page.getByRole('button', { name: 'Create account' }).last().click()
+  // next: the language to learn, never English itself
+  await page.getByRole('heading', { name: 'Which language do you want to learn?' }).waitFor()
+  assert(!(await page.getByRole('radio', { name: /^English/ }).count()), 'English is not offered to an English speaker')
+  await snap(page, 'welcome-learn-english-ui')
+  await page.getByRole('radio', { name: /French/ }).click()
+  await page.getByRole('heading', { name: 'Hi Mary, welcome!' }).waitFor()
+  await page.getByText('Type any French word', { exact: false }).waitFor()
+  assert((await page.evaluate(() => document.documentElement.dataset.deck)) === 'fr', 'the French colours are on')
+  const s = await state()
+  assert(s.profiles?.[0]?.native_language === 'en' && s.profiles?.[0]?.active_target_language === 'fr', `the languages are saved (${JSON.stringify(s.profiles?.[0])})`)
+  await page.reload()
+  await page.getByRole('heading', { name: 'Hi Mary, welcome!' }).waitFor()
+  // the own language can be changed later in the settings: the app switches to German at once
+  await page.goto(`${BASE}/#/settings`)
+  await page.getByLabel('Language').selectOption('de')
+  await page.getByRole('heading', { name: 'Einstellungen' }).waitFor()
+  await page.getByText('Wie das Gerät').waitFor()
+  assert((await state()).profiles[0].native_language === 'de', 'the new own language is saved')
+  await snap(page, 'settings-german')
+  return page
+})
+
+await test('Arabic and Russian: the interface reads well and fits the phone', async () => {
+  const cases = [
+    { name: 'العربية', code: 'ar', dir: 'rtl', signUp: 'إنشاء حساب', submit: 'أنشئ الحساب', nameLabel: 'الاسم', email: 'البريد الإلكتروني', password: 'كلمة المرور', learn: 'أي لغة تريد أن تتعلم؟', skip: 'تخطٍّ' },
+    { name: 'Русский', code: 'ru', dir: 'ltr', signUp: 'Создать аккаунт', submit: 'Создать аккаунт', nameLabel: 'Имя', email: 'Эл. почта', password: 'Пароль', learn: 'Какой язык хочешь учить?', skip: 'Пропустить' },
+  ]
+  let page
+  for (const [i, c] of cases.entries()) {
+    await control('reset', { welcome: true })
+    page = await newPage({ language: null })
+    await page.goto(BASE)
+    await page.getByRole('button', { name: c.name }).click()
+    assert((await page.evaluate(() => document.documentElement.dir)) === c.dir, `${c.code} direction`)
+    await page.getByRole('button', { name: c.signUp, exact: true }).click()
+    await page.getByLabel(c.nameLabel).fill('Sara')
+    await page.getByLabel(c.email).fill(`sara${i}@example.test`)
+    await page.getByLabel(c.password).fill('correct horse battery')
+    await page.getByRole('button', { name: c.submit }).last().click()
+    await page.getByRole('heading', { name: c.learn }).waitFor()
+    await noHorizontalScroll(page, `${c.code} learn page`)
+    await page.getByRole('button', { name: c.skip }).click()
+    await page.locator('.perch').waitFor()
+    await noHorizontalScroll(page, `${c.code} home`)
+    await snap(page, `home-${c.code}`)
+    if (i < cases.length - 1) await page.context().close()
+  }
+  return page
+})
+
 await test('welcome tour for a new account; its answers become the settings', async () => {
   await control('reset', { welcome: true })
-  const page = await newPage()
+  const page = await newPage({ language: null })
+  await page.goto(BASE)
+  await page.getByRole('button', { name: 'فارسی' }).click()
   await signUp(page, { name: 'مریم' }).catch(() => undefined)
+  // the own language was chosen before signing up; now the language to learn
+  await page.getByRole('heading', { name: 'کلمه‌های کدام زبان را می‌خواهی یاد بگیری؟' }).waitFor()
+  await snap(page, 'welcome-learn-language')
+  await page.getByRole('radio', { name: /آلمانی/ }).click()
   await page.getByRole('heading', { name: 'سلام مریم، خوش آمدی!' }).waitFor()
+  await page.getByText('هدهد یک لایتنر هوشمند است', { exact: false }).waitFor()
   await page.locator('.welcome-bird .mascot').waitFor()
   await page.waitForTimeout(1400) // the bird has flown in
   await snap(page, 'welcome-hello')
@@ -1048,6 +1127,37 @@ await test('a wrong card is reported and fixed for everyone from the admin inbox
   p = await control('platform')
   assert(p.user_limits.some((l) => l.blocked === true), 'the account is blocked for the AI too')
 
+  // one learner's own page, with their reminders
+  await page.locator('.user-card', { hasText: 'nahid@example.test' }).locator('.user-name').click()
+  await page.getByRole('heading', { name: 'یادآورها', exact: true }).waitFor()
+  await page.getByText('20:00', { exact: false }).first().waitFor()
+  await noHorizontalScroll(page, 'admin user page')
+  await snap(page, 'admin-user', { fullPage: true })
+
+  // accounting: costs per feature and the pricing calculator
+  await page.goto(`${BASE}/#/admin/money`)
+  await page.getByRole('heading', { name: 'هزینه به تفکیک بخش' }).waitFor()
+  await page.getByRole('heading', { name: 'ماشین‌حساب قیمت‌گذاری' }).waitFor()
+  await page.getByLabel('تعداد کاربر پلاس').fill('0')
+  await page.getByText('زیان ماهانه').waitFor()
+  await page.getByLabel('تعداد کاربر پلاس').fill('300')
+  await page.getByText('سود ماهانه').waitFor()
+  await noHorizontalScroll(page, 'admin accounting')
+  await snap(page, 'admin-money', { fullPage: true })
+  // growth
+  await page.goto(`${BASE}/#/admin/growth`)
+  await page.getByRole('heading', { name: 'چند نفر برمی‌گردند؟' }).waitFor()
+  await noHorizontalScroll(page, 'admin growth')
+  await snap(page, 'admin-growth', { fullPage: true })
+  // on a computer the panel has its own side menu
+  await page.setViewportSize({ width: 1280, height: 860 })
+  await page.goto(`${BASE}/#/admin/money`)
+  await page.getByRole('heading', { name: 'ماشین‌حساب قیمت‌گذاری' }).waitFor()
+  assert(await page.locator('.nav').isHidden(), 'the app menu makes room for the admin menu')
+  await noHorizontalScroll(page, 'admin on a computer')
+  await snap(page, 'admin-desktop')
+  await page.setViewportSize({ width: 390, height: 844 })
+
   // announcement: shown once on the home screen
   await page.goto(`${BASE}/#/admin/news`)
   await page.getByLabel('عنوان').fill('بسته‌های تازه آمد!')
@@ -1080,7 +1190,6 @@ await test('natural voice: generated once, then played from the saved file; the 
   // a male voice is a different recording
   await page.goto(`${BASE}/#/settings`)
   await page.getByRole('heading', { name: 'یادآوری‌ها' }).waitFor()
-  await page.getByText('این مرورگر اعلان پشتیبانی نمی‌کند.').waitFor() // the test server is plain http
   await page.getByRole('button', { name: 'صدای مرد' }).click()
   await page.waitForFunction(() => performance.getEntriesByType('resource').filter((e) => e.name.includes('/storage/v1/object/public/tts/')).length >= 2)
   p = await control('platform')
@@ -1093,6 +1202,40 @@ await test('natural voice: generated once, then played from the saved file; the 
   await page.waitForTimeout(500)
   assert((await control('platform')).ttsCalls === 2, 'with the natural voice off nothing is generated')
   assert((await played()) >= 2, 'the saved recordings were played')
+  return page
+})
+
+await test('the learner chooses their own reminder times, like alarms', async () => {
+  const page = await newPage()
+  // a phone where notifications are already allowed and this device is registered
+  await page.context().addInitScript(() => {
+    const sub = {
+      endpoint: 'https://push.example.test/e2e', options: { applicationServerKey: null },
+      toJSON: () => ({ endpoint: 'https://push.example.test/e2e', keys: { p256dh: 'k', auth: 'a' } }), unsubscribe: async () => true,
+    }
+    const reg = { pushManager: { getSubscription: async () => sub, subscribe: async () => sub } }
+    Object.defineProperty(Notification, 'permission', { get: () => 'granted' })
+    Notification.requestPermission = async () => 'granted'
+    navigator.serviceWorker.getRegistration = async () => reg
+  })
+  await signUp(page)
+  await page.goto(`${BASE}/#/settings`)
+  await page.getByRole('heading', { name: 'یادآوری‌های من' }).waitFor()
+  await page.getByRole('button', { name: 'افزودن یادآور' }).click()
+  await page.getByRole('button', { name: 'افزودن یادآور' }).click()
+  await page.getByRole('button', { name: 'افزودن یادآور' }).click()
+  await page.getByRole('button', { name: 'حذف یادآور ساعت 21:00' }).click()
+  await page.getByLabel('ساعت یادآوری 1').fill('08:30')
+  await page.getByLabel('ساعت یادآوری 1').dispatchEvent('change')
+  await page.waitForTimeout(600)
+  let s = (await state()).settings[0]
+  assert(JSON.stringify(s?.notify_times) === JSON.stringify(['08:30', '22:00']) && s?.notify_daily === true, `the chosen times are saved (${JSON.stringify(s)})`)
+  assert(s?.notify_time === '08:30', 'older servers still get the first time')
+  await page.getByText('فقط وقتی هنوز مرور نکرده‌ام').click()
+  await page.waitForTimeout(600)
+  assert((await state()).settings[0]?.notify_only_pending === true, '"only when not reviewed yet" is saved')
+  await noHorizontalScroll(page, 'reminder times')
+  await snap(page, 'reminder-times')
   return page
 })
 
@@ -1280,7 +1423,8 @@ await test('the test version under /staging/ is marked and keeps its own sign-in
   await signUp(page) // the real app
   await page.goto(`${BASE}/staging/`)
   await page.locator('.staging-ribbon').waitFor()
-  // not signed in there: the session of the real app is not shared
+  // not signed in there: the session (and the language) of the real app is not shared
+  await page.getByRole('button', { name: 'فارسی' }).click()
   await page.getByRole('button', { name: 'ساخت حساب', exact: true }).waitFor()
   await snap(page, 'staging')
   await page.goto(`${BASE}/`)

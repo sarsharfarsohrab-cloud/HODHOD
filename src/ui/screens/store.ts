@@ -5,10 +5,11 @@ import { toAppError } from '../../data/errors.ts'
 import { packItems, startPackLesson, storePacks, type PackItem, type StorePack } from '../../data/platform.ts'
 import type { Ctx, Screen } from '../context.ts'
 import { de, h, icon, replace } from '../dom.ts'
-import { fa } from '../format.ts'
+import { num } from '../format.ts'
 import { mascot } from '../mascot.ts'
 import { describeError, t } from '../strings.ts'
 import { emptyState, progressBar, segmented } from '../widgets.ts'
+import { learning } from '../learning.ts'
 
 type KindFilter = 'all' | StorePack['kind']
 
@@ -151,7 +152,7 @@ export function packScreen(ctx: Ctx, params: Record<string, string>): Screen {
   const lessonRow = (l: LessonProgress, suggested: boolean, firstLocked: boolean) => {
     const state = l.state
     const node =
-      state === 'done' ? icon('check', { size: 22 }) : state === 'locked' ? icon('lock', { size: 20 }) : h('b', null, fa(l.lesson))
+      state === 'done' ? icon('check', { size: 22 }) : state === 'locked' ? icon('lock', { size: 20 }) : h('b', null, num(l.lesson))
     const label = { done: s.lessonDone, active: s.lessonActive, open: s.lessonOpen, locked: s.lessonLocked }[state]
     const expanded = openLesson === l.lesson
     const missing = l.inBank < l.entries.length
@@ -166,7 +167,7 @@ export function packScreen(ctx: Ctx, params: Record<string, string>): Screen {
         h(
           'button',
           { class: 'lesson-head', type: 'button', 'aria-expanded': String(expanded), onclick: () => { openLesson = expanded ? null : l.lesson; render() } },
-          h('span', null, h('b', null, s.lesson(l.lesson)), h('span', { class: 'small muted' }, `، ${s.lessonWords(l.entries.length)}`)),
+          h('span', null, h('b', null, s.lesson(l.lesson)), h('span', { class: 'small muted' }, `${t.common.listSep}${s.lessonWords(l.entries.length)}`)),
           h('span', { class: `lesson-state small` }, state === 'active' ? s.lessonProgress(l.green, l.entries.length) : label),
         ),
         state === 'active' || state === 'done' ? progressBar(l.green / l.entries.length, s.lessonProgress(l.green, l.entries.length)) : null,
@@ -181,7 +182,7 @@ export function packScreen(ctx: Ctx, params: Record<string, string>): Screen {
                 return h(
                   'li',
                   { class: known ? 'known' : '' },
-                  h('span', { class: 'de', lang: 'de', dir: 'ltr' }, de(item?.lemma ?? item?.input ?? '')),
+                  h('span', { class: 'de', lang: learning(), dir: 'ltr' }, de(item?.lemma ?? item?.input ?? '')),
                   h('span', { class: 'muted' }, item?.primary_meaning ?? ''),
                 )
               }),

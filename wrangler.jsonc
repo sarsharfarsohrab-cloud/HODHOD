@@ -1,9 +1,17 @@
-// Cloudflare: serves the built app (dist/) as static files on apphodhod.com.
-// Cloudflare runs `bun run scripts/build.ts`, then `npx wrangler deploy` with this file.
+// Cloudflare: one Worker serves the introduction site (apphodhod.com) and the app
+// (app.apphodhod.com) from www/, which `wrangler deploy` builds first (build.command).
 {
   "name": "hodhod",
   "compatibility_date": "2025-10-01",
+  "main": "worker/index.js",
+  "build": {
+    "command": "bun run scripts/build-www.ts"
+  },
   "assets": {
-    "directory": "./dist"
+    "directory": "./www",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "none"
   }
 }

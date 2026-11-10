@@ -4,6 +4,8 @@
 
 :root {
   color-scheme: light;
+  /* the side where reading starts: right in Persian and Arabic, left otherwise */
+  --reading-edge: right;
 
   /* colour — the palette of a hoopoe: saffron body, ink-and-white wing, on cool paper */
   --bg: #f1f1f9;
@@ -194,6 +196,14 @@ h1 {
   line-height: 1.4;
 }
 
+/* tab names stay on one line in every language */
+.nav-label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 h2 {
   font-size: var(--text-md);
   font-weight: 700;
@@ -349,6 +359,7 @@ a {
 .nav-item {
   position: relative;
   flex: 1;
+  min-width: 0;
   max-width: 120px;
   min-height: 52px;
   display: flex;
@@ -1297,18 +1308,22 @@ button.mascot-button {
 
 /* in a card the word sits at the reading edge, in line with the Persian text under it */
 .card .word-title {
-  text-align: right;
+  text-align: var(--reading-edge);
 }
 
-.article-der {
+.article-der,
+.gender-m,
+.gender-c {
   color: var(--der);
 }
 
-.article-die {
+.article-die,
+.gender-f {
   color: var(--die);
 }
 
-.article-das {
+.article-das,
+.gender-n {
   color: var(--das);
 }
 
@@ -1364,7 +1379,7 @@ button.mascot-button {
 .example .de {
   display: block;
   /* the German line sits at the same (right) edge as its Persian translation */
-  text-align: right;
+  text-align: var(--reading-edge);
   font-weight: 600;
   line-height: 1.55;
 }
@@ -1698,7 +1713,7 @@ details.fold[open] > summary .icon {
 .word-row .de {
   font-size: var(--text-md);
   font-weight: 700;
-  text-align: right; /* aligned with the Persian line below it, at the reading edge */
+  text-align: var(--reading-edge); /* aligned with the Persian line below it, at the reading edge */
   line-height: 1.5;
 }
 
@@ -2022,7 +2037,7 @@ input[type='range'] {
 }
 
 .option-card b.de {
-  text-align: right;
+  text-align: var(--reading-edge);
 }
 
 .option-card span {
@@ -2089,14 +2104,18 @@ button.quiz-option:hover {
   font-size: var(--text-lg);
 }
 
+.quiz-option.gender-m,
+.quiz-option.gender-c,
 .quiz-option.article-der {
   color: var(--der);
 }
 
+.quiz-option.gender-f,
 .quiz-option.article-die {
   color: var(--die);
 }
 
+.quiz-option.gender-n,
 .quiz-option.article-das {
   color: var(--das);
 }
@@ -3505,7 +3524,7 @@ button.quiz-option:hover {
 }
 .user-email {
   color: var(--ink-2);
-  text-align: right;
+  text-align: var(--reading-edge);
 }
 .faded {
   opacity: 0.6;
@@ -4025,7 +4044,7 @@ button.quiz-option:hover {
   color: var(--accent);
   font-weight: 700;
 }
-.today-link .icon {
+html[dir='rtl'] .today-link .icon {
   transform: scaleX(-1);
 }
 
@@ -4077,4 +4096,447 @@ button.quiz-option:hover {
 }
 .board-week small {
   white-space: nowrap;
+}
+
+
+html[dir='ltr'] {
+  --reading-edge: left;
+}
+html[dir='ltr'] .icon-directional {
+  transform: scaleX(-1);
+}
+
+/* Vazirmatn is made for Persian and Arabic script; other interface languages use the system font */
+html:not([lang='fa']):not([lang='ar']) {
+  --font-fa: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Each language being learned has its own colour; German keeps the hoopoe's saffron. */
+html[data-deck='en'] {
+  --brand: #5b9cf6;
+  --brand-strong: #3f84ee;
+  --brand-soft: #e6efff;
+  --brand-text: #1d4fb8;
+}
+html[data-deck='en'][data-theme='dark'] {
+  --brand: #7fb0fa;
+  --brand-strong: #9cc2ff;
+  --brand-soft: #1a2747;
+  --brand-text: #9cc2ff;
+}
+html[data-deck='fr'] {
+  --brand: #a78bfa;
+  --brand-strong: #8f6ef5;
+  --brand-soft: #f1ebff;
+  --brand-text: #6131c9;
+}
+html[data-deck='fr'][data-theme='dark'] {
+  --brand: #b9a2ff;
+  --brand-strong: #c9b6ff;
+  --brand-soft: #2a2150;
+  --brand-text: #c9b6ff;
+}
+html[data-deck='it'] {
+  --brand: #34c38a;
+  --brand-strong: #20a873;
+  --brand-soft: #e3f6ee;
+  --brand-text: #0f7a57;
+}
+html[data-deck='it'][data-theme='dark'] {
+  --brand: #5fd6a4;
+  --brand-strong: #6fdcae;
+  --brand-soft: #16342a;
+  --brand-text: #6fdcae;
+}
+html[data-deck='es'] {
+  --brand: #f87171;
+  --brand-strong: #ef5350;
+  --brand-soft: #fdecec;
+  --brand-text: #b42318;
+}
+html[data-deck='es'][data-theme='dark'] {
+  --brand: #ff8f8f;
+  --brand-strong: #ffa3a3;
+  --brand-soft: #3d1f22;
+  --brand-text: #ffa3a3;
+}
+html[data-deck='nl'] {
+  --brand: #2cc7b4;
+  --brand-strong: #18ad9b;
+  --brand-soft: #e0f7f4;
+  --brand-text: #0b6e63;
+}
+html[data-deck='nl'][data-theme='dark'] {
+  --brand: #52d6c5;
+  --brand-strong: #6ee0d2;
+  --brand-soft: #143532;
+  --brand-text: #6ee0d2;
+}
+
+/* --- languages ("decks") ----------------------------------------------------------------- */
+
+.perch-top h1 {
+  flex: 1;
+}
+
+.deck-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 12%);
+  color: var(--on-perch);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.deck-chip:hover {
+  background: rgb(255 255 255 / 20%);
+}
+
+.deck-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--brand);
+  flex: none;
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 70%);
+}
+
+.deck-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s2);
+}
+
+.deck-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s3) var(--s4);
+  border-radius: var(--radius, 18px);
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.deck-row .grow {
+  display: flex;
+  flex-direction: column;
+}
+
+.deck-row.current {
+  border-color: var(--brand);
+  box-shadow: inset 0 0 0 1px var(--brand);
+}
+
+.deck-row .icon {
+  color: var(--ink-3);
+  transform: scaleX(-1);
+}
+
+html[dir='ltr'] .deck-row .icon {
+  transform: none;
+}
+
+.deck-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--s2);
+}
+
+.deck-choice {
+  align-items: flex-start;
+}
+
+.plus-note {
+  align-items: center;
+  text-align: center;
+  background: var(--brand-soft);
+}
+
+.language-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s2);
+  width: 100%;
+}
+
+.language-grid .option-card {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--s2);
+  row-gap: 0;
+  min-height: 52px;
+  min-width: 0;
+}
+
+/* long names ("нидерландский") wrap inside the card instead of pushing the page sideways */
+.language-grid .option-card b,
+.language-grid .option-card span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.intro-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s3);
+  width: 100%;
+  text-align: start;
+}
+
+.intro-list li {
+  display: flex;
+  gap: var(--s3);
+  align-items: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: var(--s3);
+}
+
+.intro-list li > span:first-child {
+  font-size: 1.4rem;
+  line-height: 1.4;
+}
+
+.language-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.language-picker select {
+  min-height: 40px;
+}
+
+.auth-language {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  color: var(--ink-2);
+}
+
+.auth-language select {
+  width: auto;
+  min-width: 140px;
+}
+
+/* --- admin: accounting and growth ----------------------------------------------------- */
+
+.table-scroll {
+  overflow-x: auto;
+  margin-inline: calc(var(--s2) * -1);
+}
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+.admin-table th,
+.admin-table td {
+  padding: var(--s2);
+  text-align: start;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--line);
+}
+.admin-table th {
+  color: var(--ink-3);
+  font-weight: 700;
+  font-size: var(--text-xs);
+}
+.admin-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.kind-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-inline-end: 6px;
+  vertical-align: middle;
+}
+.chart-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1) var(--s3);
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+.cost-chart.stacked li {
+  align-items: flex-end;
+}
+.cost-chart .stack-bar {
+  width: 100%;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 1px;
+  border-radius: 4px 4px 0 0;
+  overflow: hidden;
+}
+.cost-chart .stack-bar > span {
+  display: block;
+  min-height: 1px;
+}
+.admin-list.ranked {
+  counter-reset: rank;
+}
+.admin-list.ranked > li {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+.admin-list.ranked > li::before {
+  counter-increment: rank;
+  content: counter(rank);
+  min-width: 1.5em;
+  color: var(--ink-3);
+  font-weight: 700;
+}
+.calc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--s3);
+}
+.calc-grid .field {
+  min-width: 0;
+}
+.calc-lines {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--s1) var(--s3);
+  margin: 0;
+  padding: var(--s3) var(--s4);
+  border-radius: var(--r-md);
+  background: var(--bg);
+}
+.calc-lines dt,
+.calc-lines dd {
+  margin: 0;
+}
+.calc-lines dd {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+.calc-lines .total {
+  padding-top: var(--s2);
+  border-top: 1px solid var(--line);
+  font-weight: 800;
+  font-size: var(--text-lg);
+}
+.calc-lines dd.good {
+  color: var(--good);
+}
+.calc-lines dd.bad {
+  color: var(--danger);
+}
+.retention-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+.hbar {
+  height: 10px;
+  border-radius: var(--r-full);
+  background: var(--line);
+  overflow: hidden;
+  margin-block: 4px;
+}
+.hbar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--chart-bar);
+}
+.admin-two {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--s4);
+}
+
+/* --- admin on a computer: its own side menu ---------------------------------------------- */
+@media (min-width: 900px) {
+  .screen.admin-layout {
+    max-width: 1320px;
+    display: grid;
+    grid-template-columns: 230px minmax(0, 1fr);
+    align-items: start;
+    gap: var(--s6);
+  }
+  .admin-side {
+    position: sticky;
+    top: var(--s6);
+    padding: var(--s4);
+    border-radius: var(--r-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+  .admin-side .topbar {
+    margin: 0;
+  }
+  .admin-side h1 {
+    font-size: var(--text-lg);
+  }
+  .admin-layout .admin-tabs {
+    flex-direction: column;
+    overflow: visible;
+  }
+  .admin-layout .admin-tabs a {
+    border-radius: var(--r-md);
+    border-color: transparent;
+    background: none;
+    justify-content: flex-start;
+  }
+  .admin-layout .admin-tabs a:hover {
+    background: var(--bg);
+  }
+  .admin-layout .admin-tabs a[aria-current='page'] {
+    background: var(--ink);
+    color: var(--bg);
+  }
+  .admin-layout .admin-stats {
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  }
+}
+
+/* chart dates read in the same direction as the columns (oldest on the left) */
+.cost-chart + .row {
+  direction: ltr;
+}
+
+.reminder-times {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.reminder-times li {
+  align-items: center;
+  gap: var(--s2);
+}
+.reminder-times .input {
+  min-width: 0;
 }

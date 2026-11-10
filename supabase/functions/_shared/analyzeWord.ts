@@ -20,13 +20,13 @@ import { callStructured, type ChatMessage, type Usage } from './aiClient.ts'
 import { checkAllowance } from './budget.ts'
 import { validateWordInput } from './inputRules.ts'
 import {
-  AI_OUTPUT_SCHEMA,
   AI_STATUS,
   aiOutputToContentInput,
   buildMessages,
   buildRepairMessage,
   COMPATIBLE_PROMPT_VERSIONS,
   isSupportedPair,
+  outputSchema,
   PROMPT_VERSION,
   type AiStatus,
 } from './prompt.ts'
@@ -119,14 +119,16 @@ export async function handleAnalyzeWord(
 
     if (!force) {
       // the current prompt first, then analyses made by earlier compatible prompts
-      for (const version of [PROMPT_VERSION, ...COMPATIBLE_PROMPT_VERSIONS]) {
+      // only German–Persian existed before v4
+      const versions = pair.target === 'de' && pair.native === 'fa' ? [PROMPT_VERSION, ...COMPATIBLE_PROMPT_VERSIONS] : [PROMPT_VERSION]
+      for (const version of versions) {
         const rows = await db
           .select<{ result: AnalyzeResult }>(`ai_word_cache?${cacheFilter(version)}&select=result&limit=1`)
           .catch(() => [])
         const hit = rows[0]?.result
-        if (hit && (version === PROMPT_VERSION || hit.status === 'ok') && isUsableCachedResult(hit, input.cacheKey)) {
+        if (hit && (version === PROMPT_VERSION || hit.status === 'ok') && isUsableCachedResult(hit, input.cacheKey, pair)) {
           await log('cache_hit')
-          return json({ ...upgradeCached(hit), cached: true }, 200, cors)
+          return json({ ...upgradeCached(hit, pair), cached: true }, 200, cors)
         }
       }
     }
@@ -200,18 +202,18 @@ function sameKey(word: string, cacheKey: string): boolean {
 }
 
 /** Older cached analyses get the fields added since (content version 2). */
-function upgradeCached(hit: AnalyzeResult): AnalyzeResult {
+function upgradeCached(hit: AnalyzeResult, pair: { target: string; native: string }): AnalyzeResult {
   if (hit.status !== 'ok') return hit
-  const checked = validateWordContent(hit.content, { mode: 'ai' })
+  const checked = validateWordContent(hit.content, { mode: 'ai', ...pair })
   return checked.ok ? { ...hit, content: checked.value } : hit
 }
 
-function isUsableCachedResult(hit: AnalyzeResult, cacheKey: string): boolean {
+function isUsableCachedResult(hit: AnalyzeResult, cacheKey: string, pair: { target: string; native: string }): boolean {
   // older entries may suggest a spelling that differs only in capital letters
   if (hit.status === 'misspelled') return typeof hit.suggestion === 'string' && !sameKey(hit.suggestion, cacheKey)
   if (hit.status !== 'ok') return AI_STATUS.includes(hit.status)
   // Re-validate: the cache must never be a way around the schema.
-  return validateWordContent(hit.content, { mode: 'ai' }).ok
+  return validateWordContent(hit.content, { mode: 'ai', ...pair }).ok
 }
 
 async function enforceRateLimits(
@@ -267,11 +269,11 @@ async function generate(
   // One generation, then at most one controlled repair with the validation errors.
   let lastIssues: ValidationIssue[] = []
   for (let attempt = 0; attempt < 2; attempt++) {
-    const answer = await callStructured(messages, env, { name: 'word_analysis', schema: AI_OUTPUT_SCHEMA, maxOutputTokens: MAX_OUTPUT_TOKENS }, fetchImpl, sleep)
+    const answer = await callStructured(messages, env, { name: 'word_analysis', schema: outputSchema(pair.target), maxOutputTokens: MAX_OUTPUT_TOKENS }, fetchImpl, sleep)
     usage.inputTokens += answer.usage.inputTokens
     usage.outputTokens += answer.usage.outputTokens
 
-    const parsed = interpret(answer.text, env.aiModel)
+    const parsed = interpret(answer.text, env.aiModel, pair)
     if (parsed.ok) return { result: parsed.result, usage }
 
     lastIssues = parsed.issues
@@ -285,6 +287,7 @@ async function generate(
 function interpret(
   text: string,
   model: string,
+  pair: { target: string; native: string },
 ): { ok: true; result: AnalyzeResult } | { ok: false; issues: ValidationIssue[] } {
   let raw: unknown
   try {
@@ -307,7 +310,7 @@ function interpret(
   }
   if (status !== 'ok') return { ok: true, result: { status, cached: false } }
 
-  const checked = validateWordContent(aiOutputToContentInput(data), { mode: 'ai' })
+  const checked = validateWordContent(aiOutputToContentInput(data), { mode: 'ai', ...pair })
   if (!checked.ok) return { ok: false, issues: checked.issues }
   const inputNote = typeof data.input_note === 'string' && data.input_note.trim() ? data.input_note.trim().slice(0, 300) : null
   return {

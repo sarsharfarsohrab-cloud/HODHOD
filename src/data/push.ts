@@ -16,7 +16,7 @@ export function isStandalone(): boolean {
 }
 
 export function pushSupported(): boolean {
-  return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && location.protocol === 'https:'
+  return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && window.isSecureContext
 }
 
 /** "BASE64URL" → bytes, as PushManager wants the server key. */
@@ -58,6 +58,22 @@ export async function enablePush(client: SupabaseClient): Promise<PushState> {
   if (!json.keys?.p256dh || !json.keys.auth) throw new Error('push subscription without keys')
   await client.upsert('push_subscriptions', [{ endpoint: json.endpoint, p256dh: json.keys.p256dh, auth: json.keys.auth, user_agent: navigator.userAgent.slice(0, 300) }], 'endpoint')
   return 'on'
+}
+
+/**
+ * Re-registers this device with the server each time the app opens. Phones sometimes renew the
+ * push address on their own, and the server drops an address after repeated failures; without
+ * this, the device still looks "on" while no reminder can reach it. Never asks for permission:
+ * it only acts when notifications are already allowed and the learner wants reminders.
+ */
+export async function refreshPush(client: SupabaseClient, wanted: boolean): Promise<void> {
+  if (!pushSupported() || Notification.permission !== 'granted') return
+  const reg = await registration()
+  if (!reg) return
+  const sub = await reg.pushManager.getSubscription()
+  if (!sub && !wanted) return
+  // enablePush keeps a matching subscription, replaces one made with an old key, or makes a new one
+  await enablePush(client)
 }
 
 function sameKey(sub: PushSubscription, publicKey: string): boolean {

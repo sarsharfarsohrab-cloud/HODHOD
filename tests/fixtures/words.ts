@@ -5,7 +5,7 @@ const three = (de: [string, string, string], fa: [string, string, string]) =>
   (['easy', 'medium', 'hard'] as const).map((level, i) => ({ level, de: de[i]!, fa: fa[i]! }))
 
 export const AUFGEBEN: WordContent = {
-  version: 2,
+  version: 3,
   lemma: 'aufgeben',
   pos: 'verb',
   cefr: 'B1',
@@ -29,6 +29,7 @@ export const AUFGEBEN: WordContent = {
     },
   ],
   noun: null,
+  conjugation: null,
   verb: {
     separable: true,
     auxiliary: 'haben',
@@ -55,7 +56,7 @@ export const AUFGEBEN: WordContent = {
 }
 
 export const TISCH: WordContent = {
-  version: 2,
+  version: 3,
   lemma: 'Tisch',
   pos: 'noun',
   cefr: 'A1',
@@ -70,7 +71,8 @@ export const TISCH: WordContent = {
       ),
     },
   ],
-  noun: { article: 'der', plural: 'Tische', genitive: 'Tisches', pluralOnly: false },
+  conjugation: null,
+  noun: { article: 'der', gender: 'm', plural: 'Tische', genitive: 'Tisches', pluralOnly: false },
   verb: null,
   adjective: null,
   synonyms: [],
@@ -85,7 +87,7 @@ export const TISCH: WordContent = {
 }
 
 export const SCHNELL: WordContent = {
-  version: 2,
+  version: 3,
   lemma: 'schnell',
   pos: 'adjective',
   cefr: 'A1',
@@ -101,6 +103,7 @@ export const SCHNELL: WordContent = {
     },
   ],
   noun: null,
+  conjugation: null,
   verb: null,
   adjective: { comparative: 'schneller', superlative: 'am schnellsten' },
   synonyms: ['rasch'],

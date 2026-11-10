@@ -163,6 +163,73 @@ export interface AdminOverview {
   push_subscribers: number
 }
 
+export interface AdminCostKind {
+  kind: string
+  calls: number
+  ok: number
+  cache_hits: number
+  errors: number
+  cost: number
+  avg_cost: number
+  users: number
+}
+
+export interface AdminCosts {
+  days: number
+  total: number
+  by_kind: AdminCostKind[]
+  daily: { day: string; kind: string; cost: number }[]
+  models: { kind: string; model: string | null; calls: number; priced: boolean }[]
+  top_users: { user_id: string; email: string | null; display_name: string | null; cost: number; calls: number }[]
+  active_users: number
+}
+
+export interface AdminGrowth {
+  days: number
+  users: number
+  dau: number
+  wau: number
+  mau: number
+  plus: number
+  push: number
+  daily: { day: string; signups: number; active: number }[]
+  retention: Record<'d1' | 'd7' | 'd30', { base: number; back: number }>
+  native: Record<string, number>
+  learning: Record<string, number>
+}
+
+export interface AdminUserDetail {
+  user_id: string
+  email: string
+  display_name: string | null
+  created_at: string
+  last_sign_in_at: string | null
+  banned: boolean
+  is_admin: boolean
+  native_language: string | null
+  active_language: string | null
+  languages: { language: string; words: number }[]
+  words: number
+  cards: Record<string, number>
+  reviews_7d: number
+  reviews_30d: number
+  last_active_at: string | null
+  streak: number
+  costs_30d: { kind: string; calls: number; cost: number }[]
+  ai_per_day: number | null
+  blocked: boolean
+  plus_until: string | null
+  packs: number
+  friends: number
+  stories: number
+}
+
+export interface AdminReminders {
+  settings: { daily: boolean; time: string; times?: string[] | null; only_pending?: boolean; streak: boolean; time_zone: string | null } | null
+  devices: { agent: string | null; created_at: string; last_success_at: string | null; failures: number }[]
+  sent: { kind: string; ref?: string | null; sent_at: string }[]
+}
+
 export interface AdminBudget {
   since: string | null
   credit: number
@@ -279,6 +346,57 @@ export const admin = {
     }
   },
 
+  async user(client: SupabaseClient, userId: string): Promise<AdminUserDetail> {
+    const r = (await client.rpc<Record<string, unknown>>('admin_user', { p_user: userId })) ?? {}
+    return {
+      ...(r as unknown as AdminUserDetail),
+      words: num(r.words), reviews_7d: num(r.reviews_7d), reviews_30d: num(r.reviews_30d), streak: num(r.streak),
+      packs: num(r.packs), friends: num(r.friends), stories: num(r.stories),
+      ai_per_day: r.ai_per_day === null || r.ai_per_day === undefined ? null : num(r.ai_per_day),
+      blocked: r.blocked === true, banned: r.banned === true, is_admin: r.is_admin === true,
+      languages: ((r.languages as { language: string; words: unknown }[]) ?? []).map((l) => ({ language: l.language, words: num(l.words) })),
+      cards: Object.fromEntries(Object.entries((r.cards as Record<string, unknown>) ?? {}).map(([k, v]) => [k, num(v)])),
+      costs_30d: ((r.costs_30d as { kind: string; calls: unknown; cost: unknown }[]) ?? []).map((c) => ({ kind: c.kind, calls: num(c.calls), cost: num(c.cost) })),
+    }
+  },
+
+  async reminders(client: SupabaseClient, userId: string): Promise<AdminReminders> {
+    const r = (await client.rpc<AdminReminders>('admin_reminders', { p_user: userId })) ?? { settings: null, devices: [], sent: [] }
+    return { settings: r.settings ?? null, devices: (r.devices ?? []).map((d) => ({ ...d, failures: num(d.failures) })), sent: r.sent ?? [] }
+  },
+
+  async costs(client: SupabaseClient, days: number): Promise<AdminCosts> {
+    const raw = (await client.rpc<Record<string, unknown>>('admin_costs', { p_days: days })) ?? {}
+    const list = <T,>(v: unknown) => (Array.isArray(v) ? (v as T[]) : [])
+    return {
+      days: num(raw.days),
+      total: num(raw.total),
+      by_kind: list<Record<string, unknown>>(raw.by_kind).map((k) => ({
+        kind: String(k.kind), calls: num(k.calls), ok: num(k.ok), cache_hits: num(k.cache_hits), errors: num(k.errors), cost: num(k.cost), avg_cost: num(k.avg_cost), users: num(k.users),
+      })),
+      daily: list<Record<string, unknown>>(raw.daily).map((d) => ({ day: String(d.day), kind: String(d.kind), cost: num(d.cost) })),
+      models: list<Record<string, unknown>>(raw.models).map((m) => ({ kind: String(m.kind), model: (m.model as string | null) ?? null, calls: num(m.calls), priced: m.priced === true })),
+      top_users: list<Record<string, unknown>>(raw.top_users).map((u) => ({
+        user_id: String(u.user_id), email: (u.email as string | null) ?? null, display_name: (u.display_name as string | null) ?? null, cost: num(u.cost), calls: num(u.calls),
+      })),
+      active_users: num(raw.active_users),
+    }
+  },
+
+  async growth(client: SupabaseClient, days: number): Promise<AdminGrowth> {
+    const raw = (await client.rpc<Record<string, unknown>>('admin_growth', { p_days: days })) ?? {}
+    const counts = (v: unknown) => Object.fromEntries(Object.entries((v as Record<string, unknown>) ?? {}).map(([k, n]) => [k, num(n)]))
+    const ret = (raw.retention as Record<string, { base: unknown; back: unknown }>) ?? {}
+    const r = (k: string) => ({ base: num(ret[k]?.base), back: num(ret[k]?.back) })
+    return {
+      days: num(raw.days), users: num(raw.users), dau: num(raw.dau), wau: num(raw.wau), mau: num(raw.mau), plus: num(raw.plus), push: num(raw.push),
+      daily: ((raw.daily as Record<string, unknown>[]) ?? []).map((d) => ({ day: String(d.day), signups: num(d.signups), active: num(d.active) })),
+      retention: { d1: r('d1'), d7: r('d7'), d30: r('d30') },
+      native: counts(raw.native),
+      learning: counts(raw.learning),
+    }
+  },
+
   async users(client: SupabaseClient, search: string, offset = 0, limit = 50): Promise<AdminUser[]> {
     const rows = (await client.rpc<AdminUser[]>('admin_users', { p_search: search.trim() || null, p_limit: limit, p_offset: offset })) ?? []
     return rows.map((r) => ({ ...r, cost_30d: num(r.cost_30d), total: num(r.total) }))
@@ -286,6 +404,11 @@ export const admin = {
 
   setLimit(client: SupabaseClient, userId: string, aiPerDay: number | null, blocked: boolean, note: string | null = null): Promise<void> {
     return client.rpc('admin_set_limit', { p_user: userId, p_ai_per_day: aiPerDay, p_blocked: blocked, p_note: note })
+  },
+
+  /** Hodhod Plus for `days` days from now (0 takes it away); returns until when. */
+  setPlus(client: SupabaseClient, userId: string, days: number): Promise<string | null> {
+    return client.rpc<string | null>('admin_set_plus', { p_user: userId, p_days: days })
   },
 
   ban(client: SupabaseClient, userId: string, banned: boolean): Promise<void> {
@@ -504,8 +627,8 @@ export const stories = {
     return (await client.select<StoryRow>('stories', { select: '*', id: `eq.${id}` }))[0] ?? null
   },
   /** Asks the AI for a new story around these words; takes 10–30 seconds. */
-  create(client: SupabaseClient, words: string[], level: string): Promise<StoryRow> {
-    return client.invoke<StoryRow>('story', { words, level }, { timeoutMs: 120_000 })
+  create(client: SupabaseClient, words: string[], level: string, languages = { target: 'de', native: 'fa' }): Promise<StoryRow> {
+    return client.invoke<StoryRow>('story', { words, level, targetLanguage: languages.target, nativeLanguage: languages.native }, { timeoutMs: 120_000 })
   },
   async markRead(client: SupabaseClient, id: string): Promise<void> {
     await client.update('stories', { id: `eq.${id}` }, { read_at: new Date().toISOString() }).catch(() => undefined)

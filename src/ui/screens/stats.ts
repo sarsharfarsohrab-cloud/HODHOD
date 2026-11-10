@@ -3,7 +3,7 @@ import type { WordStatus } from '../../core/cards.ts'
 import { computeStats, type PeriodStats, type Stats } from '../../core/stats.ts'
 import type { Ctx, Screen } from '../context.ts'
 import { de, h, icon, replace } from '../dom.ts'
-import { fa, faPercent } from '../format.ts'
+import { num, fmtPercent } from '../format.ts'
 import { mascot, type MascotMood } from '../mascot.ts'
 import { t } from '../strings.ts'
 import { emptyState, segmented, wordTitle } from '../widgets.ts'
@@ -47,7 +47,7 @@ function columnChart(columns: Column[], options: { summary: string; idle: string
         h(
           'span',
           { class: 'chart-bar', style: { height: column.value > 0 ? `max(4px, ${(column.value / peak) * 100}%)` : '0' } },
-          i === peakIndex && column.value > 0 ? h('span', { class: 'chart-peak' }, fa(column.value)) : null,
+          i === peakIndex && column.value > 0 ? h('span', { class: 'chart-peak' }, num(column.value)) : null,
         ),
       )
     }),
@@ -66,16 +66,16 @@ export function statsScreen(ctx: Ctx): Screen {
     h(
       'div',
       { class: 'summary-grid four' },
-      tile(fa(p.reviews), t.stats.reviews),
-      tile(fa(p.minutes), t.stats.minutes),
-      tile(fa(p.newCards), t.stats.newWords),
-      tile(p.retention === null ? '—' : faPercent(p.retention), t.stats.retention),
+      tile(num(p.reviews), t.stats.reviews),
+      tile(num(p.minutes), t.stats.minutes),
+      tile(num(p.newCards), t.stats.newWords),
+      tile(p.retention === null ? '—' : fmtPercent(p.retention), t.stats.retention),
     )
 
   function insight(stats: Stats): { mood: MascotMood; line: string } {
     if (stats.month.reviews === 0) return { mood: 'idle', line: t.stats.insightStart }
     if (stats.streak.current >= 3) return { mood: 'proud', line: t.stats.insightStreak(stats.streak.current) }
-    if (stats.month.retention !== null && stats.month.retention >= 0.8) return { mood: 'happy', line: t.stats.insightRetention(faPercent(stats.month.retention)) }
+    if (stats.month.retention !== null && stats.month.retention >= 0.8) return { mood: 'happy', line: t.stats.insightRetention(fmtPercent(stats.month.retention)) }
     if (stats.byStatus.mastered > 0) return { mood: 'happy', line: t.stats.insightMastered(stats.byStatus.mastered) }
     return { mood: 'encouraging', line: t.stats.insightStart }
   }
@@ -131,10 +131,10 @@ export function statsScreen(ctx: Ctx): Screen {
               : h(
                   'ul',
                   { class: 'said' },
-                  h('li', null, h('b', null, fa(week.reviews)), h('span', null, t.stats.saidReviews(week.minutes))),
-                  h('li', null, h('b', null, fa(week.newCards)), h('span', null, t.stats.saidNew)),
-                  week.retention !== null ? h('li', null, h('b', null, faPercent(week.retention)), h('span', null, t.stats.saidRetention)) : null,
-                  h('li', null, h('b', null, fa(week.activeDays)), h('span', null, t.stats.saidDays)),
+                  h('li', null, h('b', null, num(week.reviews)), h('span', null, t.stats.saidReviews(week.minutes))),
+                  h('li', null, h('b', null, num(week.newCards)), h('span', null, t.stats.saidNew)),
+                  week.retention !== null ? h('li', null, h('b', null, fmtPercent(week.retention)), h('span', null, t.stats.saidRetention)) : null,
+                  h('li', null, h('b', null, num(week.activeDays)), h('span', null, t.stats.saidDays)),
                 ),
             segmented<Period>(
               [{ value: 'today', label: t.stats.today }, { value: 'week', label: t.stats.week }, { value: 'month', label: t.stats.month }],
@@ -154,12 +154,12 @@ export function statsScreen(ctx: Ctx): Screen {
             h('div', { class: 'row spread' }, h('h2', null, t.stats.journey), h('span', { class: 'small muted' }, t.stats.wordsTotal(stats.totalWords))),
             h(
               'ol',
-              { class: 'journey', 'aria-label': STATUSES.map((st) => `${t.status[st]}: ${fa(stats.byStatus[st])}`).join('، ') },
+              { class: 'journey', 'aria-label': STATUSES.map((st) => `${t.status[st]}: ${num(stats.byStatus[st])}`).join(t.common.listSep) },
               STATUSES.map((st) =>
                 h(
                   'li',
                   { class: `station st-${st}` },
-                  h('span', { class: 'station-dot', style: { '--size': `${28 + Math.round((stats.byStatus[st] / total) * 26)}px` } }, fa(stats.byStatus[st])),
+                  h('span', { class: 'station-dot', style: { '--size': `${28 + Math.round((stats.byStatus[st] / total) * 26)}px` } }, num(stats.byStatus[st])),
                   h('span', { class: 'station-name' }, t.status[st]),
                 ),
               ),
@@ -175,7 +175,7 @@ export function statsScreen(ctx: Ctx): Screen {
                   'ul',
                   { class: 'word-list flat' },
                   stats.difficult.map(({ word, lapses }) =>
-                    h('li', { class: 'word-row' }, h('a', { href: `#/words/${word.id}` }, wordTitle(word.content, 'span', 'de'), h('span', { class: 'meaning-line' }, `${word.primaryMeaning}، ${t.stats.lapses(lapses)}`))),
+                    h('li', { class: 'word-row' }, h('a', { href: `#/words/${word.id}` }, wordTitle(word.content, 'span', 'de'), h('span', { class: 'meaning-line' }, `${word.primaryMeaning}${t.common.listSep}${t.stats.lapses(lapses)}`))),
                   ),
                 )
               : h('p', { class: 'muted' }, t.stats.difficultNone),
@@ -220,7 +220,7 @@ export function statsScreen(ctx: Ctx): Screen {
                       null,
                       level.level ? de(level.level, 'hbar-label') : h('span', { class: 'hbar-label' }, t.stats.noLevel),
                       h('span', { class: 'hbar-track' }, h('span', { class: 'hbar-fill', style: { width: `${(level.count / levelPeak) * 100}%` } })),
-                      h('b', null, fa(level.count)),
+                      h('b', null, num(level.count)),
                     ),
                   ),
                 ),
@@ -232,7 +232,7 @@ export function statsScreen(ctx: Ctx): Screen {
             h('h2', null, t.stats.quiz),
             stats.quiz.accuracy === null
               ? h('div', { class: 'row spread wrap' }, h('p', { class: 'muted' }, t.stats.quizNone), h('a', { class: 'btn small', href: '#/quiz' }, t.quiz.start))
-              : h('div', { class: 'summary-grid' }, tile(faPercent(stats.quiz.accuracy), t.quiz.accuracyLabel), tile(fa(stats.quiz.attempts), t.stats.quizAnswersLabel)),
+              : h('div', { class: 'summary-grid' }, tile(fmtPercent(stats.quiz.accuracy), t.quiz.accuracyLabel), tile(num(stats.quiz.attempts), t.stats.quizAnswersLabel)),
           ),
         ),
       ),

@@ -31,15 +31,18 @@ import {
 import type { Ctx, Screen } from '../context.ts'
 import { de, h, icon, replace, type IconName } from '../dom.ts'
 import { createEditor } from '../editor.ts'
-import { fa, faDate, faDateTime, faRelative } from '../format.ts'
+import { num, fmtDate, fmtDateTime, fmtRelative } from '../format.ts'
 import { mascot } from '../mascot.ts'
 import { describeError, t } from '../strings.ts'
 import { emptyState, progressBar } from '../widgets.ts'
+import { growth, money } from './adminInsights.ts'
 
 const a = t.admin
-type Tab = 'overview' | 'users' | 'inbox' | 'news' | 'packs'
+type Tab = 'overview' | 'money' | 'growth' | 'users' | 'inbox' | 'news' | 'packs'
 const TABS: { id: Tab; icon: IconName }[] = [
-  { id: 'overview', icon: 'chart' },
+  { id: 'overview', icon: 'home' },
+  { id: 'money', icon: 'wallet' },
+  { id: 'growth', icon: 'trend' },
   { id: 'users', icon: 'users' },
   { id: 'inbox', icon: 'message' },
   { id: 'news', icon: 'bell' },
@@ -48,9 +51,9 @@ const TABS: { id: Tab; icon: IconName }[] = [
 /** Below this many dollars the overview warns that the credit is running out. */
 const LOW_CREDIT_USD = 1
 
-const usd = (n: number, digits = 2) => h('bdi', { dir: 'ltr', class: 'money' }, `$${n.toFixed(digits)}`)
+export const usd = (n: number, digits = 2) => h('bdi', { dir: 'ltr', class: 'money' }, `$${n.toFixed(digits)}`)
 /** Isolated left-to-right, so "$0.25" never turns into "0.25$" inside Persian text. */
-const usdText = (n: number, digits = 2) => `\u2066$${n.toFixed(digits)}\u2069`
+export const usdText = (n: number, digits = 2) => `\u2066$${n.toFixed(digits)}\u2069`
 
 const back = (ctx: Ctx, to: string) =>
   h('button', { class: 'icon-btn', type: 'button', 'aria-label': t.common.back, title: t.common.back, onclick: () => ctx.go(to) }, icon('back'))
@@ -79,24 +82,25 @@ function guarded(ctx: Ctx, el: HTMLElement, header: () => HTMLElement, start: ()
   })
 }
 
-function failure(err: unknown): HTMLElement {
+export function failure(err: unknown): HTMLElement {
   const error = toAppError(err)
   return h('p', { class: 'notice error' }, icon('info', { size: 18 }), h('span', null, error.kind === 'not_found' ? a.notReady : describeError(error)))
 }
 
-const stat = (value: string | Node, label: string, hint?: string) =>
+export const stat = (value: string | Node, label: string, hint?: string) =>
   h('div', { class: 'admin-stat' }, h('b', null, value), h('span', null, label), hint ? h('small', { class: 'muted' }, hint) : null)
 
 // --- the tabbed panel -------------------------------------------------------------------------
 
 export function adminScreen(ctx: Ctx, params: Record<string, string>): Screen {
   const tab = (TABS.some((x) => x.id === params.tab) ? params.tab : 'overview') as Tab
-  const el = h('main', { class: 'screen wide admin' })
+  // on a computer the panel has its own side menu instead of the app's (see .admin-layout)
+  const el = h('main', { class: 'screen wide admin admin-layout' })
   const body = h('div', { class: 'stack admin-body' })
   const header = () =>
     h(
       'div',
-      { class: 'stack', style: { gap: 'var(--s3)' } },
+      { class: 'stack admin-side', style: { gap: 'var(--s3)' } },
       h('header', { class: 'topbar' }, back(ctx, '/settings'), h('h1', null, a.title)),
       h(
         'nav',
@@ -107,10 +111,10 @@ export function adminScreen(ctx: Ctx, params: Record<string, string>): Screen {
   let destroy: (() => void) | undefined
   guarded(ctx, el, header, () => {
     replace(el, header(), body)
-    const views: Record<Tab, (ctx: Ctx, body: HTMLElement) => void | (() => void)> = { overview, users, inbox, news, packs }
-    destroy = views[tab](ctx, body) ?? undefined
+    const views: Record<Tab, (ctx: Ctx, body: HTMLElement, params: Record<string, string>) => void | (() => void)> = { overview, money, growth, users, inbox, news, packs }
+    destroy = views[tab](ctx, body, params) ?? undefined
   })
-  return { el, destroy: () => destroy?.() }
+  return { el, nav: false, destroy: () => destroy?.() }
 }
 
 // --- overview & money ------------------------------------------------------------------------
@@ -119,14 +123,8 @@ function overview(ctx: Ctx, body: HTMLElement): void {
   replace(body, h('p', { class: 'muted' }, t.common.loading))
   const load = async () => {
     try {
-      const [o, b, credits, prices, budget] = await Promise.all([
-        admin.overview(ctx.client),
-        admin.budget(ctx.client),
-        admin.credits(ctx.client),
-        admin.config<AiPrices>(ctx.client, 'ai_prices'),
-        admin.config<AiBudgetConfig>(ctx.client, 'ai_budget'),
-      ])
-      replace(body, numbers(o), creditCard(ctx, b, credits, load), costChart(b), settingsCard(ctx, prices, budget))
+      const [o, b, credits] = await Promise.all([admin.overview(ctx.client), admin.budget(ctx.client), admin.credits(ctx.client)])
+      replace(body, numbers(o), creditCard(ctx, b, credits, load), costChart(b))
     } catch (err) {
       replace(body, failure(err))
     }
@@ -138,16 +136,16 @@ function numbers(o: AdminOverview): HTMLElement {
   return h(
     'section',
     { class: 'admin-stats' },
-    stat(fa(o.users), a.usersTotal, a.usersNew(o.users_7d)),
-    stat(fa(o.active_today), a.activeToday, a.active7(o.active_7d)),
-    stat(fa(o.reviews_today), a.reviewsToday, a.reviews7(o.reviews_7d)),
-    stat(fa(o.words), a.wordsTotal),
-    stat(fa(o.ai_calls_today), a.aiToday),
+    stat(num(o.users), a.usersTotal, a.usersNew(o.users_7d)),
+    stat(num(o.active_today), a.activeToday, a.active7(o.active_7d)),
+    stat(num(o.reviews_today), a.reviewsToday, a.reviews7(o.reviews_7d)),
+    stat(num(o.words), a.wordsTotal),
+    stat(num(o.ai_calls_today), a.aiToday),
     stat(usd(o.cost_today), a.costToday, `${a.cost7}: ${usdText(o.cost_7d)}، ${a.cost30}: ${usdText(o.cost_30d)}`),
     h(
       'a',
       { class: `admin-stat link ${o.feedback_new + o.reports_new > 0 ? 'attention' : ''}`, href: '#/admin/inbox' },
-      h('b', null, fa(o.feedback_new + o.reports_new)),
+      h('b', null, num(o.feedback_new + o.reports_new)),
       h('span', null, a.tabs.inbox),
       h('small', { class: 'muted' }, a.inboxNew(o.feedback_new, o.reports_new, o.errors_24h)),
     ),
@@ -176,7 +174,7 @@ function creditCard(ctx: Ctx, b: AdminBudget, credits: CreditEntry[], reload: ()
           h('b', { class: 'credit-number' }, usd(b.remaining)),
           h('span', null, a.remaining),
           progressBar(b.credit > 0 ? b.remaining / b.credit : 0, a.remaining),
-          h('small', { class: 'muted' }, a.spent(usdText(b.spent), b.since ? faDate(b.since) : '—')),
+          h('small', { class: 'muted' }, a.spent(usdText(b.spent), b.since ? fmtDate(b.since) : '—')),
           b.avg_card_cost > 0 ? h('small', { class: 'muted' }, a.perCard(usdText(b.avg_card_cost, 4))) : null,
           cardsLeft !== null ? h('small', { class: 'muted' }, a.cardsLeft(cardsLeft)) : null,
         )
@@ -199,7 +197,7 @@ function creditCard(ctx: Ctx, b: AdminBudget, credits: CreditEntry[], reload: ()
             'ul',
             { class: 'admin-list compact' },
             credits.map((c) =>
-              h('li', null, h('span', { class: 'chip' }, c.kind === 'topup' ? a.kindTopup : a.kindBalance), usd(Number(c.amount_usd)), h('span', { class: 'muted grow' }, c.note ?? ''), h('small', { class: 'muted' }, faDate(c.created_at))),
+              h('li', null, h('span', { class: 'chip' }, c.kind === 'topup' ? a.kindTopup : a.kindBalance), usd(Number(c.amount_usd)), h('span', { class: 'muted grow' }, c.note ?? ''), h('small', { class: 'muted' }, fmtDate(c.created_at))),
             ),
           ),
         )
@@ -221,16 +219,17 @@ function costChart(b: AdminBudget): HTMLElement | null {
       b.daily.map((d) =>
         h(
           'li',
-          { title: `${faDate(d.day)}: ${usdText(d.cost, 3)}، ${fa(d.calls)}`, 'aria-label': `${faDate(d.day)}: ${usdText(d.cost, 3)}` },
+          { title: `${fmtDate(d.day)}: ${usdText(d.cost, 3)}، ${num(d.calls)}`, 'aria-label': `${fmtDate(d.day)}: ${usdText(d.cost, 3)}` },
           h('span', { class: 'bar', style: { height: `${Math.max(2, (d.cost / max) * 100)}%` } }),
         ),
       ),
     ),
-    h('div', { class: 'row spread small muted' }, h('span', null, faDate(b.daily[0]!.day)), h('span', null, `max ${usdText(max, 3)}`), h('span', null, faDate(b.daily.at(-1)!.day))),
+    h('div', { class: 'row spread small muted' }, h('span', null, fmtDate(b.daily[0]!.day)), h('span', null, `max ${usdText(max, 3)}`), h('span', null, fmtDate(b.daily.at(-1)!.day))),
   )
 }
 
-function settingsCard(ctx: Ctx, prices: AiPrices | null, budget: AiBudgetConfig | null): HTMLElement {
+/** Prices per model (every model the app used gets a row) and the spending limits. */
+export function settingsCard(ctx: Ctx, prices: AiPrices | null, budget: AiBudgetConfig | null, models: string[] = []): HTMLElement {
   const p: AiPrices = structuredClone(prices ?? { default: { input: 1.25, output: 10 }, tts: { input: 15, output: 0 } })
   const bud: AiBudgetConfig = { daily_usd: 1.5, new_user_days: 3, new_user_per_day: 30, tts_per_day: 300, stories_per_day: 3, ...(budget ?? {}) }
   const numberInput = (value: number, onChange: (v: number) => void, label: string, step = '0.01') =>
@@ -256,6 +255,7 @@ function settingsCard(ctx: Ctx, prices: AiPrices | null, budget: AiBudgetConfig 
     { class: 'card stack fold' },
     h('summary', null, h('h2', null, a.prices), icon('chevron', { size: 18 })),
     h('p', { class: 'help' }, a.pricesHelp),
+    models.filter((m) => m !== 'default' && m !== 'tts').map((m) => priceRow(m, a.priceModel(m))),
     priceRow('default', a.priceDefault),
     priceRow('tts', a.priceTts),
     numberInput(bud.daily_usd, (v) => (bud.daily_usd = v), a.dailyUsd),
@@ -277,10 +277,10 @@ function settingsCard(ctx: Ctx, prices: AiPrices | null, budget: AiBudgetConfig 
 
 // --- users ---------------------------------------------------------------------------------------
 
-function users(ctx: Ctx, body: HTMLElement): () => void {
+function users(ctx: Ctx, body: HTMLElement, params: Record<string, string> = {}): () => void {
   let list: AdminUser[] = []
   let total = 0
-  let query = ''
+  let query = params.q ?? ''
   let timer: ReturnType<typeof setTimeout> | undefined
   const search = h('input', {
     class: 'input',
@@ -288,6 +288,7 @@ function users(ctx: Ctx, body: HTMLElement): () => void {
     placeholder: a.search,
     'aria-label': a.search,
     dir: 'auto',
+    value: query,
     oninput: () => {
       clearTimeout(timer)
       timer = setTimeout(() => {
@@ -311,40 +312,7 @@ function users(ctx: Ctx, body: HTMLElement): () => void {
   }
 
   const userCard = (u: AdminUser) => {
-    const limitBtn = h('button', { class: 'btn small', type: 'button' }, icon('sparkle', { size: 16 }), a.setLimit)
-    limitBtn.onclick = async () => {
-      const raw = prompt(a.limitPrompt, u.ai_per_day === null ? '' : String(u.ai_per_day))
-      if (raw === null) return
-      const value = raw.trim() === '' ? null : Math.max(0, Math.min(5000, Math.round(Number(raw))))
-      if (value !== null && !Number.isFinite(value)) return
-      if (await act(ctx, limitBtn, () => admin.setLimit(ctx.client, u.user_id, value, u.blocked), a.limitSaved)) {
-        u.ai_per_day = value
-        render()
-      }
-    }
     const blocked = u.blocked || u.banned
-    const blockBtn = h('button', { class: `btn small ${blocked ? '' : 'danger'}`, type: 'button' }, icon(blocked ? 'check' : 'lock', { size: 16 }), blocked ? a.unblock : a.block)
-    blockBtn.onclick = async () => {
-      if (!blocked && !(await ctx.confirm({ title: a.block, body: a.blockConfirm(u.email), confirmLabel: a.block, danger: true }))) return
-      const ok = await act(ctx, blockBtn, async () => {
-        await admin.ban(ctx.client, u.user_id, !blocked)
-        await admin.setLimit(ctx.client, u.user_id, u.ai_per_day, !blocked)
-      }, blocked ? a.unblocked : a.blocked)
-      if (ok) {
-        u.blocked = !blocked
-        u.banned = !blocked
-        render()
-      }
-    }
-    const deleteBtn = h('button', { class: 'btn small danger', type: 'button' }, icon('trash', { size: 16 }), a.deleteUser)
-    deleteBtn.onclick = async () => {
-      if (!(await ctx.confirm({ title: a.deleteUser, body: a.deleteConfirm(u.email), confirmLabel: t.common.delete, danger: true }))) return
-      if (await act(ctx, deleteBtn, () => admin.deleteUser(ctx.client, u.user_id), a.deletedUser)) {
-        list = list.filter((x) => x.user_id !== u.user_id)
-        total--
-        render()
-      }
-    }
     const now = ctx.now()
     return h(
       'article',
@@ -352,15 +320,23 @@ function users(ctx: Ctx, body: HTMLElement): () => void {
       h(
         'div',
         { class: 'row wrap', style: { gap: 'var(--s2)' } },
-        h('b', { class: 'grow' }, u.display_name || '—'),
+        h('a', { class: 'grow user-name', href: `#/admin/users/${u.user_id}` }, u.display_name || '—'),
         u.is_admin ? h('span', { class: 'chip status-review' }, a.adminBadge) : null,
         blocked ? h('span', { class: 'chip danger' }, a.blockedBadge) : null,
         u.ai_per_day !== null ? h('span', { class: 'chip' }, a.limitBadge(u.ai_per_day)) : null,
       ),
       h('bdi', { dir: 'ltr', class: 'small user-email' }, u.email),
-      h('p', { class: 'small muted' }, `${a.joined(faDate(u.created_at))}، ${u.last_active_at ? a.lastActive(faRelative(u.last_active_at, now)) : a.neverActive}`),
+      h('p', { class: 'small muted' }, `${a.joined(fmtDate(u.created_at))}، ${u.last_active_at ? a.lastActive(fmtRelative(u.last_active_at, now)) : a.neverActive}`),
       h('p', { class: 'small' }, a.userStats(u.words, u.reviews_30d, u.ai_calls_30d, usdText(u.cost_30d, 3), u.packs)),
-      u.is_admin ? null : h('div', { class: 'row wrap' }, limitBtn, blockBtn, deleteBtn),
+      u.is_admin
+        ? null
+        : userActions(ctx, u, (change) => {
+            if (change === 'deleted') {
+              list = list.filter((x) => x.user_id !== u.user_id)
+              total--
+            }
+            render()
+          }),
     )
   }
 
@@ -376,6 +352,51 @@ function users(ctx: Ctx, body: HTMLElement): () => void {
   replace(results, h('p', { class: 'muted' }, t.common.loading))
   void load(false)
   return () => clearTimeout(timer)
+}
+
+type ActionUser = Pick<AdminUser, 'user_id' | 'email' | 'ai_per_day' | 'blocked' | 'banned'>
+
+/** Limit, Plus, block and delete for one account (in the list and on the account's own page). */
+export function userActions(ctx: Ctx, u: ActionUser, onChange: (change: 'changed' | 'deleted') => void): HTMLElement {
+  const limitBtn = h('button', { class: 'btn small', type: 'button' }, icon('sparkle', { size: 16 }), a.setLimit)
+  limitBtn.onclick = async () => {
+    const raw = prompt(a.limitPrompt, u.ai_per_day === null ? '' : String(u.ai_per_day))
+    if (raw === null) return
+    const value = raw.trim() === '' ? null : Math.max(0, Math.min(5000, Math.round(Number(raw))))
+    if (value !== null && !Number.isFinite(value)) return
+    if (await act(ctx, limitBtn, () => admin.setLimit(ctx.client, u.user_id, value, u.blocked), a.limitSaved)) {
+      u.ai_per_day = value
+      onChange('changed')
+    }
+  }
+  const plusBtn = h('button', { class: 'btn small', type: 'button' }, icon('star', { size: 16 }), a.plus)
+  plusBtn.onclick = async () => {
+    const raw = prompt(a.plusPrompt, '30')
+    if (raw === null) return
+    const days = Math.max(0, Math.min(3650, Math.round(Number(raw.trim() || '0'))))
+    if (!Number.isFinite(days)) return
+    if (await act(ctx, plusBtn, () => admin.setPlus(ctx.client, u.user_id, days), days > 0 ? a.plusGiven(days) : a.plusRemoved)) onChange('changed')
+  }
+  const blocked = u.blocked || u.banned
+  const blockBtn = h('button', { class: `btn small ${blocked ? '' : 'danger'}`, type: 'button' }, icon(blocked ? 'check' : 'lock', { size: 16 }), blocked ? a.unblock : a.block)
+  blockBtn.onclick = async () => {
+    if (!blocked && !(await ctx.confirm({ title: a.block, body: a.blockConfirm(u.email), confirmLabel: a.block, danger: true }))) return
+    const ok = await act(ctx, blockBtn, async () => {
+      await admin.ban(ctx.client, u.user_id, !blocked)
+      await admin.setLimit(ctx.client, u.user_id, u.ai_per_day, !blocked)
+    }, blocked ? a.unblocked : a.blocked)
+    if (ok) {
+      u.blocked = !blocked
+      u.banned = !blocked
+      onChange('changed')
+    }
+  }
+  const deleteBtn = h('button', { class: 'btn small danger', type: 'button' }, icon('trash', { size: 16 }), a.deleteUser)
+  deleteBtn.onclick = async () => {
+    if (!(await ctx.confirm({ title: a.deleteUser, body: a.deleteConfirm(u.email), confirmLabel: t.common.delete, danger: true }))) return
+    if (await act(ctx, deleteBtn, () => admin.deleteUser(ctx.client, u.user_id), a.deletedUser)) onChange('deleted')
+  }
+  return h('div', { class: 'row wrap' }, limitBtn, plusBtn, blockBtn, deleteBtn)
 }
 
 // --- inbox ------------------------------------------------------------------------------------
@@ -409,7 +430,7 @@ function reportList(ctx: Ctx, rows: ReportRow[], reload: () => void): HTMLElemen
     return h(
       'li',
       { class: 'inbox-item' },
-      h('div', { class: 'row wrap' }, statusChip(r.status), h('span', { class: 'chip' }, t.report.reasons[r.reason]), h('b', { class: 'de grow', lang: 'de', dir: 'ltr' }, r.lemma), h('small', { class: 'muted' }, faDateTime(r.created_at))),
+      h('div', { class: 'row wrap' }, statusChip(r.status), h('span', { class: 'chip' }, t.report.reasons[r.reason]), h('b', { class: 'de grow', lang: 'de', dir: 'ltr' }, r.lemma), h('small', { class: 'muted' }, fmtDateTime(r.created_at))),
       r.message ? h('p', { class: 'small' }, r.message) : null,
       r.status === 'new'
         ? h('div', { class: 'row wrap' }, r.content ? h('a', { class: 'btn small primary', href: `#/admin/reports/${r.id}` }, icon('edit', { size: 16 }), a.fix) : null, reject)
@@ -419,7 +440,7 @@ function reportList(ctx: Ctx, rows: ReportRow[], reload: () => void): HTMLElemen
   return h(
     'section',
     { class: 'card stack' },
-    h('h2', null, `${a.reportsTitle} (${fa(open.length)})`),
+    h('h2', null, `${a.reportsTitle} (${num(open.length)})`),
     open.length + closed.length === 0 ? h('p', { class: 'muted small' }, a.nothing) : h('ul', { class: 'admin-list' }, [...open, ...closed].map(row)),
   )
 }
@@ -436,7 +457,7 @@ function feedbackList(ctx: Ctx, rows: FeedbackRow[], reload: () => void): HTMLEl
     return h(
       'li',
       { class: `inbox-item ${f.status}` },
-      h('div', { class: 'row wrap' }, statusChip(f.status), h('span', { class: 'chip' }, t.feedback.kinds[f.kind]), h('span', { class: 'grow' }), h('small', { class: 'muted' }, faDateTime(f.created_at))),
+      h('div', { class: 'row wrap' }, statusChip(f.status), h('span', { class: 'chip' }, t.feedback.kinds[f.kind]), h('span', { class: 'grow' }), h('small', { class: 'muted' }, fmtDateTime(f.created_at))),
       h('p', { class: 'inbox-message' }, f.message),
       f.context && Object.keys(f.context).length > 0 ? h('small', { class: 'muted', dir: 'ltr' }, Object.entries(f.context).map(([k, v]) => `${k}: ${String(v)}`).join(' · ')) : null,
       h('div', { class: 'row wrap' }, f.status === 'new' ? mark('seen', a.markSeen) : null, f.status !== 'done' ? mark('done', a.markDone) : null),
@@ -447,7 +468,7 @@ function feedbackList(ctx: Ctx, rows: FeedbackRow[], reload: () => void): HTMLEl
   return h(
     'section',
     { class: 'card stack' },
-    h('h2', null, `${a.feedbackTitle} (${fa(rows.filter((f) => f.status === 'new').length)})`),
+    h('h2', null, `${a.feedbackTitle} (${num(rows.filter((f) => f.status === 'new').length)})`),
     rows.length === 0 ? h('p', { class: 'muted small' }, a.nothing) : h('ul', { class: 'admin-list' }, [...open, ...done].map(row)),
   )
 }
@@ -456,7 +477,7 @@ function errorList(rows: ErrorRow[]): HTMLElement {
   return h(
     'section',
     { class: 'card stack' },
-    h('h2', null, `${a.errorsTitle} (${fa(rows.length)})`),
+    h('h2', null, `${a.errorsTitle} (${num(rows.length)})`),
     rows.length === 0
       ? h('p', { class: 'muted small' }, a.nothing)
       : h(
@@ -466,7 +487,7 @@ function errorList(rows: ErrorRow[]): HTMLElement {
             h(
               'li',
               { class: 'inbox-item' },
-              h('details', null, h('summary', { dir: 'ltr', class: 'error-line' }, h('small', { class: 'muted' }, faDateTime(e.created_at)), ' ', e.message), h('pre', { class: 'error-stack', dir: 'ltr' }, [e.url, e.app_version, e.user_agent, e.stack].filter(Boolean).join('\n'))),
+              h('details', null, h('summary', { dir: 'ltr', class: 'error-line' }, h('small', { class: 'muted' }, fmtDateTime(e.created_at)), ' ', e.message), h('pre', { class: 'error-stack', dir: 'ltr' }, [e.url, e.app_version, e.user_agent, e.stack].filter(Boolean).join('\n'))),
             ),
           ),
         ),
@@ -519,7 +540,7 @@ function news(ctx: Ctx, body: HTMLElement): void {
     return h(
       'article',
       { class: `card stack ${n.published ? '' : 'faded'}` },
-      h('div', { class: 'row wrap' }, h('b', { class: 'grow' }, n.title), n.published ? null : h('span', { class: 'chip' }, a.newsHidden), h('small', { class: 'muted' }, faDateTime(n.created_at))),
+      h('div', { class: 'row wrap' }, h('b', { class: 'grow' }, n.title), n.published ? null : h('span', { class: 'chip' }, a.newsHidden), h('small', { class: 'muted' }, fmtDateTime(n.created_at))),
       n.body ? h('p', { class: 'small' }, n.body) : null,
       h('div', { class: 'row wrap' }, push, toggle),
     )
@@ -905,7 +926,7 @@ export function adminPackScreen(ctx: Ctx, params: Record<string, string>): Scree
       h(
         'section',
         { class: 'card stack' },
-        h('div', { class: 'row spread' }, h('h2', null, `${a.items} (${fa(items.length)})`), items.length > 0 ? relessonBtn : null),
+        h('div', { class: 'row spread' }, h('h2', null, `${a.items} (${num(items.length)})`), items.length > 0 ? relessonBtn : null),
         [...byLesson.entries()].map(([lesson, list]) => h('div', { class: 'stack', style: { gap: 'var(--s1)' } }, h('h3', { class: 'small muted' }, t.store.lesson(lesson)), h('ul', { class: 'admin-list' }, list.map(itemRow)))),
       ),
     )
@@ -991,7 +1012,7 @@ export function adminReportScreen(ctx: Ctx, params: Record<string, string>): Scr
         h(
           'section',
           { class: 'card stack' },
-          h('div', { class: 'row wrap' }, h('span', { class: 'chip' }, t.report.reasons[report.reason]), h('small', { class: 'muted' }, faDateTime(report.created_at))),
+          h('div', { class: 'row wrap' }, h('span', { class: 'chip' }, t.report.reasons[report.reason]), h('small', { class: 'muted' }, fmtDateTime(report.created_at))),
           report.message ? h('p', null, report.message) : null,
           h('p', { class: 'help' }, a.fixHelp),
         ),

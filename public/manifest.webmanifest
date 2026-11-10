@@ -1,9 +1,9 @@
 {
-  "name": "HODHOD — واژه‌های آلمانی",
-  "short_name": "HODHOD",
-  "description": "یادگیری واژه‌های آلمانی برای فارسی‌زبانان با مرور فاصله‌دار.",
-  "lang": "fa",
-  "dir": "rtl",
+  "name": "Hodhod — smart flashcards",
+  "short_name": "Hodhod",
+  "description": "Smart flashcards with spaced repetition for the words you need.",
+  "lang": "en",
+  "dir": "ltr",
   "start_url": "./#/home",
   "scope": "./",
   "id": "./",
@@ -36,11 +36,11 @@
   ],
   "shortcuts": [
     {
-      "name": "مرور",
+      "name": "Review",
       "url": "./#/study"
     },
     {
-      "name": "کلمهٔ تازه",
+      "name": "New word",
       "url": "./#/create"
     }
   ]
