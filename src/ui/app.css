@@ -4540,3 +4540,31 @@ html[dir='ltr'] .deck-row .icon {
 .reminder-times .input {
   min-width: 0;
 }
+
+/* first-visit language list: flag, English name, own name underneath */
+.first-language .language-grid .option-card {
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.language-flag {
+  flex: none;
+  width: 28px;
+  height: 21px;
+  border-radius: 4px;
+  object-fit: cover;
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.language-names {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.language-names small {
+  color: var(--ink-2);
+  font-size: 0.8rem;
+}
