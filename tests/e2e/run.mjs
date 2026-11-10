@@ -39,8 +39,16 @@ function assert(condition, message) {
   if (!condition) throw new Error(`assertion failed: ${message}`)
 }
 
-async function newPage(options = {}) {
+/** A fresh phone. `language` is the interface language this device already chose (null: a first visit). */
+async function newPage({ language = 'fa', ...options } = {}) {
   const context = await browser.newContext({ ...PHONE, ...options })
+  if (language) {
+    await context.addInitScript((code) => {
+      try {
+        if (!localStorage.getItem('hodhod.language')) localStorage.setItem('hodhod.language', code)
+      } catch {}
+    }, language)
+  }
   const page = await context.newPage()
   const problems = []
   page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`))
@@ -813,14 +821,42 @@ await test('the bird is on every main screen and reacts', async () => {
   return page
 })
 
+await test('a first visit opens in English and asks for the language first', async () => {
+  await control('reset', { welcome: true })
+  const page = await newPage({ language: null })
+  await page.goto(BASE)
+  await page.getByRole('heading', { name: 'Choose your language' }).waitFor()
+  assert((await page.evaluate(() => document.documentElement.dir)) === 'ltr', 'English is left to right')
+  await noHorizontalScroll(page, 'first language')
+  await snap(page, 'first-language')
+  await page.getByRole('button', { name: 'English' }).click()
+  await page.getByRole('button', { name: 'Create account', exact: true }).click()
+  await page.getByLabel('Name').fill('Mary')
+  await page.getByLabel('Email').fill('mary@example.test')
+  await page.getByLabel('Password').fill('correct horse battery')
+  await page.getByRole('button', { name: 'Create account' }).last().click()
+  // next: the language to learn, never English itself
+  await page.getByRole('heading', { name: 'Which language do you want to learn?' }).waitFor()
+  assert(!(await page.getByRole('radio', { name: /^English/ }).count()), 'English is not offered to an English speaker')
+  await snap(page, 'welcome-learn-english-ui')
+  await page.getByRole('radio', { name: /French/ }).click()
+  await page.getByRole('heading', { name: 'Hi Mary, welcome!' }).waitFor()
+  await page.getByText('Type any French word', { exact: false }).waitFor()
+  assert((await page.evaluate(() => document.documentElement.dataset.deck)) === 'fr', 'the French colours are on')
+  const s = await state()
+  assert(s.profiles?.[0]?.native_language === 'en' && s.profiles?.[0]?.active_target_language === 'fr', `the languages are saved (${JSON.stringify(s.profiles?.[0])})`)
+  await page.reload()
+  await page.getByRole('heading', { name: 'Hi Mary, welcome!' }).waitFor()
+  return page
+})
+
 await test('welcome tour for a new account; its answers become the settings', async () => {
   await control('reset', { welcome: true })
-  const page = await newPage()
+  const page = await newPage({ language: null })
+  await page.goto(BASE)
+  await page.getByRole('button', { name: 'فارسی' }).click()
   await signUp(page, { name: 'مریم' }).catch(() => undefined)
-  // own language, then the language to learn
-  await page.getByRole('heading', { name: 'زبان خودت کدام است؟' }).waitFor()
-  await snap(page, 'welcome-own-language')
-  await page.getByRole('radio', { name: 'فارسی' }).click()
+  // the own language was chosen before signing up; now the language to learn
   await page.getByRole('heading', { name: 'کلمه‌های کدام زبان را می‌خواهی یاد بگیری؟' }).waitFor()
   await snap(page, 'welcome-learn-language')
   await page.getByRole('radio', { name: /آلمانی/ }).click()
@@ -1288,7 +1324,8 @@ await test('the test version under /staging/ is marked and keeps its own sign-in
   await signUp(page) // the real app
   await page.goto(`${BASE}/staging/`)
   await page.locator('.staging-ribbon').waitFor()
-  // not signed in there: the session of the real app is not shared
+  // not signed in there: the session (and the language) of the real app is not shared
+  await page.getByRole('button', { name: 'فارسی' }).click()
   await page.getByRole('button', { name: 'ساخت حساب', exact: true }).waitFor()
   await snap(page, 'staging')
   await page.goto(`${BASE}/`)

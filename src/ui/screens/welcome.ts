@@ -30,8 +30,8 @@ export function welcomeScreen(ctx: Ctx, params: Record<string, string> = {}): Sc
   let level: Level = 'beginner'
   // someone who already uses the app sees this once after an update: their numbers stay the start
   const returning = ctx.data.words.size > 0
-  // a new learner first picks their own language and the language to learn
-  const pages: Page[] = returning ? ['hello', 'time', 'level', 'ready'] : ['own', 'learn', 'intro', 'time', 'level', 'ready']
+  // a new learner chose their own language before signing up; first they pick the language to learn
+  const pages: Page[] = returning ? ['hello', 'time', 'level', 'ready'] : ['learn', 'intro', 'time', 'level', 'ready']
   // the page number survives the rebuild that follows a change of interface language
   let step = Math.min(Math.max(Number(params.step) || 0, 0), pages.length - 1)
   let busy = false

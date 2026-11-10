@@ -11,12 +11,19 @@ import type { Rating } from '../core/types.ts'
 import type { AppError } from '../data/errors.ts'
 import { num, setFormatLocale } from './format.ts'
 import { fa as faStrings } from './i18n/fa.ts'
+import { en as enStrings } from './i18n/en.ts'
 import { isUiLanguage, UI_LANGUAGE_INFO, type UiLanguage } from './i18n/languages.ts'
 
 export type Strings = typeof faStrings
 
-/** Dictionaries that ship with the app; a language without one falls back to Persian for now. */
-const DICTIONARIES: Partial<Record<UiLanguage, Strings>> = { fa: faStrings }
+/** A dictionary of another language; the admin panel is only in Persian. */
+export type Dictionary = Omit<Strings, 'admin'>
+
+/** Dictionaries that ship with the app; a language without one falls back to English for now. */
+const DICTIONARIES: Partial<Record<UiLanguage, Dictionary>> = { fa: faStrings, en: enStrings }
+
+/** The language a first-time visitor sees: English, the international one. */
+export const DEFAULT_LANGUAGE: UiLanguage = 'en'
 
 type Plain = Record<string, unknown>
 const isPlain = (v: unknown): v is Plain => typeof v === 'object' && v !== null && !Array.isArray(v)
@@ -58,9 +65,9 @@ export const appName = (): string => UI_LANGUAGE_INFO[current].appName
 
 /** Switches the whole interface: texts, number and date formats, and the page direction. */
 export function setLanguage(code: string | null | undefined): UiLanguage {
-  const next: UiLanguage = isUiLanguage(code) ? code : 'fa'
+  const next: UiLanguage = isUiLanguage(code) ? code : DEFAULT_LANGUAGE
   current = next
-  deepAssign(t as unknown as Plain, (DICTIONARIES[next] ?? faStrings) as unknown as Plain)
+  deepAssign(t as unknown as Plain, (DICTIONARIES[next] ?? enStrings) as unknown as Plain)
   const info = UI_LANGUAGE_INFO[next]
   setFormatLocale(info.intl)
   if (typeof document !== 'undefined') {

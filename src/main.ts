@@ -17,6 +17,7 @@ import { num } from './ui/format.ts'
 import { mascot, preloadMascot } from './ui/mascot.ts'
 import { adminItemScreen, adminPackScreen, adminReportScreen, adminScreen } from './ui/screens/admin.ts'
 import { authScreen } from './ui/screens/auth.ts'
+import { languageScreen } from './ui/screens/language.ts'
 import { createScreen } from './ui/screens/create.ts'
 import { homeScreen } from './ui/screens/home.ts'
 import { deckImportScreen } from './ui/screens/deckImport.ts'
@@ -175,13 +176,19 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
     applyLanguage(data.profile.nativeLanguage)
     return true
   }
-  // a new account takes over the language chosen on the sign-in page
-  const chosen = storage.getItem(LANGUAGE_KEY)
-  if (!data.settings.onboarded && isUiLanguage(chosen) && chosen !== data.profile.nativeLanguage) {
-    const target = data.profile.activeTargetLanguage === chosen ? targetsFor(chosen)[0]! : data.profile.activeTargetLanguage
-    await data.setLanguages({ native: chosen, target }).catch(() => undefined)
+  // a new account takes over the language chosen on this device before signing up
+  const adoptChosenLanguage = async () => {
+    const chosen = storage.getItem(LANGUAGE_KEY)
+    if (!data.settings.onboarded && isUiLanguage(chosen) && chosen !== data.profile.nativeLanguage) {
+      const target = data.profile.activeTargetLanguage === chosen ? targetsFor(chosen)[0]! : data.profile.activeTargetLanguage
+      await data.setLanguages({ native: chosen, target }).catch(() => undefined)
+    }
   }
-  syncLanguages()
+  // until the account has arrived from the server, its settings are not known: keep the device's language
+  if (data.hasSyncedOnce) {
+    await adoptChosenLanguage()
+    syncLanguages()
+  }
   // someone learning several languages picks today's one when the app opens (once per visit)
   try {
     if (data.settings.onboarded && data.decks().length > 1 && /^#?\/?(home)?$/.test(location.hash.replace(/^#/, '')) && !sessionStorage.getItem('hodhod.deckAsked')) {
@@ -221,6 +228,8 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
     })
   }
   if (stopped) return { stop }
+  await adoptChosenLanguage()
+  syncLanguages()
 
   // natural voice from the server first; the phone's own voice whenever that is not possible
   const cloudSpeech = new CloudSpeechProvider({
@@ -405,7 +414,10 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
 // --- boot -------------------------------------------------------------------------------
 
 async function boot() {
-  applyLanguage(storage.getItem(LANGUAGE_KEY))
+  // a new device has no language yet: it opens in English and asks first (see languageScreen)
+  let languageChosen = isUiLanguage(storage.getItem(LANGUAGE_KEY))
+  if (languageChosen) applyLanguage(storage.getItem(LANGUAGE_KEY))
+  else setLanguage(null)
   if (STAGING) document.body.append(h('div', { class: 'staging-ribbon', 'aria-hidden': 'true' }, t.staging))
   applyTheme((storage.getItem(THEME_KEY) as Settings['theme'] | null) ?? 'system')
   const config = readConfig()
@@ -455,7 +467,16 @@ async function boot() {
             },
           }),
         )
-      signIn()
+      if (languageChosen) signIn()
+      else
+        replace(
+          root,
+          languageScreen((code) => {
+            languageChosen = true
+            applyLanguage(code)
+            signIn()
+          }),
+        )
       linkProblem = undefined
       return
     }

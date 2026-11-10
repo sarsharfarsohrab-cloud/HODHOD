@@ -128,8 +128,9 @@ Bun.serve({
             settings: backend.tables.user_settings,
             quizSessions: backend.tables.quiz_sessions,
             quizAnswers: backend.tables.quiz_answers,
-            aiCalls: backend.aiCalls,
             logs: backend.tables.ai_generation_logs,
+            aiCalls: backend.aiCalls,
+            profiles: backend.tables.profiles,
           })
       }
       return Response.json({ ok: true })
