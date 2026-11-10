@@ -8,8 +8,9 @@ export type StoryLevel = (typeof LEVELS)[number]
 export const storyForm = (word: Word): string => (word.content.noun?.article ? `${word.content.noun.article} ${word.lemma}` : word.lemma)
 
 /**
- * Words the learner has met (not brand-new cards), favouring the ones being learned right
- * now and the ones reviewed most recently. Sentences are left out: a story needs words.
+ * The learner's words, favouring the ones being learned right now and the ones reviewed most
+ * recently; brand-new words come last, so a story can be written right after adding a few words.
+ * Sentences are left out: a story needs words.
  */
 export function pickStoryWords(words: Iterable<Word>, cards: Iterable<Card>, max = 15): Word[] {
   const main = new Map<string, Card>()
@@ -18,8 +19,8 @@ export function pickStoryWords(words: Iterable<Word>, cards: Iterable<Card>, max
   for (const word of words) {
     if (word.deletedAt || word.pos === 'sentence') continue
     const card = main.get(word.id)
-    if (!card || card.state === 'new') continue
-    const recent = card.lastReview ? Date.parse(card.lastReview) : 0
+    if (!card) continue
+    const recent = card.state === 'new' ? -1 : card.lastReview ? Date.parse(card.lastReview) : 0
     const learning = card.state === 'learning' || card.state === 'relearning' ? 1e13 : 0
     scored.push({ word, score: learning + recent })
   }
@@ -41,9 +42,13 @@ export interface Segment {
 function stems(forms: readonly string[]): string[] {
   const out = new Set<string>()
   for (const form of forms) {
-    const parts = form.toLocaleLowerCase('de').replace(/^(der|die|das|sich)\s+/, '').split(/\s+/)
+    // articles and reflexive markers of the learned languages are not part of the word
+    const parts = form
+      .toLocaleLowerCase()
+      .replace(/^(?:(?:der|die|das|sich|the|to|le|la|les|il|lo|gli|i|el|los|las|de|het|se|si)\s+|l['’])/, '')
+      .split(/\s+/)
     for (const part of parts) {
-      if (part.length < 3 || ['jdn.', 'jdm.', 'etw.', 'sein', 'haben'].includes(part)) continue
+      if (part.length < 3 || ['jdn.', 'jdm.', 'etw.', 'sein', 'haben', 'sth', 'sb'].includes(part)) continue
       out.add(part.length >= 5 ? part.replace(/(en|n|e)$/, '') : part)
     }
   }
@@ -56,7 +61,8 @@ export function highlightKnown(sentence: string, forms: readonly string[]): Segm
   const segments: Segment[] = []
   for (const piece of sentence.split(/(\p{L}+(?:['’]\p{L}+)?)/u)) {
     if (!piece) continue
-    const lower = piece.toLocaleLowerCase('de')
+    // French and Italian glue the article on: l'école, dell'acqua
+    const lower = piece.toLocaleLowerCase().replace(/^(?:l|d|j|m|n|s|t|c|qu|dell|all|nell|sull|dall|un)['’]/, '')
     const isKnown = /\p{L}/u.test(piece) && known.some((s) => lower === s || (s.length >= 4 && lower.startsWith(s) && lower.length - s.length <= 3))
     const last = segments.at(-1)
     if (last && last.known === isKnown && !isKnown) last.text += piece

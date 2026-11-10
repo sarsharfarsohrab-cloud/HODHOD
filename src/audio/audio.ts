@@ -17,7 +17,7 @@ export interface AudioProvider {
   speak(request: SpeakRequest): Promise<void>
   stop(): void
   /** Optional: get the sound ready before it is asked for. */
-  prefetch?(text: string): void
+  prefetch?(text: string, lang: string): void
 }
 
 export const LANGUAGE_TAGS: Record<string, string> = {
@@ -61,7 +61,7 @@ export class AudioPlayer {
   /** Prepares the sound for a text that is likely to be played soon. */
   prefetch(text: string, languageCode: string): void {
     const lang = LANGUAGE_TAGS[languageCode] ?? languageCode
-    this.providers.find((p) => p.canSpeak(lang))?.prefetch?.(text)
+    this.providers.find((p) => p.canSpeak(lang))?.prefetch?.(text, lang)
   }
 
   stop(): void {

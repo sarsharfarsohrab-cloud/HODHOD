@@ -888,7 +888,7 @@ export const es: Dictionary = {
     tile: 'Cuento',
     tileHint: 'Con tus propias palabras',
     intro: 'Te escribo un cuento corto con las palabras que estás aprendiendo, con la traducción de cada frase.',
-    needWords: (n: number) => `Un cuento necesita al menos ${n_(n, 'palabra', 'palabras')} que ya estés repasando. Repasa primero unas tarjetas.`,
+    needWords: (n: number) => `Un cuento necesita al menos ${n_(n, 'palabra', 'palabras')}. Añade primero algunas palabras.`,
     level: 'Nivel',
     write: 'Escribir cuento',
     writing: 'Escribiendo… (hasta medio minuto)',

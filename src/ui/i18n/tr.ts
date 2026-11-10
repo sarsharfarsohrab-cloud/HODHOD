@@ -888,7 +888,7 @@ export const tr: Dictionary = {
     tile: 'Hikâye',
     tileHint: 'Kendi kelimelerinle',
     intro: 'Öğrendiğin kelimelerle sana her cümlesinin çevirisiyle kısa bir hikâye yazarım.',
-    needWords: (n: number) => `Hikâye için tekrarına başladığın en az ${n_(n, 'kelime')} gerekir. Önce birkaç kart tekrar et.`,
+    needWords: (n: number) => `Hikâye için en az ${n_(n, 'kelime')} gerekir. Önce birkaç kelime ekle.`,
     level: 'Seviye',
     write: 'Hikâye yaz',
     writing: 'Yazıyorum… (yarım dakikaya kadar)',

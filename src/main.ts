@@ -238,7 +238,7 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
 
   // natural voice from the server first; the phone's own voice whenever that is not possible
   const cloudSpeech = new CloudSpeechProvider({
-    fetchUrl: async (text, voice) => (await client.invoke<{ url: string }>('tts', { text, voice }, { timeoutMs: 15_000 })).url,
+    fetchUrl: async (text, voice, language) => (await client.invoke<{ url: string }>('tts', { text, voice, language }, { timeoutMs: 15_000 })).url,
     enabled: () => data.settings.aiVoice,
     voice: () => data.settings.aiVoiceGender,
     online: () => navigator.onLine !== false,

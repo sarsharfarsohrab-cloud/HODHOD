@@ -890,7 +890,7 @@ export const fr: Dictionary = {
     tile: 'Histoire',
     tileHint: 'Avec tes propres mots',
     intro: 'Je t’écris une petite histoire avec les mots que tu apprends, avec la traduction de chaque phrase.',
-    needWords: (n: number) => `Une histoire demande au moins ${n_(n, 'mot', 'mots')} déjà en révision. Révise d’abord quelques cartes.`,
+    needWords: (n: number) => `Une histoire demande au moins ${n_(n, 'mot', 'mots')}. Ajoute d’abord quelques mots.`,
     level: 'Niveau',
     write: 'Écrire une histoire',
     writing: 'J’écris… (jusqu’à une demi-minute)',
