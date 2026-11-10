@@ -14,6 +14,8 @@ export interface UiLanguageInfo {
   code: UiLanguage
   /** The language's own name, shown in the language picker. */
   name: string
+  /** The name in English, the same for everyone on the very first screen. */
+  english: string
   dir: 'rtl' | 'ltr'
   /** Locale for numbers and dates. */
   intl: string
@@ -22,16 +24,16 @@ export interface UiLanguageInfo {
 }
 
 export const UI_LANGUAGE_INFO: Record<UiLanguage, UiLanguageInfo> = {
-  fa: { code: 'fa', name: 'فارسی', dir: 'rtl', intl: 'fa-IR', appName: 'هدهد' },
-  de: { code: 'de', name: 'Deutsch', dir: 'ltr', intl: 'de-DE', appName: 'Hodhod' },
-  en: { code: 'en', name: 'English', dir: 'ltr', intl: 'en-GB', appName: 'Hodhod' },
-  fr: { code: 'fr', name: 'Français', dir: 'ltr', intl: 'fr-FR', appName: 'Hodhod' },
-  tr: { code: 'tr', name: 'Türkçe', dir: 'ltr', intl: 'tr-TR', appName: 'Hodhod' },
-  uk: { code: 'uk', name: 'Українська', dir: 'ltr', intl: 'uk-UA', appName: 'Hodhod' },
-  ru: { code: 'ru', name: 'Русский', dir: 'ltr', intl: 'ru-RU', appName: 'Hodhod' },
-  ar: { code: 'ar', name: 'العربية', dir: 'rtl', intl: 'ar', appName: 'هدهد' },
-  es: { code: 'es', name: 'Español', dir: 'ltr', intl: 'es-ES', appName: 'Hodhod' },
-  nl: { code: 'nl', name: 'Nederlands', dir: 'ltr', intl: 'nl-NL', appName: 'Hodhod' },
+  fa: { code: 'fa', name: 'فارسی', english: 'Persian', dir: 'rtl', intl: 'fa-IR', appName: 'هدهد' },
+  de: { code: 'de', name: 'Deutsch', english: 'German', dir: 'ltr', intl: 'de-DE', appName: 'Hodhod' },
+  en: { code: 'en', name: 'English', english: 'English', dir: 'ltr', intl: 'en-GB', appName: 'Hodhod' },
+  fr: { code: 'fr', name: 'Français', english: 'French', dir: 'ltr', intl: 'fr-FR', appName: 'Hodhod' },
+  tr: { code: 'tr', name: 'Türkçe', english: 'Turkish', dir: 'ltr', intl: 'tr-TR', appName: 'Hodhod' },
+  uk: { code: 'uk', name: 'Українська', english: 'Ukrainian', dir: 'ltr', intl: 'uk-UA', appName: 'Hodhod' },
+  ru: { code: 'ru', name: 'Русский', english: 'Russian', dir: 'ltr', intl: 'ru-RU', appName: 'Hodhod' },
+  ar: { code: 'ar', name: 'العربية', english: 'Arabic', dir: 'rtl', intl: 'ar', appName: 'هدهد' },
+  es: { code: 'es', name: 'Español', english: 'Spanish', dir: 'ltr', intl: 'es-ES', appName: 'Hodhod' },
+  nl: { code: 'nl', name: 'Nederlands', english: 'Dutch', dir: 'ltr', intl: 'nl-NL', appName: 'Hodhod' },
 }
 
 export interface TargetLanguageInfo {

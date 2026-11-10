@@ -44,8 +44,8 @@ sw.addEventListener('fetch', (event) => {
     return
   }
 
-  // Pictures of the bird and icons: from the cache at once, refreshed in the background.
-  if (url.pathname.includes('/mascot/') || url.pathname.includes('/icons/')) {
+  // Pictures of the bird, icons and flags: from the cache at once, refreshed in the background.
+  if (url.pathname.includes('/mascot/') || url.pathname.includes('/icons/') || url.pathname.includes('/flags/')) {
     event.respondWith(
       caches.open(CACHE).then(async (cache) => {
         const hit = await cache.match(request)
