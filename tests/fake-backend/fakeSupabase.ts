@@ -563,7 +563,7 @@ export class FakeSupabase {
         used_words: words.slice(0, 3),
       })
     }
-    const word = JSON.parse(first.replace(/^German (?:word|entry): /, '')) as string
+    const word = JSON.parse(first.replace(/^\p{L}+ (?:word|entry): /u, '')) as string
     return this.aiReply(word)
   }
 }
