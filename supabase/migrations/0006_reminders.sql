@@ -21,9 +21,8 @@ alter table public.user_settings add constraint user_settings_notify_times_check
   and array_to_string(notify_times, ',') ~ '^((([01][0-9]|2[0-3]):[0-5][0-9])(,|$))*$'
 );
 
--- the one time chosen so far becomes the first of the list
-update public.user_settings set notify_times = array[notify_time]
-where notify_daily and cardinality(notify_times) = 0;
+-- no copy of the old single time into the list: while the list is empty the single time is used,
+-- so this file can run before the new app is published and the current app keeps working
 
 drop function if exists public.push_candidates(timestamptz);
 create function public.push_candidates(p_now timestamptz)
