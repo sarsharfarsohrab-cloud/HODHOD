@@ -158,3 +158,13 @@ describe('importing decks in other languages', () => {
     expect(contentFromRow({ german: 'the house', persian: 'das Haus', tags: [] }, 'en', 'de')?.pos).toBe('phrase')
   })
 })
+
+import { reminderMessage } from '../../supabase/functions/_shared/push.ts'
+
+describe('reminders in the learner’s own language', () => {
+  test('German, Arabic and the Persian default', () => {
+    expect(reminderMessage('daily', 3, 0, 'de').body).toBe('3 Karten warten auf dich.')
+    expect(reminderMessage('streak', 0, 5, 'ar').body).toContain('راجعت')
+    expect(reminderMessage('daily', 12, 0, 'xx').body).toBe('۱۲ کارت منتظرت است.')
+  })
+})

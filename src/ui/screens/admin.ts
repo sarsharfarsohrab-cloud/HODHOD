@@ -322,6 +322,14 @@ function users(ctx: Ctx, body: HTMLElement): () => void {
         render()
       }
     }
+    const plusBtn = h('button', { class: 'btn small', type: 'button' }, icon('star', { size: 16 }), a.plus)
+    plusBtn.onclick = async () => {
+      const raw = prompt(a.plusPrompt, '30')
+      if (raw === null) return
+      const days = Math.max(0, Math.min(3650, Math.round(Number(raw.trim() || '0'))))
+      if (!Number.isFinite(days)) return
+      await act(ctx, plusBtn, () => admin.setPlus(ctx.client, u.user_id, days), days > 0 ? a.plusGiven(days) : a.plusRemoved)
+    }
     const blocked = u.blocked || u.banned
     const blockBtn = h('button', { class: `btn small ${blocked ? '' : 'danger'}`, type: 'button' }, icon(blocked ? 'check' : 'lock', { size: 16 }), blocked ? a.unblock : a.block)
     blockBtn.onclick = async () => {
@@ -360,7 +368,7 @@ function users(ctx: Ctx, body: HTMLElement): () => void {
       h('bdi', { dir: 'ltr', class: 'small user-email' }, u.email),
       h('p', { class: 'small muted' }, `${a.joined(fmtDate(u.created_at))}، ${u.last_active_at ? a.lastActive(fmtRelative(u.last_active_at, now)) : a.neverActive}`),
       h('p', { class: 'small' }, a.userStats(u.words, u.reviews_30d, u.ai_calls_30d, usdText(u.cost_30d, 3), u.packs)),
-      u.is_admin ? null : h('div', { class: 'row wrap' }, limitBtn, blockBtn, deleteBtn),
+      u.is_admin ? null : h('div', { class: 'row wrap' }, limitBtn, plusBtn, blockBtn, deleteBtn),
     )
   }
 

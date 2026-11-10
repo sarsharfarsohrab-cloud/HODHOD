@@ -1,8 +1,9 @@
 import { AppError, toAppError } from '../../data/errors.ts'
 import type { SupabaseClient } from '../../data/supabase.ts'
-import { h, replace } from '../dom.ts'
+import { h, icon, replace } from '../dom.ts'
 import { mascot } from '../mascot.ts'
-import { appName, describeError, t } from '../strings.ts'
+import { appName, currentLanguage, describeError, t } from '../strings.ts'
+import { UI_LANGUAGE_INFO, UI_LANGUAGES } from '../i18n/languages.ts'
 import { segmented } from '../widgets.ts'
 import { captchaSiteKey, createCaptcha } from '../captcha.ts'
 
@@ -26,7 +27,10 @@ function authMessage(error: AppError): string {
 }
 
 /** Sign-in, sign-up and "set a new password" (after a reset link). Shown whenever nobody is signed in. */
-export function authScreen(client: SupabaseClient, options: { mode?: Mode; notice?: string; onPasswordChanged?: () => void } = {}): HTMLElement {
+export function authScreen(
+  client: SupabaseClient,
+  options: { mode?: Mode; notice?: string; onPasswordChanged?: () => void; onLanguage?: (code: string) => void } = {},
+): HTMLElement {
   let mode: Mode = options.mode ?? 'signin'
   let busy = false
   const form = h('form', { class: 'card stack', novalidate: true })
@@ -123,9 +127,23 @@ export function authScreen(client: SupabaseClient, options: { mode?: Mode; notic
 
   render()
   if (options.notice) show(options.notice, 'error')
+  const languagePicker = options.onLanguage
+    ? h(
+        'label',
+        { class: 'language-picker' },
+        icon('globe', { size: 18 }),
+        h('span', { class: 'visually-hidden' }, t.auth.language),
+        h(
+          'select',
+          { class: 'input', onchange: (e: Event) => options.onLanguage?.((e.target as HTMLSelectElement).value) },
+          UI_LANGUAGES.map((code) => h('option', { value: code, selected: code === currentLanguage(), lang: code }, UI_LANGUAGE_INFO[code].name)),
+        ),
+      )
+    : null
   return h(
     'main',
     { class: 'screen no-nav auth' },
+    languagePicker ? h('div', { class: 'auth-language' }, languagePicker) : null,
     h(
       'div',
       { class: 'auth-hero' },

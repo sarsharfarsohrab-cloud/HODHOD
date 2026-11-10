@@ -817,7 +817,15 @@ await test('welcome tour for a new account; its answers become the settings', as
   await control('reset', { welcome: true })
   const page = await newPage()
   await signUp(page, { name: 'مریم' }).catch(() => undefined)
+  // own language, then the language to learn
+  await page.getByRole('heading', { name: 'زبان خودت کدام است؟' }).waitFor()
+  await snap(page, 'welcome-own-language')
+  await page.getByRole('radio', { name: 'فارسی' }).click()
+  await page.getByRole('heading', { name: 'کلمه‌های کدام زبان را می‌خواهی یاد بگیری؟' }).waitFor()
+  await snap(page, 'welcome-learn-language')
+  await page.getByRole('radio', { name: /آلمانی/ }).click()
   await page.getByRole('heading', { name: 'سلام مریم، خوش آمدی!' }).waitFor()
+  await page.getByText('هدهد یک لایتنر هوشمند است', { exact: false }).waitFor()
   await page.locator('.welcome-bird .mascot').waitFor()
   await page.waitForTimeout(1400) // the bird has flown in
   await snap(page, 'welcome-hello')

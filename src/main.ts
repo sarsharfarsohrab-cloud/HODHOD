@@ -34,6 +34,7 @@ import { decksScreen } from './ui/screens/decks.ts'
 import { wordsScreen } from './ui/screens/words.ts'
 import { appName, currentLanguage, describeError, setLanguage, t } from './ui/strings.ts'
 import { setLearningPair } from './ui/learning.ts'
+import { isUiLanguage, targetsFor } from './ui/i18n/languages.ts'
 import { confirmSheet, emptyState, toast } from './ui/widgets.ts'
 
 declare global {
@@ -174,7 +175,22 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
     applyLanguage(data.profile.nativeLanguage)
     return true
   }
+  // a new account takes over the language chosen on the sign-in page
+  const chosen = storage.getItem(LANGUAGE_KEY)
+  if (!data.settings.onboarded && isUiLanguage(chosen) && chosen !== data.profile.nativeLanguage) {
+    const target = data.profile.activeTargetLanguage === chosen ? targetsFor(chosen)[0]! : data.profile.activeTargetLanguage
+    await data.setLanguages({ native: chosen, target }).catch(() => undefined)
+  }
   syncLanguages()
+  // someone learning several languages picks today's one when the app opens (once per visit)
+  try {
+    if (data.settings.onboarded && data.decks().length > 1 && /^#?\/?(home)?$/.test(location.hash.replace(/^#/, '')) && !sessionStorage.getItem('hodhod.deckAsked')) {
+      sessionStorage.setItem('hodhod.deckAsked', '1')
+      history.replaceState(null, '', `${location.pathname}${location.search}#/decks`)
+    }
+  } catch {
+    // storage unavailable: just open the home screen
+  }
 
   // First visit on this device: the Word Bank has to arrive before there is anything to show.
   while (!data.hasSyncedOnce && !stopped) {
@@ -427,7 +443,19 @@ async function boot() {
     if (!session) {
       applyTheme('system')
       if (!/^#\/(home)?$/.test(location.hash)) history.replaceState(null, '', `${location.pathname}${location.search}#/home`)
-      replace(root, authScreen(client, { notice: linkProblem }))
+      const signIn = () =>
+        replace(
+          root,
+          authScreen(client, {
+            notice: linkProblem,
+            // the language can be chosen before an account exists; the new account takes it over
+            onLanguage: (code) => {
+              applyLanguage(code)
+              signIn()
+            },
+          }),
+        )
+      signIn()
       linkProblem = undefined
       return
     }

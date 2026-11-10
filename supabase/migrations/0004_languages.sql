@@ -114,3 +114,26 @@ grant execute on function public.has_plus(uuid) to authenticated;
 update public.app_config
 set value = value || '{"gpt-6-luna": {"input": 0.10, "output": 0.50}}'::jsonb
 where key = 'ai_prices' and not (value ? 'gpt-6-luna');
+
+-- The administrator gives (or takes back) Hodhod Plus by hand until payments exist.
+-- p_days > 0: Plus for that many days from now; 0 or null: no Plus.
+create or replace function public.admin_set_plus(p_user uuid, p_days integer)
+returns timestamptz
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_until timestamptz := case when coalesce(p_days, 0) > 0 then now() + make_interval(days => p_days) else null end;
+begin
+  if not public.is_admin() then
+    raise exception 'not allowed' using errcode = '42501';
+  end if;
+  insert into public.user_limits (user_id, plus_until) values (p_user, v_until)
+  on conflict (user_id) do update set plus_until = excluded.plus_until;
+  return v_until;
+end;
+$$;
+
+revoke all on function public.admin_set_plus(uuid, integer) from anon, public;
+grant execute on function public.admin_set_plus(uuid, integer) to authenticated;

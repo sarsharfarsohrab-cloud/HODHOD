@@ -288,6 +288,11 @@ export const admin = {
     return client.rpc('admin_set_limit', { p_user: userId, p_ai_per_day: aiPerDay, p_blocked: blocked, p_note: note })
   },
 
+  /** Hodhod Plus for `days` days from now (0 takes it away); returns until when. */
+  setPlus(client: SupabaseClient, userId: string, days: number): Promise<string | null> {
+    return client.rpc<string | null>('admin_set_plus', { p_user: userId, p_days: days })
+  },
+
   ban(client: SupabaseClient, userId: string, banned: boolean): Promise<void> {
     return client.invoke('admin-actions', { action: 'ban', userId, banned }, { timeoutMs: 30_000 })
   },
