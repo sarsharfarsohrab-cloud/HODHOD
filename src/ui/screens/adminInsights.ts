@@ -2,6 +2,7 @@
  * Admin panel, part two: accounting (what each AI feature really costs, a pricing calculator)
  * and growth (sign-ups, active learners, who comes back, languages in use).
  */
+import { parseDecimal } from '../../core/decimal.ts'
 import { admin, type AdminCosts, type AdminGrowth, type AiBudgetConfig, type AiPrices } from '../../data/platform.ts'
 import type { Ctx } from '../context.ts'
 import { h, icon, replace } from '../dom.ts'
@@ -283,9 +284,9 @@ function calculator(c: AdminCosts): HTMLElement {
       { class: 'field' },
       h('span', null, label),
       h('input', {
-        class: 'input', type: 'number', inputMode: 'decimal', min: '0', step, value: String(input[key]), dir: 'ltr',
+        class: 'input', type: 'text', inputMode: 'decimal', autocomplete: 'off', value: String(input[key]), dir: 'ltr',
         oninput: (e: Event) => {
-          const v = Number((e.target as HTMLInputElement).value)
+          const v = parseDecimal((e.target as HTMLInputElement).value)
           if (Number.isFinite(v) && v >= 0) {
             input = { ...input, [key]: v }
             update()
