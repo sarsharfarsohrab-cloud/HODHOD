@@ -5,7 +5,7 @@
 import { SITE_CONFIG } from './config.ts'
 import { SITE_COPY, type SiteCopy } from './copy.ts'
 
-export const SITE_LANGUAGES = ['en', 'fa', 'de', 'fr', 'tr', 'uk', 'ru', 'ar', 'es', 'nl'] as const
+export const SITE_LANGUAGES = ['en', 'fa', 'de', 'fr', 'it', 'tr', 'uk', 'ru', 'ar', 'es', 'nl'] as const
 export type SiteLanguage = (typeof SITE_LANGUAGES)[number]
 
 const INFO: Record<SiteLanguage, { english: string; own: string; rtl: boolean; locale: string; og: string }> = {
@@ -13,6 +13,7 @@ const INFO: Record<SiteLanguage, { english: string; own: string; rtl: boolean; l
   fa: { english: 'Persian', own: 'فارسی', rtl: true, locale: 'fa-IR', og: 'fa_IR' },
   de: { english: 'German', own: 'Deutsch', rtl: false, locale: 'de-DE', og: 'de_DE' },
   fr: { english: 'French', own: 'Français', rtl: false, locale: 'fr-FR', og: 'fr_FR' },
+  it: { english: 'Italian', own: 'Italiano', rtl: false, locale: 'it-IT', og: 'it_IT' },
   tr: { english: 'Turkish', own: 'Türkçe', rtl: false, locale: 'tr-TR', og: 'tr_TR' },
   uk: { english: 'Ukrainian', own: 'Українська', rtl: false, locale: 'uk-UA', og: 'uk_UA' },
   ru: { english: 'Russian', own: 'Русский', rtl: false, locale: 'ru-RU', og: 'ru_RU' },

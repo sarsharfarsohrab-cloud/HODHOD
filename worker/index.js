@@ -16,12 +16,13 @@
 const APEX = 'apphodhod.com'
 
 /** The site's languages besides English (which lives at /). */
-const SITE_LANGUAGES = ['fa', 'de', 'fr', 'tr', 'uk', 'ru', 'ar', 'es', 'nl']
+const SITE_LANGUAGES = ['fa', 'de', 'fr', 'it', 'tr', 'uk', 'ru', 'ar', 'es', 'nl']
 /** When the browser names none of our languages, the visitor's country gives a hint. */
 const COUNTRY_LANGUAGE = {
   IR: 'fa', AF: 'fa', TJ: 'fa',
   DE: 'de', AT: 'de', LI: 'de',
   FR: 'fr', LU: 'fr', MC: 'fr',
+  IT: 'it', SM: 'it', VA: 'it',
   TR: 'tr', UA: 'uk', RU: 'ru', BY: 'ru', KZ: 'ru',
   SA: 'ar', AE: 'ar', EG: 'ar', IQ: 'ar', SY: 'ar', JO: 'ar', LB: 'ar', KW: 'ar', QA: 'ar', BH: 'ar', OM: 'ar', YE: 'ar', LY: 'ar', TN: 'ar', DZ: 'ar', MA: 'ar', SD: 'ar', PS: 'ar',
   ES: 'es', MX: 'es', AR: 'es', CO: 'es', CL: 'es', PE: 'es', VE: 'es', EC: 'es', GT: 'es', CU: 'es', BO: 'es', DO: 'es', HN: 'es', PY: 'es', SV: 'es', NI: 'es', CR: 'es', PA: 'es', UY: 'es',
