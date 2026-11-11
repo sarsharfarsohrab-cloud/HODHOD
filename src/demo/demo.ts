@@ -78,17 +78,34 @@ export async function startOver(): Promise<void> {
   location.replace('/')
 }
 
+/** The bar's words in every interface language (kept here so they stay out of the real app). */
+const BAR_TEXT: Record<string, { note: string; fresh: string; sample: string }> = {
+  en: { note: 'Test mode — nothing here is real', fresh: 'Start over', sample: 'Sample learner' },
+  fa: { note: 'حالت آزمایشی — هیچ‌چیز واقعی نیست', fresh: 'از اول', sample: 'زبان‌آموز نمونه' },
+  de: { note: 'Testmodus – nichts hier ist echt', fresh: 'Neu starten', sample: 'Beispiel-Lerner' },
+  fr: { note: 'Mode test — rien ici n’est réel', fresh: 'Recommencer', sample: 'Apprenant d’exemple' },
+  it: { note: 'Modalità di prova — qui niente è reale', fresh: 'Ricomincia', sample: 'Studente di esempio' },
+  tr: { note: 'Test modu — buradaki hiçbir şey gerçek değil', fresh: 'Baştan başla', sample: 'Örnek öğrenci' },
+  uk: { note: 'Тестовий режим — тут усе несправжнє', fresh: 'Почати спочатку', sample: 'Приклад учня' },
+  ru: { note: 'Тестовый режим — здесь всё ненастоящее', fresh: 'Начать заново', sample: 'Пример ученика' },
+  ar: { note: 'وضع تجريبي — لا شيء هنا حقيقي', fresh: 'ابدأ من جديد', sample: 'متعلّم نموذجي' },
+  es: { note: 'Modo de prueba: nada de esto es real', fresh: 'Empezar de nuevo', sample: 'Estudiante de ejemplo' },
+  nl: { note: 'Testmodus — niets hier is echt', fresh: 'Opnieuw beginnen', sample: 'Voorbeeldleerling' },
+}
+
 /** The bar at the top: says it is a test, and offers "start over" and the sample learner. */
 export function demoBar(onSample: () => Promise<void>): HTMLElement {
-  const fa = currentLanguage() === 'fa'
-  const text = fa
-    ? { note: 'حالت آزمایشی — هیچ‌چیز واقعی نیست', fresh: 'از اول', sample: 'زبان‌آموز نمونه' }
-    : { note: 'Test mode — nothing here is real', fresh: 'Start over', sample: 'Sample learner' }
-  return h(
-    'div',
-    { class: 'demo-bar', role: 'note' },
-    h('span', null, text.note),
-    h('button', { type: 'button', onclick: () => void onSample() }, text.sample),
-    h('button', { type: 'button', onclick: () => void startOver() }, text.fresh),
-  )
+  const note = h('span')
+  const sample = h('button', { type: 'button', onclick: () => void onSample() })
+  const fresh = h('button', { type: 'button', onclick: () => void startOver() })
+  // the visitor can switch the language at any time; the bar follows
+  const write = () => {
+    const text = BAR_TEXT[currentLanguage()] ?? BAR_TEXT.en!
+    note.textContent = text.note
+    sample.textContent = text.sample
+    fresh.textContent = text.fresh
+  }
+  write()
+  new MutationObserver(write).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] })
+  return h('div', { class: 'demo-bar', role: 'note' }, note, sample, fresh)
 }

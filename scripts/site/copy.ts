@@ -757,4 +757,76 @@ const nl: SiteCopy = {
   suggest: 'Deze pagina in het Nederlands bekijken?',
 }
 
-export const SITE_COPY = { en, fa, de, fr, tr, uk, ru, ar, es, nl } as const
+const it: SiteCopy = {
+  title: 'Hodhod — impara le parole di una nuova lingua, nella tua lingua',
+  description:
+    'Scrivi una parola: Hodhod crea una flashcard completa con i significati nella tua lingua, grammatica, esempi e pronuncia naturale, e ti ricorda di ripassarla poco prima che tu la dimentichi. Inglese, tedesco, francese, italiano, spagnolo e olandese.',
+  nav: { features: 'Funzioni', languages: 'Lingue', pricing: 'Prezzi', faq: 'Domande', openApp: 'Apri l’app', menu: 'Menu', language: 'Lingua' },
+  hero: {
+    eyebrow: 'Flashcard intelligenti con un uccellino',
+    h1: 'Impara parole nuove nella tua lingua, e non dimenticarle più.',
+    lead: 'Scrivi una parola che hai sentito oggi. In pochi secondi Hodhod crea una carta completa con significati nella tua lingua, grammatica, esempi e una voce naturale, e te la ripropone poco prima che tu la dimentichi.',
+    start: 'Inizia gratis',
+    how: 'Come funziona',
+    free: 'Gratis per iniziare · senza carta di credito',
+  },
+  stores: { title: 'Su ogni dispositivo', ios: 'iPhone e iPad', android: 'Android', web: 'Qualsiasi browser', soon: 'In arrivo', get: 'Scarica', open: 'Apri ora' },
+  stats: { title: 'Hodhod in numeri', learners: 'studenti', words: 'parole salvate', reviews: 'ripassi fatti', languages: 'lingue' },
+  langs: { title: 'La tua lingua. La tua prossima lingua.', sub: 'Hodhod spiega tutto nella lingua che parli già.', speak: 'Parli', learn: 'Impari' },
+  features: {
+    title: 'Tutto quello che serve per imparare davvero le parole',
+    sub: 'Non un altro dizionario: un compagno che ripassa con te ogni giorno.',
+    items: [
+      ['Una carta completa in pochi secondi', 'Significati nella tua lingua, genere a colori, plurali, forme verbali, esempi e il livello giusto: tutto da una sola parola.'],
+      ['Ripassa al momento giusto', 'Hodhod sa quale parola stai per dimenticare e ti mostra proprio quella. Bastano pochi minuti al giorno.'],
+      ['Pronuncia naturale', 'Ascolta ogni parola e ogni frase con una voce naturale, non da robot.'],
+      ['Pacchetti pronti', 'Parole per la vita reale, lezione per lezione: lavoro, medico, ufficio, casa e altro.'],
+      ['Storie e podcast', 'Brevi storie con le tue parole e brevi conversazioni da seguire frase per frase: tocca una parola per farne una carta.'],
+      ['Ascolta e parla', 'Dettato ed esercizi orali: ascolta e scrivi, oppure dillo ad alta voce e scopri se era giusto.'],
+      ['Promemoria ai tuoi orari', 'Scegli fino a otto orari al giorno, come una sveglia. Hodhod ti chiama solo quando c’è qualcosa da fare.'],
+      ['Impara con gli amici', 'Aggiungi amici con un codice e guarda la classifica della settimana: una piccola spinta fa molto.'],
+    ],
+  },
+  how: {
+    title: 'Come funziona',
+    steps: [
+      ['Scrivi la parola', 'Qualsiasi cosa tu abbia sentito al lavoro, a lezione o per strada.'],
+      ['La tua carta è pronta', 'Significato, grammatica, esempi e audio. Dai un’occhiata e salvala.'],
+      ['Ripassa pochi minuti al giorno', 'Arriva un promemoria, ripassi qualche carta e le parole restano con te per sempre.'],
+    ],
+    shots: ['Una carta finita', 'Il tuo obiettivo del giorno', 'Il ripasso di una carta'],
+  },
+  pricing: {
+    title: 'Prezzi semplici',
+    sub: 'Inizia gratis. Passa a Plus quando Hodhod diventa parte della tua giornata.',
+    freeName: 'Gratis',
+    freePrice: '0 €',
+    freeFor: 'per sempre',
+    free: ['Una lingua da imparare', 'Carte intelligenti e ripasso quotidiano', 'Pronuncia naturale', 'Promemoria e amici'],
+    plusName: 'Hodhod Plus',
+    plusFor: 'per chi studia sul serio',
+    plus: ['Tutto quello che c’è in Gratis', 'Più lingue contemporaneamente', 'Più carte e storie con l’IA ogni giorno', 'Sostieni una piccola app indipendente'],
+    month: 'al mese',
+    year: 'all’anno',
+    lifetime: 'una volta, per sempre',
+    soon: 'In arrivo',
+    start: 'Inizia gratis',
+    popular: 'Il più conveniente',
+  },
+  reviews: { title: 'Cosa dice chi studia' },
+  faq: {
+    title: 'Domande',
+    items: [
+      ['Hodhod è gratis?', 'Sì. Puoi iniziare e continuare a imparare una lingua gratis. Hodhod Plus aggiunge più lingue e più aiuto dall’IA.'],
+      ['Come lo installo sul telefono?', 'Apri l’app nel browser e scegli «Aggiungi a schermata Home». Le versioni per App Store e Google Play arriveranno presto.'],
+      ['Per quale livello è?', 'Dalla tua primissima parola al livello avanzato. Le parole le scegli tu, quindi l’app cresce con te.'],
+      ['Perdo le mie parole se cambio telefono?', 'No. Parole e progressi sono salvati nel tuo account: accedi dal nuovo telefono e ritrovi tutto.'],
+      ['I miei dati sono al sicuro?', 'Le tue parole e i tuoi progressi sono solo tuoi. Nessun altro può vederli e puoi eliminare l’account in qualsiasi momento.'],
+    ],
+  },
+  final: { title: 'Crea ora la tua prima carta', sub: 'Registrarsi richiede un minuto.' },
+  footer: { tagline: 'Flashcard intelligenti nella tua lingua.', legal: 'Note legali', languages: 'Lingue', contact: 'Contatti' },
+  suggest: 'Vuoi vedere questa pagina in italiano?',
+}
+
+export const SITE_COPY = { en, fa, de, fr, it, tr, uk, ru, ar, es, nl } as const
