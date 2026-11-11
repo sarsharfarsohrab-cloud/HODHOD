@@ -35,8 +35,8 @@ export const nl: Dictionary = {
 
   auth: {
     language: 'Taal',
-    chooseTitle: 'Kies je taal',
-    chooseBody: 'Hodhod praat in deze taal met je. Daarna kies je de taal die je wilt leren.',
+    chooseTitle: 'Wat is jouw taal?',
+    chooseBody: 'In deze taal praat Hodhod met je en legt hij elk woord uit — meestal je moedertaal. Daarna kies je de taal waarvan je de woorden wilt leren.',
     tagline: 'Slimme flashcards voor de woorden die jij nodig hebt, elke dag een beetje meer',
     hello: 'Hoi! Ik ben Hodhod.',
     signIn: 'Inloggen',
@@ -163,9 +163,9 @@ export const nl: Dictionary = {
       ['🔔', 'Herinneringen op je telefoon'],
     ] as [string, string][],
     ownTitle: 'Wat is jouw taal?',
-    ownBody: 'Hodhod praat in deze taal met je en schrijft de betekenissen van woorden erin.',
-    learnTitle: 'Welke taal wil je leren?',
-    learnBody: 'Elke taal heeft een eigen kleur en eigen kaarten.',
+    ownBody: 'In deze taal praat Hodhod met je en legt hij elk woord uit — meestal je moedertaal.',
+    learnTitle: 'Van welke taal wil je woorden leren?',
+    learnBody: 'Eén taal leer je gratis. Wil je meerdere talen tegelijk leren, dan heb je Hodhod Plus nodig.',
     introTitle: 'Hoe werkt Hodhod?',
     get intro() {
       return [

@@ -35,8 +35,8 @@ export const en: Dictionary = {
 
   auth: {
     language: 'Language',
-    chooseTitle: 'Choose your language',
-    chooseBody: "Hodhod will talk to you in this language. Next, you'll pick the language you want to learn.",
+    chooseTitle: 'What\'s your language?',
+    chooseBody: 'Hodhod speaks to you and explains every word in this language — usually your mother tongue. Next, you\'ll choose the language whose words you want to learn.',
     tagline: 'Smart flashcards for the words you need, a little more every day',
     hello: "Hi! I'm Hodhod.",
     signIn: 'Sign in',
@@ -162,10 +162,10 @@ export const en: Dictionary = {
       ['👥', 'Learning with friends'],
       ['🔔', 'Reminders on your phone'],
     ] as [string, string][],
-    ownTitle: "What's your language?",
-    ownBody: 'Hodhod will talk to you in this language and write the meanings of words in it.',
-    learnTitle: 'Which language do you want to learn?',
-    learnBody: 'Each language has its own colour and its own cards.',
+    ownTitle: 'What\'s your language?',
+    ownBody: 'Hodhod speaks to you and explains every word in this language — usually your mother tongue.',
+    learnTitle: 'Which language\'s words do you want to learn?',
+    learnBody: 'You can learn one language for free. To learn several languages at the same time, you\'ll need Hodhod Plus.',
     introTitle: 'How does Hodhod work?',
     get intro() {
       return [
