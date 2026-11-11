@@ -68,6 +68,12 @@ const T: Record<string, Record<Kind, Text> & { sign: string }> = {
     'email-change': { title: 'Confirma tu nuevo correo', body: 'Pulsa el botón para usar esta dirección en tu cuenta de Hodhod a partir de ahora.', button: 'Confirmar nuevo correo', ignore: 'Si no lo pediste, ignora este correo.' },
     sign: 'Feliz aprendizaje — Hodhod',
   },
+  it: {
+    confirm: { title: 'Benvenuto su Hodhod!', body: 'Conferma il tuo indirizzo e-mail per completare la creazione del tuo account.', button: 'Conferma la mia e-mail', ignore: 'Se non ti sei iscritto a Hodhod, puoi ignorare questa e-mail.' },
+    recovery: { title: 'Reimposta la password', body: 'Abbiamo ricevuto una richiesta per reimpostare la tua password. Tocca il pulsante per sceglierne una nuova.', button: 'Scegli una nuova password', ignore: 'Se non l’hai chiesto tu, ignora questa e-mail: la tua password resta la stessa.' },
+    'email-change': { title: 'Conferma la nuova e-mail', body: 'Tocca il pulsante per usare d’ora in poi questo indirizzo per il tuo account Hodhod.', button: 'Conferma la nuova e-mail', ignore: 'Se non l’hai chiesto tu, ignora questa e-mail.' },
+    sign: 'Buono studio — Hodhod',
+  },
   nl: {
     confirm: { title: 'Welkom bij Hodhod!', body: 'Bevestig je e-mailadres om je account af te ronden.', button: 'E-mail bevestigen', ignore: 'Heb je je niet aangemeld bij Hodhod? Dan kun je deze e-mail negeren.' },
     recovery: { title: 'Wachtwoord opnieuw instellen', body: 'We kregen een verzoek om je wachtwoord opnieuw in te stellen. Tik op de knop om een nieuw wachtwoord te kiezen.', button: 'Nieuw wachtwoord kiezen', ignore: 'Heb je hier niet om gevraagd? Negeer deze e-mail — je wachtwoord blijft hetzelfde.' },
