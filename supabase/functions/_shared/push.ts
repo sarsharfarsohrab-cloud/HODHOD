@@ -58,6 +58,7 @@ const TEXTS: Record<string, Texts> = {
   ru: { locale: 'ru-RU', dailyTitle: 'Время повторить 🐦', daily: (n) => `Тебя ждут карточки: ${n}.`, nudge: 'Удели несколько минут своим словам.', streakTitle: 'Сохрани серию 🔥', streak: (n) => `Ты повторяешь уже ${n} дн. подряд. Удели несколько минут и сегодня.`, testTitle: 'Hodhod 🐦', test: 'Напоминания включены. Вот так я буду тебе сообщать.' },
   es: { locale: 'es-ES', dailyTitle: 'Hora de repasar 🐦', daily: (n) => `${n} tarjetas te esperan.`, nudge: 'Dedica unos minutos a tus palabras.', streakTitle: 'Mantén tu racha 🔥', streak: (n) => `Llevas ${n} días seguidos repasando. Dedica unos minutos también hoy.`, testTitle: 'Hodhod 🐦', test: 'Los recordatorios están activados. Así te avisaré.' },
   nl: { locale: 'nl-NL', dailyTitle: 'Tijd om te herhalen 🐦', daily: (n) => `Er wachten ${n} kaarten op je.`, nudge: 'Neem een paar minuten voor je woorden.', streakTitle: 'Houd je reeks vast 🔥', streak: (n) => `Je hebt ${n} dagen op rij herhaald. Neem vandaag ook een paar minuten.`, testTitle: 'Hodhod 🐦', test: 'Herinneringen staan aan. Zo laat ik het je weten.' },
+  it: { locale: 'it-IT', dailyTitle: 'È ora di ripassare 🐦', daily: (n) => `Ti aspettano ${n} carte.`, nudge: 'Dedica qualche minuto alle tue parole.', streakTitle: 'Mantieni la tua serie 🔥', streak: (n) => `Hai ripassato ${n} giorni di fila. Dedica qualche minuto anche oggi.`, testTitle: 'Hodhod 🐦', test: 'I promemoria sono attivi. Ti avviserò così.' },
 }
 
 const textsFor = (language: string | null | undefined): Texts => TEXTS[language ?? 'fa'] ?? TEXTS.fa!
