@@ -25,7 +25,9 @@ let parked: Draft | null = null
 
 export function createScreen(ctx: Ctx, params: Record<string, string>): Screen {
   const el = h('main', { class: 'screen' })
-  let state: State = parked ? { step: 'draft', draft: parked } : { step: 'input', value: '' }
+  // a word handed over from elsewhere ("#/create?word=…", e.g. from the Learn corner) fills the field
+  const handed = (params.word ?? '').trim().slice(0, 80)
+  let state: State = handed ? { step: 'input', value: handed } : parked ? { step: 'draft', draft: parked } : { step: 'input', value: '' }
   let request: AbortController | null = null
   let panel: DraftPanel | null = null
   let saving = false

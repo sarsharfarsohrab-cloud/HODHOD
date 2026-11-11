@@ -3932,8 +3932,8 @@ button.quiz-option:hover {
 
 .feature-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--s3);
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--s2);
 }
 .feature {
   display: flex;
@@ -4725,4 +4725,118 @@ html[dir='ltr'] .deck-row .icon {
     font-weight: 700;
     opacity: 0.45;
   }
+}
+
+/* --- Learn corner ------------------------------------------------------------- */
+.learn-intro {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+}
+.learn-intro p {
+  margin: 0;
+}
+.learn-note {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+.learn-section-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+}
+.learn-section-head h2,
+.learn-section-head p {
+  margin: 0;
+}
+.learn-list {
+  display: grid;
+  gap: var(--s2);
+}
+.learn-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s3);
+  border-radius: var(--r-md);
+  background: var(--bg);
+  color: var(--ink);
+  text-decoration: none;
+}
+.learn-item-text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+.learn-level {
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 700;
+}
+.learn-who {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 800;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.learn-who.who-B {
+  background: var(--cream);
+  color: var(--on-cream);
+}
+.learn-words {
+  width: 100%;
+  margin-top: var(--s2);
+}
+.learn-word {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  text-decoration: none;
+}
+.learn-examples {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s2);
+}
+.learn-examples li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2);
+}
+.learn-verbs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s3);
+}
+.learn-verb .row {
+  flex-wrap: wrap;
+  gap: var(--s2);
+  align-items: center;
+}
+.learn-example {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin: 0;
+}
+.learn-pair p {
+  margin: 0;
+}
+/* "open" arrow, pointing forward in both writing directions (same trick as .today-link) */
+.learn-arrow {
+  display: inline-flex;
+  color: var(--ink-2);
+}
+html[dir='rtl'] .learn-arrow {
+  transform: scaleX(-1);
 }

@@ -173,6 +173,7 @@ export function homeScreen(ctx: Ctx): Screen {
         'nav',
         { class: 'feature-row', 'aria-label': t.home.more },
         feature('#/store', 'bag', t.store.tile, 'store'),
+        feature('#/learn', 'ear', t.learn.tile),
         feature('#/stories', 'sparkle', t.stories.tile),
         feature('#/friends', 'users', t.friends.tile),
       ),
