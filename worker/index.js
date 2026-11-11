@@ -4,6 +4,8 @@
  *   app.apphodhod.com      → www/app   (the app itself)
  *   admin.apphodhod.com    → www/app   (the same app, opening on the admin panel; locked by
  *                                       Cloudflare Access to the owner's e-mail)
+ *   test.apphodhod.com     → www/app   (the test mode: the app against a stand-in server in the
+ *                                       browser, see src/demo/demo.ts; never indexed)
  *   www.apphodhod.com      → permanent redirect to apphodhod.com
  * Any other host (the *.workers.dev preview address) shows the site.
  *
@@ -55,8 +57,8 @@ export default {
       return Response.redirect(url.toString(), 301)
     }
 
-    const preview = host.endsWith('.workers.dev')
-    const appHost = host.startsWith('app.') || host.startsWith('admin.')
+    const preview = host.endsWith('.workers.dev') || host.startsWith('test.')
+    const appHost = host.startsWith('app.') || host.startsWith('admin.') || host.startsWith('test.')
     const folder = appHost || (!SITE_LIVE && !preview) ? '/app' : '/site'
     // the site's front door opens in the visitor's language (search engines get English)
     if (folder === '/site' && url.pathname === '/' && request.method === 'GET' && !url.search) {

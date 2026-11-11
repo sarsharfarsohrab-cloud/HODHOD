@@ -80,7 +80,7 @@ export function authScreen(
       void run(async () => {
         if (mode === 'signin') await client.signIn(mail, password.value, await token())
         else if (mode === 'signup') {
-          const result = await client.signUp(mail, password.value, name.value.trim(), appUrl(), await token())
+          const result = await client.signUp(mail, password.value, name.value.trim(), appUrl(), await token(), currentLanguage())
           if (result.needsEmailConfirmation) {
             mode = 'signin'
             render()

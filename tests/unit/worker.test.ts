@@ -33,4 +33,7 @@ test('a language picked by hand wins', async () => {
 test('the app and admin addresses always get the app', async () => {
   expect(await (await visit('https://app.apphodhod.com/', { 'accept-language': 'de' })).text()).toBe('/app/')
   expect(await (await visit('https://admin.apphodhod.com/')).text()).toBe('/app/')
+  const test = await visit('https://test.apphodhod.com/')
+  expect(await test.text()).toBe('/app/')
+  expect(test.headers.get('x-robots-tag')).toBe('noindex')
 })

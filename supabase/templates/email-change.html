@@ -1,0 +1,96 @@
+{{ $lang := printf "%v" .Data.language }}<!doctype html>
+<html>
+<body style="margin:0;padding:0;background:#f4f3fb;font-family:Vazirmatn,Tahoma,'Segoe UI',Arial,sans-serif">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f3fb;padding:32px 12px">
+<tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:24px;padding:32px 28px;box-shadow:0 12px 28px -12px rgba(37,34,63,.22)">
+<tr><td align="center" style="padding-bottom:18px"><img src="https://apphodhod.com/img/icon-192.png" width="64" height="64" alt="Hodhod" style="border-radius:16px"></td></tr>
+<tr><td>
+{{ if eq $lang "fa" }}
+<div dir="rtl" lang="fa" style="text-align:right">
+  <h1 style="margin:0 0 12px;font-size:24px;line-height:1.3;color:#25223f">تأیید ایمیل تازه</h1>
+  <p style="margin:0 0 24px;font-size:16px;line-height:1.7;color:#5c5978">دکمه را بزن تا از این به بعد این نشانی برای حساب هدهدت استفاده شود.</p>
+  <p style="margin:0 0 28px"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 26px;border-radius:999px;background:#f5922b;color:#25223f;font-weight:700;font-size:16px;text-decoration:none">تأیید ایمیل تازه</a></p>
+  <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#8a87a3">اگر چنین درخواستی نداده‌ای، این ایمیل را نادیده بگیر.</p>
+  <p style="margin:18px 0 0;font-size:14px;color:#5c5978">یادگیری خوش بگذرد — هدهد</p>
+</div>
+{{ else if eq $lang "de" }}
+<div dir="ltr" lang="de" style="text-align:left">
+  <h1 style="margin:0 0 12px;font-size:24px;line-height:1.3;color:#25223f">Neue E-Mail bestätigen</h1>
+  <p style="margin:0 0 24px;font-size:16px;line-height:1.7;color:#5c5978">Tippe auf den Button, um diese Adresse ab jetzt für dein Hodhod-Konto zu verwenden.</p>
+  <p style="margin:0 0 28px"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 26px;border-radius:999px;background:#f5922b;color:#25223f;font-weight:700;font-size:16px;text-decoration:none">Neue E-Mail bestätigen</a></p>
+  <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#8a87a3">Wenn du das nicht angefordert hast, ignoriere bitte diese E-Mail.</p>
+  <p style="margin:18px 0 0;font-size:14px;color:#5c5978">Viel Spaß beim Lernen – Hodhod</p>
+</div>
+{{ else if eq $lang "fr" }}
+<div dir="ltr" lang="fr" style="text-align:left">
+  <h1 style="margin:0 0 12px;font-size:24px;line-height:1.3;color:#25223f">Confirme ta nouvelle adresse</h1>
+  <p style="margin:0 0 24px;font-size:16px;line-height:1.7;color:#5c5978">Appuie sur le bouton pour utiliser désormais cette adresse pour ton compte Hodhod.</p>
+  <p style="margin:0 0 28px"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 26px;border-radius:999px;background:#f5922b;color:#25223f;font-weight:700;font-size:16px;text-decoration:none">Confirmer la nouvelle adresse</a></p>
+  <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#8a87a3">Si tu n’as rien demandé, ignore cet e-mail.</p>
+  <p style="margin:18px 0 0;font-size:14px;color:#5c5978">Bon apprentissage — Hodhod</p>
+</div>
+{{ else if eq $lang "tr" }}
+<div dir="ltr" lang="tr" style="text-align:left">
+  <h1 style="margin:0 0 12px;font-size:24px;line-height:1.3;color:#25223f">Yeni e-postanı onayla</h1>
+  <p style="margin:0 0 24px;font-size:16px;line-height:1.7;color:#5c5978">Bu adresi bundan sonra Hodhod hesabın için kullanmak üzere düğmeye dokun.</p>
+  <p style="margin:0 0 28px"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 26px;border-radius:999px;background:#f5922b;color:#25223f;font-weight:700;font-size:16px;text-decoration:none">Yeni e-postayı onayla</a></p>
+  <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#8a87a3">Bunu sen istemediysen lütfen bu e-postayı yok say.</p>
+  <p style="margin:18px 0 0;font-size:14px;color:#5c5978">Keyifli öğrenmeler — Hodhod</p>
+</div>
+{{ else if eq $lang "uk" }}
+<div dir="ltr" lang="uk" style="text-align:left">
+  <h1 style="margin:0 0 12px;font-size:24px;line-height:1.3;color:#25223f">Підтверди нову адресу</h1>
+  <p style="margin:0 0 24px;font-size:16px;line-height:1.7;color:#5c5978">Натисни кнопку, щоб надалі використовувати цю адресу для акаунта Hodhod.</p>
+  <p style="margin:0 0 28px"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 26px;border-radius:999px;background:#f5922b;color:#25223f;font-weight:700;font-size:16px;text-decoration:none">Підтвердити нову адресу</a></p>
+  <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#8a87a3">Якщо ти цього не просив, ігноруй цей лист.</p>
+  <p style="margin:18px 0 0;font-size:14px;color:#5c5978">Приємного навчання — Hodhod</p>
+</div>
+{{ else if eq $lang "ru" }}
+<div dir="ltr" lang="ru" style="text-align:left">
+  <h1 style="margin:0 0 12px;font-size:24px;line-height:1.3;color:#25223f">Подтверди новый адрес</h1>
+  <p style="margin:0 0 24px;font-size:16px;line-height:1.7;color:#5c5978">Нажми кнопку, чтобы дальше использовать этот адрес для аккаунта Hodhod.</p>
+  <p style="margin:0 0 28px"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 26px;border-radius:999px;background:#f5922b;color:#25223f;font-weight:700;font-size:16px;text-decoration:none">Подтвердить новый адрес</a></p>
+  <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#8a87a3">Если ты этого не просил, проигнорируй это письмо.</p>
+  <p style="margin:18px 0 0;font-size:14px;color:#5c5978">Приятной учёбы — Hodhod</p>
+</div>
+{{ else if eq $lang "ar" }}
+<div dir="rtl" lang="ar" style="text-align:right">
+  <h1 style="margin:0 0 12px;font-size:24px;line-height:1.3;color:#25223f">تأكيد بريدك الجديد</h1>
+  <p style="margin:0 0 24px;font-size:16px;line-height:1.7;color:#5c5978">اضغط الزر لاستخدام هذا العنوان لحسابك في هدهد من الآن فصاعدًا.</p>
+  <p style="margin:0 0 28px"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 26px;border-radius:999px;background:#f5922b;color:#25223f;font-weight:700;font-size:16px;text-decoration:none">تأكيد البريد الجديد</a></p>
+  <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#8a87a3">إذا لم تطلب ذلك، يُرجى تجاهل هذه الرسالة.</p>
+  <p style="margin:18px 0 0;font-size:14px;color:#5c5978">تعلّمًا ممتعًا — هدهد</p>
+</div>
+{{ else if eq $lang "es" }}
+<div dir="ltr" lang="es" style="text-align:left">
+  <h1 style="margin:0 0 12px;font-size:24px;line-height:1.3;color:#25223f">Confirma tu nuevo correo</h1>
+  <p style="margin:0 0 24px;font-size:16px;line-height:1.7;color:#5c5978">Pulsa el botón para usar esta dirección en tu cuenta de Hodhod a partir de ahora.</p>
+  <p style="margin:0 0 28px"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 26px;border-radius:999px;background:#f5922b;color:#25223f;font-weight:700;font-size:16px;text-decoration:none">Confirmar nuevo correo</a></p>
+  <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#8a87a3">Si no lo pediste, ignora este correo.</p>
+  <p style="margin:18px 0 0;font-size:14px;color:#5c5978">Feliz aprendizaje — Hodhod</p>
+</div>
+{{ else if eq $lang "nl" }}
+<div dir="ltr" lang="nl" style="text-align:left">
+  <h1 style="margin:0 0 12px;font-size:24px;line-height:1.3;color:#25223f">Bevestig je nieuwe e-mail</h1>
+  <p style="margin:0 0 24px;font-size:16px;line-height:1.7;color:#5c5978">Tik op de knop om dit adres voortaan voor je Hodhod-account te gebruiken.</p>
+  <p style="margin:0 0 28px"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 26px;border-radius:999px;background:#f5922b;color:#25223f;font-weight:700;font-size:16px;text-decoration:none">Nieuwe e-mail bevestigen</a></p>
+  <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#8a87a3">Heb je hier niet om gevraagd? Negeer dan deze e-mail.</p>
+  <p style="margin:18px 0 0;font-size:14px;color:#5c5978">Veel leerplezier — Hodhod</p>
+</div>
+{{ else }}
+<div dir="ltr" lang="en" style="text-align:left">
+  <h1 style="margin:0 0 12px;font-size:24px;line-height:1.3;color:#25223f">Confirm your new e-mail</h1>
+  <p style="margin:0 0 24px;font-size:16px;line-height:1.7;color:#5c5978">Tap the button to use this address for your Hodhod account from now on.</p>
+  <p style="margin:0 0 28px"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 26px;border-radius:999px;background:#f5922b;color:#25223f;font-weight:700;font-size:16px;text-decoration:none">Confirm new e-mail</a></p>
+  <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#8a87a3">If you didn't ask for this, please ignore this e-mail.</p>
+  <p style="margin:18px 0 0;font-size:14px;color:#5c5978">Happy learning — Hodhod</p>
+</div>
+{{ end }}
+</td></tr>
+</table>
+<p style="margin:18px 0 0;font-size:12px;color:#8a87a3;font-family:Arial,sans-serif">Hodhod · <a href="https://apphodhod.com" style="color:#8a87a3">apphodhod.com</a> · <a href="mailto:support@apphodhod.com" style="color:#8a87a3">support@apphodhod.com</a></p>
+</td></tr>
+</table>
+</body>
+</html>
