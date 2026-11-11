@@ -22,7 +22,6 @@ import { languageScreen } from './ui/screens/language.ts'
 import { refreshPush } from './data/push.ts'
 import { createScreen } from './ui/screens/create.ts'
 import { homeScreen } from './ui/screens/home.ts'
-import { deckImportScreen } from './ui/screens/deckImport.ts'
 import { importScreen } from './ui/screens/import.ts'
 import { friendsScreen } from './ui/screens/friends.ts'
 import { quizScreen } from './ui/screens/quiz.ts'
@@ -118,7 +117,6 @@ const ROUTES: { pattern: RegExp; keys: string[]; screen: ScreenFactory; tab: str
   { pattern: /^\/home$/, keys: [], screen: homeScreen, tab: 'home' },
   { pattern: /^\/create$/, keys: [], screen: createScreen, tab: 'create' },
   { pattern: /^\/import$/, keys: [], screen: importScreen, tab: 'create' },
-  { pattern: /^\/import\/deck$/, keys: [], screen: deckImportScreen, tab: 'create' },
   { pattern: /^\/words$/, keys: [], screen: wordsScreen, tab: 'words' },
   { pattern: /^\/words\/([^/]+)\/edit$/, keys: ['id'], screen: wordEditScreen, tab: 'words' },
   { pattern: /^\/words\/([^/]+)$/, keys: ['id'], screen: wordDetailScreen, tab: 'words' },

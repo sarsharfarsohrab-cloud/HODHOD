@@ -4,7 +4,7 @@
  *   Target languages: the languages whose words are learned.
  */
 
-export const UI_LANGUAGES = ['fa', 'de', 'en', 'fr', 'tr', 'uk', 'ru', 'ar', 'es', 'nl'] as const
+export const UI_LANGUAGES = ['fa', 'de', 'en', 'fr', 'it', 'tr', 'uk', 'ru', 'ar', 'es', 'nl'] as const
 export type UiLanguage = (typeof UI_LANGUAGES)[number]
 
 export const TARGET_LANGUAGES = ['en', 'de', 'fr', 'it', 'es', 'nl'] as const
@@ -34,6 +34,7 @@ export const UI_LANGUAGE_INFO: Record<UiLanguage, UiLanguageInfo> = {
   ar: { code: 'ar', name: 'العربية', english: 'Arabic', dir: 'rtl', intl: 'ar', appName: 'هدهد' },
   es: { code: 'es', name: 'Español', english: 'Spanish', dir: 'ltr', intl: 'es-ES', appName: 'Hodhod' },
   nl: { code: 'nl', name: 'Nederlands', english: 'Dutch', dir: 'ltr', intl: 'nl-NL', appName: 'Hodhod' },
+  it: { code: 'it', name: 'Italiano', english: 'Italian', dir: 'ltr', intl: 'it-IT', appName: 'Hodhod' },
 }
 
 export interface TargetLanguageInfo {

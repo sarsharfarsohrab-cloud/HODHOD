@@ -35,8 +35,8 @@ export const tr: Dictionary = {
 
   auth: {
     language: 'Dil',
-    chooseTitle: 'Dilini seç',
-    chooseBody: 'Hodhod seninle bu dilde konuşacak. Sonra öğrenmek istediğin dili seçeceksin.',
+    chooseTitle: 'Senin dilin hangisi?',
+    chooseBody: 'Hodhod seninle bu dilde konuşur ve her kelimeyi bu dilde açıklar — genellikle ana dilin. Sonra kelimelerini öğrenmek istediğin dili seçeceksin.',
     tagline: 'İhtiyacın olan kelimeler için akıllı kartlar, her gün biraz daha',
     hello: 'Merhaba! Ben Hodhod.',
     signIn: 'Giriş yap',
@@ -163,9 +163,9 @@ export const tr: Dictionary = {
       ['🔔', 'Telefona hatırlatmalar'],
     ] as [string, string][],
     ownTitle: 'Senin dilin hangisi?',
-    ownBody: 'Hodhod seninle bu dilde konuşur ve kelimelerin anlamlarını bu dilde yazar.',
-    learnTitle: 'Hangi dili öğrenmek istiyorsun?',
-    learnBody: 'Her dilin kendi rengi ve kendi kartları var.',
+    ownBody: 'Hodhod seninle bu dilde konuşur ve her kelimeyi bu dilde açıklar — genellikle ana dilin.',
+    learnTitle: 'Hangi dilin kelimelerini öğrenmek istiyorsun?',
+    learnBody: 'Bir dili ücretsiz öğrenebilirsin. Aynı anda birden fazla dil öğrenmek için Hodhod Plus gerekir.',
     introTitle: 'Hodhod nasıl çalışır?',
     get intro() {
       return [

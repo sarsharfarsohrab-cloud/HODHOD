@@ -31,7 +31,7 @@ export interface LanguagePair {
 /** Languages whose words can be learned. */
 export const TARGETS = ['de', 'en', 'fr', 'it', 'es', 'nl'] as const
 /** Languages the meanings can be written in (the learner's own language). */
-export const NATIVES = ['fa', 'de', 'en', 'fr', 'tr', 'uk', 'ru', 'ar', 'es', 'nl'] as const
+export const NATIVES = ['fa', 'de', 'en', 'fr', 'tr', 'uk', 'ru', 'ar', 'es', 'nl', 'it'] as const
 
 export function isSupportedPair(pair: LanguagePair): boolean {
   return (
@@ -105,6 +105,11 @@ const NATIVE: Record<string, NativeInfo> = {
     name: 'Dutch',
     rules: 'standard Dutch (as in the Netherlands and Flanders), current official spelling.',
     literal: '"de neus vol hebben"',
+  },
+  it: {
+    name: 'Italian',
+    rules: 'standard Italian with correct accents (è, é, à, ò, ù) and apostrophes.',
+    literal: '«avere il naso pieno»',
   },
 }
 

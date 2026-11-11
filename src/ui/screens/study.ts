@@ -191,7 +191,7 @@ export function studyScreen(ctx: Ctx, params: Record<string, string> = {}): Scre
           RATINGS.map((rating) =>
             h(
               'button',
-              { class: `rating rating-${rating}`, type: 'button', title: t.study.ratingHelp[rating], 'aria-label': `${t.study.ratings[rating]} — ${t.study.ratingHelp[rating]} — ${fmtDuration(preview[rating].intervalMs)}`, onclick: () => void rate(rating) },
+              { class: `rating rating-${rating}`, type: 'button', 'data-key': String(rating), title: t.study.ratingHelp[rating], 'aria-label': `${t.study.ratings[rating]} — ${t.study.ratingHelp[rating]} — ${fmtDuration(preview[rating].intervalMs)}`, onclick: () => void rate(rating) },
               h('b', null, t.study.ratings[rating]),
               h('span', null, fmtDuration(preview[rating].intervalMs)),
             ),
@@ -208,7 +208,8 @@ export function studyScreen(ctx: Ctx, params: Record<string, string> = {}): Scre
       actions = h('button', { class: 'btn accent big block', type: 'button', onclick: reveal }, t.study.showAnswer)
     }
 
-    replace(el, topBar(counts), companion(), h('article', { class: `flashcard ${current.revealed ? 'revealed' : ''} ${reverse ? 'reverse' : ''}` }, front, back), actions)
+    // on a wide screen the card sits on one side and the bird with the buttons beside it (app.css)
+    replace(el, topBar(counts), companion(), h('article', { class: `flashcard ${current.revealed ? 'revealed' : ''} ${reverse ? 'reverse' : ''}` }, front, back), h('div', { class: 'study-actions' }, actions))
     // the button that was tapped is gone now: give screen readers the new content to read
     const lost = !document.activeElement || document.activeElement === document.body || !document.activeElement.isConnected
     if (lost) {
@@ -218,7 +219,7 @@ export function studyScreen(ctx: Ctx, params: Record<string, string> = {}): Scre
         target.focus({ preventScroll: true })
       }
     }
-    if (current.revealed) window.scrollTo({ top: 0 })
+    if (current.revealed && !matchMedia('(min-width: 900px)').matches) window.scrollTo({ top: 0 })
   }
 
   function reveal() {

@@ -35,8 +35,8 @@ export const de: Dictionary = {
 
   auth: {
     language: 'Sprache',
-    chooseTitle: 'Wähle deine Sprache',
-    chooseBody: 'Hodhod spricht in dieser Sprache mit dir. Danach wählst du die Sprache, die du lernen willst.',
+    chooseTitle: 'Welche Sprache sprichst du?',
+    chooseBody: 'In dieser Sprache spricht Hodhod mit dir und erklärt jedes Wort – meist deine Muttersprache. Danach wählst du die Sprache, deren Wörter du lernen willst.',
     tagline: 'Smarte Karteikarten für die Wörter, die du brauchst – jeden Tag ein bisschen mehr',
     hello: 'Hallo! Ich bin Hodhod.',
     signIn: 'Anmelden',
@@ -163,9 +163,9 @@ export const de: Dictionary = {
       ['🔔', 'Erinnerungen aufs Handy'],
     ] as [string, string][],
     ownTitle: 'Welche Sprache sprichst du?',
-    ownBody: 'Hodhod spricht in dieser Sprache mit dir und schreibt die Bedeutungen der Wörter darin.',
-    learnTitle: 'Welche Sprache willst du lernen?',
-    learnBody: 'Jede Sprache hat ihre eigene Farbe und ihre eigenen Karten.',
+    ownBody: 'In dieser Sprache spricht Hodhod mit dir und erklärt jedes Wort – meist deine Muttersprache.',
+    learnTitle: 'Wörter welcher Sprache willst du lernen?',
+    learnBody: 'Eine Sprache lernst du kostenlos. Um mehrere Sprachen gleichzeitig zu lernen, brauchst du Hodhod Plus.',
     introTitle: 'Wie funktioniert Hodhod?',
     get intro() {
       return [

@@ -825,7 +825,7 @@ await test('a first visit opens in English and asks for the language first', asy
   await control('reset', { welcome: true })
   const page = await newPage({ language: null })
   await page.goto(BASE)
-  await page.getByRole('heading', { name: 'Choose your language' }).waitFor()
+  await page.getByRole('heading', { name: "What's your language?" }).waitFor()
   assert((await page.evaluate(() => document.documentElement.dir)) === 'ltr', 'English is left to right')
   await noHorizontalScroll(page, 'first language')
   await snap(page, 'first-language')
@@ -844,7 +844,7 @@ await test('a first visit opens in English and asks for the language first', asy
   await page.getByLabel('Password').fill('correct horse battery')
   await page.getByRole('button', { name: 'Create account' }).last().click()
   // next: the language to learn, never English itself
-  await page.getByRole('heading', { name: 'Which language do you want to learn?' }).waitFor()
+  await page.getByRole('heading', { name: "Which language's words do you want to learn?" }).waitFor()
   assert(!(await page.getByRole('radio', { name: /^English/ }).count()), 'English is not offered to an English speaker')
   await snap(page, 'welcome-learn-english-ui')
   await page.getByRole('radio', { name: /French/ }).click()
@@ -867,8 +867,8 @@ await test('a first visit opens in English and asks for the language first', asy
 
 await test('Arabic and Russian: the interface reads well and fits the phone', async () => {
   const cases = [
-    { name: 'العربية', code: 'ar', dir: 'rtl', signUp: 'إنشاء حساب', submit: 'أنشئ الحساب', nameLabel: 'الاسم', email: 'البريد الإلكتروني', password: 'كلمة المرور', learn: 'أي لغة تريد أن تتعلم؟', skip: 'تخطٍّ' },
-    { name: 'Русский', code: 'ru', dir: 'ltr', signUp: 'Создать аккаунт', submit: 'Создать аккаунт', nameLabel: 'Имя', email: 'Эл. почта', password: 'Пароль', learn: 'Какой язык хочешь учить?', skip: 'Пропустить' },
+    { name: 'العربية', code: 'ar', dir: 'rtl', signUp: 'إنشاء حساب', submit: 'أنشئ الحساب', nameLabel: 'الاسم', email: 'البريد الإلكتروني', password: 'كلمة المرور', learn: 'كلمات أي لغة تريد أن تتعلّم؟', skip: 'تخطٍّ' },
+    { name: 'Русский', code: 'ru', dir: 'ltr', signUp: 'Создать аккаунт', submit: 'Создать аккаунт', nameLabel: 'Имя', email: 'Эл. почта', password: 'Пароль', learn: 'Слова какого языка хочешь учить?', skip: 'Пропустить' },
   ]
   let page
   for (const [i, c] of cases.entries()) {
@@ -900,7 +900,7 @@ await test('welcome tour for a new account; its answers become the settings', as
   await page.getByRole('button', { name: 'فارسی' }).click()
   await signUp(page, { name: 'مریم' }).catch(() => undefined)
   // the own language was chosen before signing up; now the language to learn
-  await page.getByRole('heading', { name: 'کلمه‌های کدام زبان را می‌خواهی یاد بگیری؟' }).waitFor()
+  await page.getByRole('heading', { name: 'واژه‌های کدام زبان را می‌خواهی یاد بگیری؟' }).waitFor()
   await snap(page, 'welcome-learn-language')
   await page.getByRole('radio', { name: /آلمانی/ }).click()
   await page.getByRole('heading', { name: 'سلام مریم، خوش آمدی!' }).waitFor()
@@ -1259,47 +1259,6 @@ await test('a newer version offers a reload', async () => {
   await page.waitForLoadState('load')
   await page.getByRole('heading', { name: /سهراب/ }).waitFor()
   assert((await page.locator('.update-banner').count()) === 0, 'the banner is gone after reloading')
-  return page
-})
-
-await test('an Anki deck comes in as cards, and the bank goes out for Anki', async () => {
-  const page = await newPage()
-  await signUp(page)
-  await createWord(page, 'der Tisch') // already in the bank: not imported twice
-  await page.goto(`${BASE}/#/import`)
-  await page.getByRole('link', { name: 'وارد کردن از Anki یا Quizlet' }).click()
-  await page.locator('#deck-file').setInputFiles(join(here, '..', 'fixtures', 'anki-deck.txt'))
-  await page.getByText('۴ کارت پیدا شد').waitFor()
-  await page.getByText('از قبل در بانک واژه هست').waitFor()
-  await noHorizontalScroll(page, 'deck preview')
-  await snap(page, 'deck-preview')
-
-  // complete cards with the AI: the German side goes to the list import
-  await page.getByRole('button', { name: /کارت کامل با هوش مصنوعی/ }).click()
-  await page.waitForURL(/#\/import$/)
-  const list = await page.getByLabel('لیست لغت‌ها').inputValue()
-  assert(list.includes('die Lampe') && list.includes('Bescheid sagen') && !list.includes('der Tisch'), 'the new German entries are filled in')
-
-  // or as they are, without the AI
-  await page.goto(`${BASE}/#/import/deck`)
-  await page.getByLabel('یا متن را اینجا بچسبان').fill('die Lampe\tچراغ\nBescheid sagen\tخبر دادن\nKannst du mir helfen?\tمی‌توانی کمکم کنی؟')
-  await page.getByRole('button', { name: 'خواندن متن' }).click()
-  await page.getByRole('button', { name: 'وارد کردن ۳ کارت' }).click()
-  await page.getByText('۳ کارت به بانک واژه اضافه شد').waitFor()
-  await page.waitForURL(/#\/words$/)
-  await page.getByText('خبر دادن').waitFor()
-  const s = await state()
-  const lampe = s.words.find((w) => w.lemma === 'Lampe')
-  assert(lampe && lampe.pos === 'noun' && lampe.content.noun.article === 'die' && lampe.source === 'import' && lampe.tags.includes('Anki'), 'nouns keep their article')
-  assert(s.cards.length === 4, 'every imported word got its card')
-
-  // export for Anki
-  await page.goto(`${BASE}/#/settings`)
-  const download = page.waitForEvent('download')
-  await page.getByRole('button', { name: 'خروجی برای Anki' }).click()
-  const file = await download
-  const text = await (await import('node:fs/promises')).readFile(await file.path(), 'utf8')
-  assert(text.startsWith('#separator:tab') && text.includes('die Lampe\tچراغ'), 'the export is an Anki text file')
   return page
 })
 
