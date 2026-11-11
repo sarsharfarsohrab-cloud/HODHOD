@@ -124,10 +124,11 @@ export class SupabaseClient {
 
   // --- auth --------------------------------------------------------------------
 
-  async signUp(email: string, password: string, displayName: string, redirectTo: string, captchaToken?: string | null): Promise<{ needsEmailConfirmation: boolean }> {
+  async signUp(email: string, password: string, displayName: string, redirectTo: string, captchaToken?: string | null, language?: string): Promise<{ needsEmailConfirmation: boolean }> {
     const data = await this.json<Json>(`/auth/v1/signup?redirect_to=${encodeURIComponent(redirectTo)}`, {
       method: 'POST',
-      body: { email, password, data: { display_name: displayName }, ...captcha(captchaToken) },
+      // the language picks the wording of the account e-mails (supabase/templates/)
+      body: { email, password, data: { display_name: displayName, ...(language ? { language } : {}) }, ...captcha(captchaToken) },
     })
     if (typeof data.access_token === 'string') {
       this.setSession(this.sessionFromTokenResponse(data))
@@ -164,6 +165,11 @@ export class SupabaseClient {
 
   async sendPasswordReset(email: string, redirectTo: string, captchaToken?: string | null): Promise<void> {
     await this.json(`/auth/v1/recover?redirect_to=${encodeURIComponent(redirectTo)}`, { method: 'POST', body: { email, ...captcha(captchaToken) } })
+  }
+
+  /** Remembers the interface language on the account, so its e-mails (password reset, …) speak it. */
+  async setEmailLanguage(language: string): Promise<void> {
+    await this.json('/auth/v1/user', { method: 'PUT', body: { data: { language } }, auth: 'user' })
   }
 
   async updatePassword(password: string): Promise<void> {

@@ -238,7 +238,8 @@ export class FakeSupabase {
         if (body.password.length < 6) return json({ code: 422, error_code: 'weak_password', msg: 'weak' }, 422)
         user.password = body.password
       }
-      return json({ id: user.id, email: user.email })
+      if (req.method === 'PUT' && body.data && typeof body.data === 'object') user.meta = { ...user.meta, ...(body.data as Row) }
+      return json({ id: user.id, email: user.email, user_metadata: user.meta })
     }
 
     if (path === '/logout') return new Response(null, { status: 204 })

@@ -1,0 +1,96 @@
+{{ $lang := printf "%v" .Data.language }}<!doctype html>
+<html>
+<body style="margin:0;padding:0;background:#f4f3fb;font-family:Vazirmatn,Tahoma,'Segoe UI',Arial,sans-serif">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f3fb;padding:32px 12px">
+<tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:24px;padding:32px 28px;box-shadow:0 12px 28px -12px rgba(37,34,63,.22)">
+<tr><td align="center" style="padding-bottom:18px"><img src="https://apphodhod.com/img/icon-192.png" width="64" height="64" alt="Hodhod" style="border-radius:16px"></td></tr>
+<tr><td>
+{{ if eq $lang "fa" }}
+<div dir="rtl" lang="fa" style="text-align:right">
+  <h1 style="margin:0 0 12px;font-size:24px;line-height:1.3;color:#25223f">تغییر رمز</h1>
+  <p style="margin:0 0 24px;font-size:16px;line-height:1.7;color:#5c5978">درخواستی برای تغییر رمزت رسیده است. دکمه را بزن و رمز تازه انتخاب کن.</p>
+  <p style="margin:0 0 28px"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 26px;border-radius:999px;background:#f5922b;color:#25223f;font-weight:700;font-size:16px;text-decoration:none">انتخاب رمز تازه</a></p>
+  <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#8a87a3">اگر چنین درخواستی نداده‌ای، این ایمیل را نادیده بگیر؛ رمزت عوض نمی‌شود.</p>
+  <p style="margin:18px 0 0;font-size:14px;color:#5c5978">یادگیری خوش بگذرد — هدهد</p>
+</div>
+{{ else if eq $lang "de" }}
+<div dir="ltr" lang="de" style="text-align:left">
+  <h1 style="margin:0 0 12px;font-size:24px;line-height:1.3;color:#25223f">Passwort zurücksetzen</h1>
+  <p style="margin:0 0 24px;font-size:16px;line-height:1.7;color:#5c5978">Wir haben eine Anfrage zum Zurücksetzen deines Passworts erhalten. Tippe auf den Button, um ein neues zu wählen.</p>
+  <p style="margin:0 0 28px"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 26px;border-radius:999px;background:#f5922b;color:#25223f;font-weight:700;font-size:16px;text-decoration:none">Neues Passwort wählen</a></p>
+  <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#8a87a3">Wenn du das nicht angefordert hast, ignoriere diese E-Mail – dein Passwort bleibt gleich.</p>
+  <p style="margin:18px 0 0;font-size:14px;color:#5c5978">Viel Spaß beim Lernen – Hodhod</p>
+</div>
+{{ else if eq $lang "fr" }}
+<div dir="ltr" lang="fr" style="text-align:left">
+  <h1 style="margin:0 0 12px;font-size:24px;line-height:1.3;color:#25223f">Réinitialiser ton mot de passe</h1>
+  <p style="margin:0 0 24px;font-size:16px;line-height:1.7;color:#5c5978">Nous avons reçu une demande de réinitialisation de ton mot de passe. Appuie sur le bouton pour en choisir un nouveau.</p>
+  <p style="margin:0 0 28px"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 26px;border-radius:999px;background:#f5922b;color:#25223f;font-weight:700;font-size:16px;text-decoration:none">Choisir un nouveau mot de passe</a></p>
+  <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#8a87a3">Si tu n’as rien demandé, ignore cet e-mail : ton mot de passe ne change pas.</p>
+  <p style="margin:18px 0 0;font-size:14px;color:#5c5978">Bon apprentissage — Hodhod</p>
+</div>
+{{ else if eq $lang "tr" }}
+<div dir="ltr" lang="tr" style="text-align:left">
+  <h1 style="margin:0 0 12px;font-size:24px;line-height:1.3;color:#25223f">Şifreni sıfırla</h1>
+  <p style="margin:0 0 24px;font-size:16px;line-height:1.7;color:#5c5978">Şifreni sıfırlamak için bir istek aldık. Yeni bir şifre seçmek için düğmeye dokun.</p>
+  <p style="margin:0 0 28px"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 26px;border-radius:999px;background:#f5922b;color:#25223f;font-weight:700;font-size:16px;text-decoration:none">Yeni şifre seç</a></p>
+  <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#8a87a3">Bunu sen istemediysen bu e-postayı yok say; şifren değişmez.</p>
+  <p style="margin:18px 0 0;font-size:14px;color:#5c5978">Keyifli öğrenmeler — Hodhod</p>
+</div>
+{{ else if eq $lang "uk" }}
+<div dir="ltr" lang="uk" style="text-align:left">
+  <h1 style="margin:0 0 12px;font-size:24px;line-height:1.3;color:#25223f">Скидання пароля</h1>
+  <p style="margin:0 0 24px;font-size:16px;line-height:1.7;color:#5c5978">Ми отримали запит на скидання твого пароля. Натисни кнопку, щоб вибрати новий.</p>
+  <p style="margin:0 0 28px"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 26px;border-radius:999px;background:#f5922b;color:#25223f;font-weight:700;font-size:16px;text-decoration:none">Вибрати новий пароль</a></p>
+  <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#8a87a3">Якщо ти цього не просив, ігноруй цей лист — пароль не зміниться.</p>
+  <p style="margin:18px 0 0;font-size:14px;color:#5c5978">Приємного навчання — Hodhod</p>
+</div>
+{{ else if eq $lang "ru" }}
+<div dir="ltr" lang="ru" style="text-align:left">
+  <h1 style="margin:0 0 12px;font-size:24px;line-height:1.3;color:#25223f">Сброс пароля</h1>
+  <p style="margin:0 0 24px;font-size:16px;line-height:1.7;color:#5c5978">Мы получили запрос на сброс твоего пароля. Нажми кнопку, чтобы выбрать новый.</p>
+  <p style="margin:0 0 28px"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 26px;border-radius:999px;background:#f5922b;color:#25223f;font-weight:700;font-size:16px;text-decoration:none">Выбрать новый пароль</a></p>
+  <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#8a87a3">Если ты этого не просил, проигнорируй письмо — пароль не изменится.</p>
+  <p style="margin:18px 0 0;font-size:14px;color:#5c5978">Приятной учёбы — Hodhod</p>
+</div>
+{{ else if eq $lang "ar" }}
+<div dir="rtl" lang="ar" style="text-align:right">
+  <h1 style="margin:0 0 12px;font-size:24px;line-height:1.3;color:#25223f">إعادة تعيين كلمة المرور</h1>
+  <p style="margin:0 0 24px;font-size:16px;line-height:1.7;color:#5c5978">وصلنا طلب لإعادة تعيين كلمة مرورك. اضغط الزر لاختيار كلمة مرور جديدة.</p>
+  <p style="margin:0 0 28px"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 26px;border-radius:999px;background:#f5922b;color:#25223f;font-weight:700;font-size:16px;text-decoration:none">اختيار كلمة مرور جديدة</a></p>
+  <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#8a87a3">إذا لم تطلب ذلك، تجاهل هذه الرسالة؛ ستبقى كلمة مرورك كما هي.</p>
+  <p style="margin:18px 0 0;font-size:14px;color:#5c5978">تعلّمًا ممتعًا — هدهد</p>
+</div>
+{{ else if eq $lang "es" }}
+<div dir="ltr" lang="es" style="text-align:left">
+  <h1 style="margin:0 0 12px;font-size:24px;line-height:1.3;color:#25223f">Restablecer tu contraseña</h1>
+  <p style="margin:0 0 24px;font-size:16px;line-height:1.7;color:#5c5978">Recibimos una solicitud para restablecer tu contraseña. Pulsa el botón para elegir una nueva.</p>
+  <p style="margin:0 0 28px"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 26px;border-radius:999px;background:#f5922b;color:#25223f;font-weight:700;font-size:16px;text-decoration:none">Elegir una contraseña nueva</a></p>
+  <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#8a87a3">Si no lo pediste, ignora este correo: tu contraseña no cambia.</p>
+  <p style="margin:18px 0 0;font-size:14px;color:#5c5978">Feliz aprendizaje — Hodhod</p>
+</div>
+{{ else if eq $lang "nl" }}
+<div dir="ltr" lang="nl" style="text-align:left">
+  <h1 style="margin:0 0 12px;font-size:24px;line-height:1.3;color:#25223f">Wachtwoord opnieuw instellen</h1>
+  <p style="margin:0 0 24px;font-size:16px;line-height:1.7;color:#5c5978">We kregen een verzoek om je wachtwoord opnieuw in te stellen. Tik op de knop om een nieuw wachtwoord te kiezen.</p>
+  <p style="margin:0 0 28px"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 26px;border-radius:999px;background:#f5922b;color:#25223f;font-weight:700;font-size:16px;text-decoration:none">Nieuw wachtwoord kiezen</a></p>
+  <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#8a87a3">Heb je hier niet om gevraagd? Negeer deze e-mail — je wachtwoord blijft hetzelfde.</p>
+  <p style="margin:18px 0 0;font-size:14px;color:#5c5978">Veel leerplezier — Hodhod</p>
+</div>
+{{ else }}
+<div dir="ltr" lang="en" style="text-align:left">
+  <h1 style="margin:0 0 12px;font-size:24px;line-height:1.3;color:#25223f">Reset your password</h1>
+  <p style="margin:0 0 24px;font-size:16px;line-height:1.7;color:#5c5978">We received a request to reset your password. Tap the button to choose a new one.</p>
+  <p style="margin:0 0 28px"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 26px;border-radius:999px;background:#f5922b;color:#25223f;font-weight:700;font-size:16px;text-decoration:none">Choose a new password</a></p>
+  <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:#8a87a3">If you didn't ask for this, you can ignore this e-mail — your password stays the same.</p>
+  <p style="margin:18px 0 0;font-size:14px;color:#5c5978">Happy learning — Hodhod</p>
+</div>
+{{ end }}
+</td></tr>
+</table>
+<p style="margin:18px 0 0;font-size:12px;color:#8a87a3;font-family:Arial,sans-serif">Hodhod · <a href="https://apphodhod.com" style="color:#8a87a3">apphodhod.com</a> · <a href="mailto:support@apphodhod.com" style="color:#8a87a3">support@apphodhod.com</a></p>
+</td></tr>
+</table>
+</body>
+</html>

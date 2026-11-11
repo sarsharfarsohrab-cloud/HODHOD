@@ -175,9 +175,16 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
   /** The account's languages decide the interface language and the deck on screen. Returns true when the interface language changed. */
   const syncLanguages = (): boolean => {
     setLearningPair({ target: data.profile.activeTargetLanguage, native: data.profile.nativeLanguage })
+    rememberEmailLanguage(data.profile.nativeLanguage)
     if (data.profile.nativeLanguage === currentLanguage()) return false
     applyLanguage(data.profile.nativeLanguage)
     return true
+  }
+  // the account e-mails follow the interface language; told to the server once per change
+  function rememberEmailLanguage(code: string) {
+    const key = `hodhod.emailLanguage.${session.userId}`
+    if (!isUiLanguage(code) || storage.getItem(key) === code) return
+    client.setEmailLanguage(code).then(() => storage.setItem(key, code), () => undefined)
   }
   // a new account takes over the language chosen on this device before signing up
   const adoptChosenLanguage = async () => {
