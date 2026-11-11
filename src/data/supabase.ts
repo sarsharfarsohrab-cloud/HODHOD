@@ -172,6 +172,13 @@ export class SupabaseClient {
     await this.json('/auth/v1/user', { method: 'PUT', body: { data: { language } }, auth: 'user' })
   }
 
+  /** The language the account signed up in (or last used), as kept for its e-mails; null when unknown. */
+  async emailLanguage(): Promise<string | null> {
+    const user = await this.json<Json>('/auth/v1/user', { method: 'GET', auth: 'user' })
+    const language = (user.user_metadata as Json | undefined)?.language
+    return typeof language === 'string' ? language : null
+  }
+
   async updatePassword(password: string): Promise<void> {
     await this.json('/auth/v1/user', { method: 'PUT', body: { password }, auth: 'user' })
   }

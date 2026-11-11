@@ -209,8 +209,8 @@ export class FakeSupabase {
   }
 
   /** Test helper: an account that can sign in immediately. */
-  seedUser(email: string, password: string, displayName = ''): User {
-    return this.createUser(email, password, { display_name: displayName, confirmed: true })
+  seedUser(email: string, password: string, displayName = '', language?: string): User {
+    return this.createUser(email, password, { display_name: displayName, confirmed: true, ...(language ? { language } : {}) })
   }
 
   // --- auth ------------------------------------------------------------------------

@@ -95,7 +95,7 @@ Bun.serve({
           break
         }
         case '/__test/seed-user':
-          backend.seedUser(String(body.email), String(body.password), String(body.name ?? ''))
+          backend.seedUser(String(body.email), String(body.password), String(body.name ?? ''), typeof body.language === 'string' ? body.language : undefined)
           break
         case '/__test/platform':
           return Response.json({ ttsCalls: backend.requests.filter((r) => r === 'POST /functions/v1/tts').length, ...Object.fromEntries(['packs', 'pack_items', 'user_packs', 'feedback', 'card_reports', 'announcements', 'client_errors', 'user_limits', 'ai_credit_entries', 'ai_word_cache', 'tts_cache'].map((k) => [k, backend.tables[k]])) })

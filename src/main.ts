@@ -194,7 +194,9 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
   }
   // a new account takes over the language chosen on this device before signing up
   const adoptChosenLanguage = async () => {
-    const chosen = storage.getItem(LANGUAGE_KEY)
+    let chosen = storage.getItem(LANGUAGE_KEY)
+    // the confirmation e-mail often opens in another browser, which knows no choice: ask the account
+    if (!data.settings.onboarded && !isUiLanguage(chosen)) chosen = await client.emailLanguage().catch(() => null)
     if (!data.settings.onboarded && isUiLanguage(chosen) && chosen !== data.profile.nativeLanguage) {
       const target = data.profile.activeTargetLanguage === chosen ? targetsFor(chosen)[0]! : data.profile.activeTargetLanguage
       await data.setLanguages({ native: chosen, target }).catch(() => undefined)

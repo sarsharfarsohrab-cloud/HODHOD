@@ -1315,6 +1315,20 @@ await test('the learn corner: a podcast read sentence by sentence, a word turned
   return page
 })
 
+await test('a new account opened in another browser (the confirmation e-mail) speaks the language it signed up in', async () => {
+  await control('reset', { welcome: true })
+  // signed up in German elsewhere; this browser has no language chosen yet
+  await control('seed-user', { email: 'jonas@example.test', password: 'correct horse battery', name: 'Jonas', language: 'de' })
+  const page = await newPage({ language: null })
+  // the link in the e-mail arrives with the session in the address
+  const tokens = await fetch(`${BASE}/auth/v1/token?grant_type=password`, { method: 'POST', headers: { 'content-type': 'application/json', apikey: 'test' }, body: JSON.stringify({ email: 'jonas@example.test', password: 'correct horse battery' }) }).then((r) => r.json())
+  await page.goto(`${BASE}/#access_token=${tokens.access_token}&refresh_token=${tokens.refresh_token}&expires_in=3600&token_type=bearer&type=signup`)
+  await page.getByRole('heading', { name: 'Wörter welcher Sprache willst du lernen?' }).waitFor()
+  assert((await page.evaluate(() => document.documentElement.lang)) === 'de', 'the interface is German, not the Persian default')
+  await control('reset', {})
+  return page
+})
+
 await test('friends add each other by code and share a weekly board', async () => {
   const sohrab = await newPage()
   await signUp(sohrab)
