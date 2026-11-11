@@ -1,0 +1,2505 @@
+{
+ "version": 1,
+ "packs": [
+  {
+   "slug": "talk-feelings-basic",
+   "topic": "talk-feelings",
+   "level": "basic",
+   "kind": "expressions",
+   "title_fa": "احساسات و حال — پایه",
+   "description_fa": "اصطلاح‌های رایج برای گفتن حال و احساس‌ات: خوشحالی، ناراحتی، دل‌تنگی و آرامش.",
+   "emoji": "😊",
+   "items": [
+    {
+     "text": "Mir geht's gut.",
+     "register": "informal"
+    },
+    {
+     "text": "Mir geht's nicht so gut.",
+     "register": "informal"
+    },
+    {
+     "text": "Ich bin gut drauf.",
+     "register": "informal"
+    },
+    {
+     "text": "Ich bin schlecht drauf.",
+     "register": "informal"
+    },
+    {
+     "text": "Ich bin total happy.",
+     "register": "informal"
+    },
+    {
+     "text": "Ich freu mich riesig!",
+     "register": "informal"
+    },
+    {
+     "text": "Ich bin traurig.",
+     "register": "neutral"
+    },
+    {
+     "text": "Mir ist zum Heulen zumute.",
+     "register": "informal"
+    },
+    {
+     "text": "Ich hab die Nase voll.",
+     "register": "informal"
+    },
+    {
+     "text": "Das tut mir echt leid.",
+     "register": "informal"
+    },
+    {
+     "text": "Ich vermisse dich.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich bin erleichtert.",
+     "register": "neutral"
+    },
+    {
+     "text": "Mir fällt ein Stein vom Herzen.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich bin aufgeregt.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich hab Schiss.",
+     "register": "slang"
+    },
+    {
+     "text": "Ich hab Angst.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich bin nervös.",
+     "register": "neutral"
+    },
+    {
+     "text": "Mir ist langweilig.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich bin genervt.",
+     "register": "informal"
+    },
+    {
+     "text": "Das macht mich fertig.",
+     "register": "informal"
+    },
+    {
+     "text": "Ich bin stolz auf dich.",
+     "register": "neutral"
+    },
+    {
+     "text": "Das freut mich für dich!",
+     "register": "neutral"
+    },
+    {
+     "text": "Kopf hoch!",
+     "register": "informal"
+    },
+    {
+     "text": "Mach dir keine Sorgen.",
+     "register": "neutral"
+    },
+    {
+     "text": "Alles wird gut.",
+     "register": "neutral"
+    }
+   ]
+  },
+  {
+   "slug": "talk-feelings-advanced",
+   "topic": "talk-feelings",
+   "level": "advanced",
+   "kind": "expressions",
+   "title_fa": "احساسات و حال — پیشرفته",
+   "description_fa": "اصطلاح‌های رایج برای گفتن حال و احساس‌ات: خوشحالی، ناراحتی، دل‌تنگی و آرامش. سطح بالاتر: اصطلاح‌های تصویری و ضرب‌المثل‌ها.",
+   "emoji": "😊",
+   "items": [
+    {
+     "text": "im siebten Himmel sein",
+     "register": "informal"
+    },
+    {
+     "text": "auf Wolke sieben schweben",
+     "register": "informal"
+    },
+    {
+     "text": "Schmetterlinge im Bauch haben",
+     "register": "informal"
+    },
+    {
+     "text": "einen Kloß im Hals haben",
+     "register": "informal"
+    },
+    {
+     "text": "mit den Nerven am Ende sein",
+     "register": "informal"
+    },
+    {
+     "text": "die Nase gestrichen voll haben",
+     "register": "informal"
+    },
+    {
+     "text": "Herzklopfen haben",
+     "register": "neutral"
+    },
+    {
+     "text": "sich wie ein Schneekönig freuen",
+     "register": "informal"
+    },
+    {
+     "text": "schlecht gelaunt sein",
+     "register": "neutral"
+    },
+    {
+     "text": "einen schlechten Tag erwischen",
+     "register": "informal"
+    },
+    {
+     "text": "etwas auf dem Herzen haben",
+     "register": "neutral"
+    },
+    {
+     "text": "sich etwas von der Seele reden",
+     "register": "neutral"
+    },
+    {
+     "text": "das Herz auf der Zunge tragen",
+     "register": "neutral"
+    },
+    {
+     "text": "ein dickes Fell haben",
+     "register": "informal"
+    },
+    {
+     "text": "nah am Wasser gebaut sein",
+     "register": "informal"
+    },
+    {
+     "text": "die Zähne zusammenbeißen",
+     "register": "neutral"
+    },
+    {
+     "text": "den Kopf hängen lassen",
+     "register": "neutral"
+    },
+    {
+     "text": "Muffensausen haben",
+     "register": "slang"
+    },
+    {
+     "text": "in Tränen ausbrechen",
+     "register": "neutral"
+    },
+    {
+     "text": "aus allen Wolken fallen",
+     "register": "informal"
+    }
+   ]
+  },
+  {
+   "slug": "talk-agree-basic",
+   "topic": "talk-agree",
+   "level": "basic",
+   "kind": "expressions",
+   "title_fa": "موافقت و مخالفت — پایه",
+   "description_fa": "برای اینکه بگویی موافقی، مخالفی یا هنوز مطمئن نیستی.",
+   "emoji": "👍",
+   "items": [
+    {
+     "text": "Genau!",
+     "register": "informal"
+    },
+    {
+     "text": "Stimmt.",
+     "register": "informal"
+    },
+    {
+     "text": "Da hast du recht.",
+     "register": "neutral"
+    },
+    {
+     "text": "Klar!",
+     "register": "informal"
+    },
+    {
+     "text": "Na klar!",
+     "register": "informal"
+    },
+    {
+     "text": "Auf jeden Fall!",
+     "register": "neutral"
+    },
+    {
+     "text": "Absolut.",
+     "register": "neutral"
+    },
+    {
+     "text": "Von mir aus.",
+     "register": "informal"
+    },
+    {
+     "text": "Meinetwegen.",
+     "register": "informal"
+    },
+    {
+     "text": "Geht klar.",
+     "register": "informal"
+    },
+    {
+     "text": "Passt schon.",
+     "register": "informal"
+    },
+    {
+     "text": "Ich bin dabei!",
+     "register": "informal"
+    },
+    {
+     "text": "Gute Idee!",
+     "register": "neutral"
+    },
+    {
+     "text": "Einverstanden.",
+     "register": "neutral"
+    },
+    {
+     "text": "Das sehe ich anders.",
+     "register": "neutral"
+    },
+    {
+     "text": "Da bin ich anderer Meinung.",
+     "register": "neutral"
+    },
+    {
+     "text": "Auf keinen Fall!",
+     "register": "neutral"
+    },
+    {
+     "text": "Kommt nicht in Frage!",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich weiß nicht so recht.",
+     "register": "informal"
+    },
+    {
+     "text": "Mal sehen.",
+     "register": "informal"
+    },
+    {
+     "text": "Kann sein.",
+     "register": "informal"
+    },
+    {
+     "text": "Vielleicht.",
+     "register": "neutral"
+    },
+    {
+     "text": "Das kommt drauf an.",
+     "register": "informal"
+    },
+    {
+     "text": "Ach was!",
+     "register": "informal"
+    },
+    {
+     "text": "Quatsch!",
+     "register": "informal"
+    }
+   ]
+  },
+  {
+   "slug": "talk-agree-advanced",
+   "topic": "talk-agree",
+   "level": "advanced",
+   "kind": "expressions",
+   "title_fa": "موافقت و مخالفت — پیشرفته",
+   "description_fa": "برای اینکه بگویی موافقی، مخالفی یا هنوز مطمئن نیستی. سطح بالاتر: اصطلاح‌های تصویری و ضرب‌المثل‌ها.",
+   "emoji": "👍",
+   "items": [
+    {
+     "text": "Da muss ich dir recht geben.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ganz meine Meinung.",
+     "register": "neutral"
+    },
+    {
+     "text": "Das kann man so sagen.",
+     "register": "neutral"
+    },
+    {
+     "text": "Das unterschreibe ich sofort.",
+     "register": "informal"
+    },
+    {
+     "text": "Ich bin ganz Ohr.",
+     "register": "informal"
+    },
+    {
+     "text": "Das steht außer Frage.",
+     "register": "neutral"
+    },
+    {
+     "text": "Da bin ich skeptisch.",
+     "register": "neutral"
+    },
+    {
+     "text": "Das sehe ich nicht so eng.",
+     "register": "informal"
+    },
+    {
+     "text": "Da spiel ich nicht mit.",
+     "register": "informal"
+    },
+    {
+     "text": "Das kannst du vergessen!",
+     "register": "informal"
+    },
+    {
+     "text": "Das ist Ansichtssache.",
+     "register": "neutral"
+    },
+    {
+     "text": "Darüber lässt sich streiten.",
+     "register": "neutral"
+    },
+    {
+     "text": "Da scheiden sich die Geister.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich bin hin- und hergerissen.",
+     "register": "neutral"
+    },
+    {
+     "text": "Das ist mir zu heikel.",
+     "register": "neutral"
+    },
+    {
+     "text": "Lass uns das mal offen lassen.",
+     "register": "informal"
+    },
+    {
+     "text": "Jein.",
+     "register": "informal"
+    },
+    {
+     "text": "Im Prinzip schon, aber …",
+     "register": "neutral"
+    }
+   ]
+  },
+  {
+   "slug": "talk-surprise-basic",
+   "topic": "talk-surprise",
+   "level": "basic",
+   "kind": "expressions",
+   "title_fa": "تعجب و باورنکردن — پایه",
+   "description_fa": "وقتی چیزی تعجب‌آور یا باورنکردنی است.",
+   "emoji": "😲",
+   "items": [
+    {
+     "text": "Echt?",
+     "register": "informal"
+    },
+    {
+     "text": "Wirklich?",
+     "register": "neutral"
+    },
+    {
+     "text": "Im Ernst?",
+     "register": "informal"
+    },
+    {
+     "text": "Ach so!",
+     "register": "informal"
+    },
+    {
+     "text": "Ach du meine Güte!",
+     "register": "informal"
+    },
+    {
+     "text": "Oh Mann!",
+     "register": "informal"
+    },
+    {
+     "text": "Wahnsinn!",
+     "register": "informal"
+    },
+    {
+     "text": "Krass!",
+     "register": "slang"
+    },
+    {
+     "text": "Nicht schlecht!",
+     "register": "informal"
+    },
+    {
+     "text": "Das gibt's doch nicht!",
+     "register": "informal"
+    },
+    {
+     "text": "Das glaub ich nicht!",
+     "register": "informal"
+    },
+    {
+     "text": "Ohne Witz?",
+     "register": "slang"
+    },
+    {
+     "text": "Sag bloß!",
+     "register": "informal"
+    },
+    {
+     "text": "Unglaublich!",
+     "register": "neutral"
+    },
+    {
+     "text": "Na sowas!",
+     "register": "informal"
+    },
+    {
+     "text": "Ach du Schreck!",
+     "register": "informal"
+    },
+    {
+     "text": "Wow!",
+     "register": "informal"
+    },
+    {
+     "text": "Mensch!",
+     "register": "informal"
+    },
+    {
+     "text": "Hä?",
+     "register": "slang"
+    },
+    {
+     "text": "Wie bitte?",
+     "register": "neutral"
+    }
+   ]
+  },
+  {
+   "slug": "talk-surprise-advanced",
+   "topic": "talk-surprise",
+   "level": "advanced",
+   "kind": "expressions",
+   "title_fa": "تعجب و باورنکردن — پیشرفته",
+   "description_fa": "وقتی چیزی تعجب‌آور یا باورنکردنی است. سطح بالاتر: اصطلاح‌های تصویری و ضرب‌المثل‌ها.",
+   "emoji": "😲",
+   "items": [
+    {
+     "text": "Mir bleibt die Spucke weg.",
+     "register": "informal"
+    },
+    {
+     "text": "Ich glaub, ich spinne!",
+     "register": "informal"
+    },
+    {
+     "text": "Ich glaub, mein Schwein pfeift!",
+     "register": "slang"
+    },
+    {
+     "text": "Da bin ich baff.",
+     "register": "informal"
+    },
+    {
+     "text": "Ich bin sprachlos.",
+     "register": "neutral"
+    },
+    {
+     "text": "Da staunst du, was?",
+     "register": "informal"
+    },
+    {
+     "text": "Das haut mich um!",
+     "register": "informal"
+    },
+    {
+     "text": "Ich fall vom Glauben ab.",
+     "register": "informal"
+    },
+    {
+     "text": "Das ist ja ein Ding!",
+     "register": "informal"
+    },
+    {
+     "text": "Mich laust der Affe!",
+     "register": "informal"
+    },
+    {
+     "text": "Das ist der Hammer!",
+     "register": "slang"
+    },
+    {
+     "text": "Ich trau meinen Augen nicht.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich trau meinen Ohren nicht.",
+     "register": "neutral"
+    },
+    {
+     "text": "Das ist ja nicht zu fassen!",
+     "register": "neutral"
+    },
+    {
+     "text": "Da legst di nieder!",
+     "register": "slang"
+    },
+    {
+     "text": "Wer hätte das gedacht?",
+     "register": "neutral"
+    }
+   ]
+  },
+  {
+   "slug": "talk-annoyance-basic",
+   "topic": "talk-annoyance",
+   "level": "basic",
+   "kind": "expressions",
+   "title_fa": "عصبانیت و دلخوری — پایه",
+   "description_fa": "برای وقتی که از چیزی یا کسی کلافه یا عصبانی هستی.",
+   "emoji": "😤",
+   "items": [
+    {
+     "text": "Das nervt!",
+     "register": "informal"
+    },
+    {
+     "text": "Du nervst!",
+     "register": "informal"
+    },
+    {
+     "text": "Lass mich in Ruhe!",
+     "register": "neutral"
+    },
+    {
+     "text": "Hör auf damit!",
+     "register": "informal"
+    },
+    {
+     "text": "Jetzt reicht's!",
+     "register": "informal"
+    },
+    {
+     "text": "Das ist doch nicht dein Ernst!",
+     "register": "informal"
+    },
+    {
+     "text": "Ich hab keinen Bock.",
+     "register": "slang"
+    },
+    {
+     "text": "Mir reicht's.",
+     "register": "informal"
+    },
+    {
+     "text": "So ein Mist!",
+     "register": "informal"
+    },
+    {
+     "text": "Verdammt!",
+     "register": "informal"
+    },
+    {
+     "text": "Was soll das?",
+     "register": "informal"
+    },
+    {
+     "text": "Spinnst du?",
+     "register": "informal"
+    },
+    {
+     "text": "Bist du verrückt?",
+     "register": "informal"
+    },
+    {
+     "text": "Geht's noch?",
+     "register": "slang"
+    },
+    {
+     "text": "Das ist unfair!",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich bin sauer.",
+     "register": "informal"
+    },
+    {
+     "text": "Ich bin stinksauer.",
+     "register": "slang"
+    },
+    {
+     "text": "Mach mal halblang!",
+     "register": "informal"
+    },
+    {
+     "text": "Reg dich ab!",
+     "register": "informal"
+    },
+    {
+     "text": "Halt die Klappe!",
+     "register": "slang"
+    }
+   ]
+  },
+  {
+   "slug": "talk-annoyance-advanced",
+   "topic": "talk-annoyance",
+   "level": "advanced",
+   "kind": "expressions",
+   "title_fa": "عصبانیت و دلخوری — پیشرفته",
+   "description_fa": "برای وقتی که از چیزی یا کسی کلافه یا عصبانی هستی. سطح بالاتر: اصطلاح‌های تصویری و ضرب‌المثل‌ها.",
+   "emoji": "😤",
+   "items": [
+    {
+     "text": "auf die Palme gehen",
+     "register": "informal"
+    },
+    {
+     "text": "jemanden auf die Palme bringen",
+     "register": "informal"
+    },
+    {
+     "text": "an die Decke gehen",
+     "register": "informal"
+    },
+    {
+     "text": "die Faust in der Tasche ballen",
+     "register": "neutral"
+    },
+    {
+     "text": "Das bringt das Fass zum Überlaufen.",
+     "register": "neutral"
+    },
+    {
+     "text": "Das ist der Tropfen, der das Fass zum Überlaufen bringt.",
+     "register": "neutral"
+    },
+    {
+     "text": "jemandem auf den Keks gehen",
+     "register": "informal"
+    },
+    {
+     "text": "jemandem auf den Wecker gehen",
+     "register": "informal"
+    },
+    {
+     "text": "jemandem auf die Nerven gehen",
+     "register": "informal"
+    },
+    {
+     "text": "die Geduld verlieren",
+     "register": "neutral"
+    },
+    {
+     "text": "Mir platzt gleich der Kragen!",
+     "register": "informal"
+    },
+    {
+     "text": "in die Luft gehen",
+     "register": "informal"
+    },
+    {
+     "text": "jemandem die Meinung sagen",
+     "register": "neutral"
+    },
+    {
+     "text": "eine Szene machen",
+     "register": "neutral"
+    },
+    {
+     "text": "beleidigt sein",
+     "register": "neutral"
+    },
+    {
+     "text": "eingeschnappt sein",
+     "register": "informal"
+    },
+    {
+     "text": "schlechte Laune verbreiten",
+     "register": "neutral"
+    },
+    {
+     "text": "Da hört der Spaß auf!",
+     "register": "neutral"
+    }
+   ]
+  },
+  {
+   "slug": "talk-smalltalk-basic",
+   "topic": "talk-smalltalk",
+   "level": "basic",
+   "kind": "expressions",
+   "title_fa": "جمله‌های کوتاه روزمره — پایه",
+   "description_fa": "جمله‌ها و تکه‌کلام‌هایی که آلمانی‌ها هر روز می‌گویند.",
+   "emoji": "💬",
+   "items": [
+    {
+     "text": "Na?",
+     "register": "informal"
+    },
+    {
+     "text": "Na, wie geht's?",
+     "register": "informal"
+    },
+    {
+     "text": "Alles klar?",
+     "register": "informal"
+    },
+    {
+     "text": "Alles gut.",
+     "register": "informal"
+    },
+    {
+     "text": "Was geht?",
+     "register": "slang"
+    },
+    {
+     "text": "Was machst du so?",
+     "register": "informal"
+    },
+    {
+     "text": "Lange nicht gesehen!",
+     "register": "informal"
+    },
+    {
+     "text": "Schön, dich zu sehen!",
+     "register": "neutral"
+    },
+    {
+     "text": "Mach's gut!",
+     "register": "informal"
+    },
+    {
+     "text": "Bis später!",
+     "register": "neutral"
+    },
+    {
+     "text": "Bis dann!",
+     "register": "informal"
+    },
+    {
+     "text": "Bis gleich!",
+     "register": "neutral"
+    },
+    {
+     "text": "Tschüss!",
+     "register": "informal"
+    },
+    {
+     "text": "Schönen Tag noch!",
+     "register": "neutral"
+    },
+    {
+     "text": "Schönes Wochenende!",
+     "register": "neutral"
+    },
+    {
+     "text": "Gleichfalls!",
+     "register": "neutral"
+    },
+    {
+     "text": "Danke, dir auch!",
+     "register": "informal"
+    },
+    {
+     "text": "Kein Problem.",
+     "register": "neutral"
+    },
+    {
+     "text": "Gern geschehen.",
+     "register": "neutral"
+    },
+    {
+     "text": "Nichts zu danken.",
+     "register": "neutral"
+    },
+    {
+     "text": "Macht nichts.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ist schon okay.",
+     "register": "informal"
+    },
+    {
+     "text": "Gute Besserung!",
+     "register": "neutral"
+    },
+    {
+     "text": "Viel Glück!",
+     "register": "neutral"
+    },
+    {
+     "text": "Viel Spaß!",
+     "register": "neutral"
+    },
+    {
+     "text": "Prost!",
+     "register": "informal"
+    },
+    {
+     "text": "Guten Appetit!",
+     "register": "neutral"
+    },
+    {
+     "text": "Gesundheit!",
+     "register": "neutral"
+    }
+   ]
+  },
+  {
+   "slug": "talk-smalltalk-advanced",
+   "topic": "talk-smalltalk",
+   "level": "advanced",
+   "kind": "expressions",
+   "title_fa": "جمله‌های کوتاه روزمره — پیشرفته",
+   "description_fa": "جمله‌ها و تکه‌کلام‌هایی که آلمانی‌ها هر روز می‌گویند. سطح بالاتر: اصطلاح‌های تصویری و ضرب‌المثل‌ها.",
+   "emoji": "💬",
+   "items": [
+    {
+     "text": "Ich muss los.",
+     "register": "informal"
+    },
+    {
+     "text": "Ich mach mich mal auf den Weg.",
+     "register": "informal"
+    },
+    {
+     "text": "Wir hören voneinander.",
+     "register": "neutral"
+    },
+    {
+     "text": "Melde dich mal!",
+     "register": "informal"
+    },
+    {
+     "text": "Grüß deine Eltern von mir!",
+     "register": "neutral"
+    },
+    {
+     "text": "Lass dich mal wieder blicken!",
+     "register": "informal"
+    },
+    {
+     "text": "Was gibt's Neues?",
+     "register": "informal"
+    },
+    {
+     "text": "Wie läuft's?",
+     "register": "informal"
+    },
+    {
+     "text": "Läuft bei dir!",
+     "register": "slang"
+    },
+    {
+     "text": "Es läuft.",
+     "register": "informal"
+    },
+    {
+     "text": "Na ja, es geht so.",
+     "register": "informal"
+    },
+    {
+     "text": "Man schlägt sich so durch.",
+     "register": "informal"
+    },
+    {
+     "text": "Muss ja.",
+     "register": "informal"
+    },
+    {
+     "text": "Hauptsache gesund!",
+     "register": "neutral"
+    },
+    {
+     "text": "Toi, toi, toi!",
+     "register": "informal"
+    },
+    {
+     "text": "Ich drück dir die Daumen!",
+     "register": "informal"
+    },
+    {
+     "text": "Hals- und Beinbruch!",
+     "register": "informal"
+    },
+    {
+     "text": "Nichts für ungut.",
+     "register": "informal"
+    },
+    {
+     "text": "Schwamm drüber.",
+     "register": "informal"
+    }
+   ]
+  },
+  {
+   "slug": "talk-work-basic",
+   "topic": "talk-work",
+   "level": "basic",
+   "kind": "expressions",
+   "title_fa": "کار و اداره — پایه",
+   "description_fa": "اصطلاح‌های رایج محیط کار: فشار کار، جلسه، مرخصی و همکارها.",
+   "emoji": "💼",
+   "items": [
+    {
+     "text": "Feierabend!",
+     "register": "informal"
+    },
+    {
+     "text": "Ich hab Feierabend.",
+     "register": "informal"
+    },
+    {
+     "text": "Ich mach heute Überstunden.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich bin im Stress.",
+     "register": "informal"
+    },
+    {
+     "text": "Ich hab viel um die Ohren.",
+     "register": "informal"
+    },
+    {
+     "text": "Ich bin krankgeschrieben.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich hab Urlaub.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich bin im Homeoffice.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich bin gleich wieder da.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich kümmere mich darum.",
+     "register": "neutral"
+    },
+    {
+     "text": "Das erledige ich.",
+     "register": "neutral"
+    },
+    {
+     "text": "Kein Stress.",
+     "register": "informal"
+    },
+    {
+     "text": "Das hat Zeit.",
+     "register": "neutral"
+    },
+    {
+     "text": "Das ist dringend.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich melde mich bei dir.",
+     "register": "neutral"
+    },
+    {
+     "text": "Lass uns kurz telefonieren.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich hab gleich ein Meeting.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich bin gerade beschäftigt.",
+     "register": "neutral"
+    },
+    {
+     "text": "Gute Arbeit!",
+     "register": "neutral"
+    },
+    {
+     "text": "Mahlzeit!",
+     "register": "informal"
+    }
+   ]
+  },
+  {
+   "slug": "talk-work-advanced",
+   "topic": "talk-work",
+   "level": "advanced",
+   "kind": "expressions",
+   "title_fa": "کار و اداره — پیشرفته",
+   "description_fa": "اصطلاح‌های رایج محیط کار: فشار کار، جلسه، مرخصی و همکارها. سطح بالاتر: اصطلاح‌های تصویری و ضرب‌المثل‌ها.",
+   "emoji": "💼",
+   "items": [
+    {
+     "text": "Dienst nach Vorschrift machen",
+     "register": "neutral"
+    },
+    {
+     "text": "blaumachen",
+     "register": "informal"
+    },
+    {
+     "text": "krankfeiern",
+     "register": "slang"
+    },
+    {
+     "text": "einen Job an Land ziehen",
+     "register": "informal"
+    },
+    {
+     "text": "jemanden einarbeiten",
+     "register": "neutral"
+    },
+    {
+     "text": "etwas auf die lange Bank schieben",
+     "register": "neutral"
+    },
+    {
+     "text": "alle Hände voll zu tun haben",
+     "register": "neutral"
+    },
+    {
+     "text": "bis über beide Ohren in Arbeit stecken",
+     "register": "informal"
+    },
+    {
+     "text": "sich ein Bein ausreißen",
+     "register": "informal"
+    },
+    {
+     "text": "den Laden schmeißen",
+     "register": "informal"
+    },
+    {
+     "text": "etwas unter Dach und Fach bringen",
+     "register": "neutral"
+    },
+    {
+     "text": "die Kuh vom Eis holen",
+     "register": "informal"
+    },
+    {
+     "text": "auf dem Laufenden halten",
+     "register": "neutral"
+    },
+    {
+     "text": "etwas in Angriff nehmen",
+     "register": "neutral"
+    },
+    {
+     "text": "Das ist nicht mein Bier.",
+     "register": "informal"
+    },
+    {
+     "text": "Das ist Chefsache.",
+     "register": "neutral"
+    },
+    {
+     "text": "gefeuert werden",
+     "register": "informal"
+    },
+    {
+     "text": "einen Rückzieher machen",
+     "register": "informal"
+    }
+   ]
+  },
+  {
+   "slug": "talk-money-basic",
+   "topic": "talk-money",
+   "level": "basic",
+   "kind": "expressions",
+   "title_fa": "پول و خرید — پایه",
+   "description_fa": "برای وقتی که دربارهٔ پول، گرانی، ارزانی و خرید حرف می‌زنی.",
+   "emoji": "💶",
+   "items": [
+    {
+     "text": "Das ist teuer.",
+     "register": "neutral"
+    },
+    {
+     "text": "Das ist zu teuer.",
+     "register": "neutral"
+    },
+    {
+     "text": "Das ist ein Schnäppchen!",
+     "register": "informal"
+    },
+    {
+     "text": "Das ist günstig.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich bin pleite.",
+     "register": "informal"
+    },
+    {
+     "text": "Ich bin knapp bei Kasse.",
+     "register": "informal"
+    },
+    {
+     "text": "Ich lad dich ein.",
+     "register": "informal"
+    },
+    {
+     "text": "Das geht auf mich.",
+     "register": "informal"
+    },
+    {
+     "text": "Getrennt oder zusammen?",
+     "register": "neutral"
+    },
+    {
+     "text": "Stimmt so.",
+     "register": "neutral"
+    },
+    {
+     "text": "Kann ich mit Karte zahlen?",
+     "register": "neutral"
+    },
+    {
+     "text": "Nur Bargeld.",
+     "register": "neutral"
+    },
+    {
+     "text": "Was kostet das?",
+     "register": "neutral"
+    },
+    {
+     "text": "Das lohnt sich.",
+     "register": "neutral"
+    },
+    {
+     "text": "Das lohnt sich nicht.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich muss sparen.",
+     "register": "neutral"
+    },
+    {
+     "text": "Kohle",
+     "register": "slang"
+    },
+    {
+     "text": "Knete",
+     "register": "slang"
+    }
+   ]
+  },
+  {
+   "slug": "talk-money-advanced",
+   "topic": "talk-money",
+   "level": "advanced",
+   "kind": "expressions",
+   "title_fa": "پول و خرید — پیشرفته",
+   "description_fa": "برای وقتی که دربارهٔ پول، گرانی، ارزانی و خرید حرف می‌زنی. سطح بالاتر: اصطلاح‌های تصویری و ضرب‌المثل‌ها.",
+   "emoji": "💶",
+   "items": [
+    {
+     "text": "ein Loch in die Tasche reißen",
+     "register": "informal"
+    },
+    {
+     "text": "sich dumm und dämlich verdienen",
+     "register": "slang"
+    },
+    {
+     "text": "Geld wie Heu haben",
+     "register": "informal"
+    },
+    {
+     "text": "auf großem Fuß leben",
+     "register": "neutral"
+    },
+    {
+     "text": "den Gürtel enger schnallen",
+     "register": "neutral"
+    },
+    {
+     "text": "jeden Cent zweimal umdrehen",
+     "register": "informal"
+    },
+    {
+     "text": "etwas für einen Apfel und ein Ei kaufen",
+     "register": "informal"
+    },
+    {
+     "text": "sich übers Ohr hauen lassen",
+     "register": "informal"
+    },
+    {
+     "text": "jemanden über den Tisch ziehen",
+     "register": "informal"
+    },
+    {
+     "text": "Das ist Wucher!",
+     "register": "informal"
+    },
+    {
+     "text": "für umsonst",
+     "register": "informal"
+    },
+    {
+     "text": "etwas auf Pump kaufen",
+     "register": "informal"
+    },
+    {
+     "text": "eine Stange Geld kosten",
+     "register": "informal"
+    },
+    {
+     "text": "ins Geld gehen",
+     "register": "neutral"
+    },
+    {
+     "text": "blechen müssen",
+     "register": "slang"
+    },
+    {
+     "text": "Wer zahlt, schafft an.",
+     "register": "informal"
+    }
+   ]
+  },
+  {
+   "slug": "talk-food-basic",
+   "topic": "talk-food",
+   "level": "basic",
+   "kind": "expressions",
+   "title_fa": "غذا و خوردن — پایه",
+   "description_fa": "اصطلاح‌های سر سفره و دربارهٔ غذا و گرسنگی.",
+   "emoji": "🍽️",
+   "items": [
+    {
+     "text": "Ich hab Hunger.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich hab einen Bärenhunger.",
+     "register": "informal"
+    },
+    {
+     "text": "Ich hab Durst.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich bin satt.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich bin pappsatt.",
+     "register": "informal"
+    },
+    {
+     "text": "Lecker!",
+     "register": "informal"
+    },
+    {
+     "text": "Das schmeckt super!",
+     "register": "informal"
+    },
+    {
+     "text": "Das schmeckt mir nicht.",
+     "register": "neutral"
+    },
+    {
+     "text": "Hast du schon gegessen?",
+     "register": "neutral"
+    },
+    {
+     "text": "Lass uns was essen gehen.",
+     "register": "informal"
+    },
+    {
+     "text": "Ich hab keinen Appetit.",
+     "register": "neutral"
+    },
+    {
+     "text": "Noch einen Nachschlag?",
+     "register": "informal"
+    },
+    {
+     "text": "Mir läuft das Wasser im Mund zusammen.",
+     "register": "neutral"
+    },
+    {
+     "text": "Das ist nicht so mein Ding.",
+     "register": "informal"
+    },
+    {
+     "text": "Kaffee und Kuchen",
+     "register": "neutral"
+    },
+    {
+     "text": "Zum Wohl!",
+     "register": "neutral"
+    }
+   ]
+  },
+  {
+   "slug": "talk-food-advanced",
+   "topic": "talk-food",
+   "level": "advanced",
+   "kind": "expressions",
+   "title_fa": "غذا و خوردن — پیشرفته",
+   "description_fa": "اصطلاح‌های سر سفره و دربارهٔ غذا و گرسنگی. سطح بالاتر: اصطلاح‌های تصویری و ضرب‌المثل‌ها.",
+   "emoji": "🍽️",
+   "items": [
+    {
+     "text": "Das ist nicht mein Geschmack.",
+     "register": "neutral"
+    },
+    {
+     "text": "Das ist Geschmackssache.",
+     "register": "neutral"
+    },
+    {
+     "text": "seinen Senf dazugeben",
+     "register": "informal"
+    },
+    {
+     "text": "Das ist nicht das Gelbe vom Ei.",
+     "register": "informal"
+    },
+    {
+     "text": "in den sauren Apfel beißen",
+     "register": "neutral"
+    },
+    {
+     "text": "Tomaten auf den Augen haben",
+     "register": "informal"
+    },
+    {
+     "text": "Alles hat ein Ende, nur die Wurst hat zwei.",
+     "register": "informal"
+    },
+    {
+     "text": "Das ist mir Wurst.",
+     "register": "informal"
+    },
+    {
+     "text": "Es geht um die Wurst.",
+     "register": "informal"
+    },
+    {
+     "text": "den Braten riechen",
+     "register": "informal"
+    },
+    {
+     "text": "sein Fett wegkriegen",
+     "register": "informal"
+    },
+    {
+     "text": "um den heißen Brei herumreden",
+     "register": "informal"
+    },
+    {
+     "text": "etwas ausbaden müssen",
+     "register": "informal"
+    },
+    {
+     "text": "Das ist ein Stück vom Kuchen.",
+     "register": "neutral"
+    }
+   ]
+  },
+  {
+   "slug": "talk-time-basic",
+   "topic": "talk-time",
+   "level": "basic",
+   "kind": "expressions",
+   "title_fa": "وقت و عجله — پایه",
+   "description_fa": "دربارهٔ دیر کردن، عجله، صبر و وقت نداشتن.",
+   "emoji": "⏰",
+   "items": [
+    {
+     "text": "Beeil dich!",
+     "register": "informal"
+    },
+    {
+     "text": "Mach schnell!",
+     "register": "informal"
+    },
+    {
+     "text": "Ich bin spät dran.",
+     "register": "informal"
+    },
+    {
+     "text": "Ich komme zu spät.",
+     "register": "neutral"
+    },
+    {
+     "text": "Keine Eile.",
+     "register": "neutral"
+    },
+    {
+     "text": "Lass dir Zeit.",
+     "register": "neutral"
+    },
+    {
+     "text": "Moment mal!",
+     "register": "informal"
+    },
+    {
+     "text": "Einen Augenblick, bitte.",
+     "register": "neutral"
+    },
+    {
+     "text": "Gleich!",
+     "register": "informal"
+    },
+    {
+     "text": "Ich bin gleich fertig.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich hab keine Zeit.",
+     "register": "neutral"
+    },
+    {
+     "text": "Wann passt es dir?",
+     "register": "neutral"
+    },
+    {
+     "text": "Jetzt oder nie!",
+     "register": "neutral"
+    },
+    {
+     "text": "Das dauert ewig.",
+     "register": "informal"
+    },
+    {
+     "text": "Endlich!",
+     "register": "neutral"
+    },
+    {
+     "text": "Höchste Zeit!",
+     "register": "neutral"
+    }
+   ]
+  },
+  {
+   "slug": "talk-time-advanced",
+   "topic": "talk-time",
+   "level": "advanced",
+   "kind": "expressions",
+   "title_fa": "وقت و عجله — پیشرفته",
+   "description_fa": "دربارهٔ دیر کردن، عجله، صبر و وقت نداشتن. سطح بالاتر: اصطلاح‌های تصویری و ضرب‌المثل‌ها.",
+   "emoji": "⏰",
+   "items": [
+    {
+     "text": "auf den letzten Drücker",
+     "register": "informal"
+    },
+    {
+     "text": "in letzter Minute",
+     "register": "neutral"
+    },
+    {
+     "text": "Zeit totschlagen",
+     "register": "informal"
+    },
+    {
+     "text": "die Zeit vergessen",
+     "register": "neutral"
+    },
+    {
+     "text": "unter Zeitdruck stehen",
+     "register": "neutral"
+    },
+    {
+     "text": "in Windeseile",
+     "register": "neutral"
+    },
+    {
+     "text": "im Handumdrehen",
+     "register": "neutral"
+    },
+    {
+     "text": "auf die Schnelle",
+     "register": "informal"
+    },
+    {
+     "text": "ruck, zuck",
+     "register": "informal"
+    },
+    {
+     "text": "von heute auf morgen",
+     "register": "neutral"
+    },
+    {
+     "text": "Kommt Zeit, kommt Rat.",
+     "register": "neutral"
+    },
+    {
+     "text": "Gut Ding will Weile haben.",
+     "register": "neutral"
+    },
+    {
+     "text": "Abwarten und Tee trinken.",
+     "register": "informal"
+    },
+    {
+     "text": "Es ist fünf vor zwölf.",
+     "register": "neutral"
+    },
+    {
+     "text": "sich die Beine in den Bauch stehen",
+     "register": "informal"
+    }
+   ]
+  },
+  {
+   "slug": "talk-friends-basic",
+   "topic": "talk-friends",
+   "level": "basic",
+   "kind": "expressions",
+   "title_fa": "دوستی و رابطه — پایه",
+   "description_fa": "دربارهٔ دوست‌ها، رابطه، دعوا و آشتی.",
+   "emoji": "🤝",
+   "items": [
+    {
+     "text": "Wir sind gute Freunde.",
+     "register": "neutral"
+    },
+    {
+     "text": "Wir verstehen uns gut.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich mag dich.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich hab dich lieb.",
+     "register": "informal"
+    },
+    {
+     "text": "Er ist mein Kumpel.",
+     "register": "informal"
+    },
+    {
+     "text": "Sie ist meine beste Freundin.",
+     "register": "neutral"
+    },
+    {
+     "text": "Wir sind zusammen.",
+     "register": "informal"
+    },
+    {
+     "text": "Wir haben Schluss gemacht.",
+     "register": "informal"
+    },
+    {
+     "text": "Er hat mit ihr Schluss gemacht.",
+     "register": "informal"
+    },
+    {
+     "text": "Wir haben uns gestritten.",
+     "register": "neutral"
+    },
+    {
+     "text": "Wir haben uns wieder vertragen.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich bin für dich da.",
+     "register": "neutral"
+    },
+    {
+     "text": "Du kannst auf mich zählen.",
+     "register": "neutral"
+    },
+    {
+     "text": "Wir treffen uns.",
+     "register": "neutral"
+    },
+    {
+     "text": "Hast du Lust?",
+     "register": "informal"
+    }
+   ]
+  },
+  {
+   "slug": "talk-friends-advanced",
+   "topic": "talk-friends",
+   "level": "advanced",
+   "kind": "expressions",
+   "title_fa": "دوستی و رابطه — پیشرفته",
+   "description_fa": "دربارهٔ دوست‌ها، رابطه، دعوا و آشتی. سطح بالاتر: اصطلاح‌های تصویری و ضرب‌المثل‌ها.",
+   "emoji": "🤝",
+   "items": [
+    {
+     "text": "sich in jemanden verknallen",
+     "register": "informal"
+    },
+    {
+     "text": "Liebe auf den ersten Blick",
+     "register": "neutral"
+    },
+    {
+     "text": "jemandem einen Korb geben",
+     "register": "informal"
+    },
+    {
+     "text": "mit jemandem durch dick und dünn gehen",
+     "register": "neutral"
+    },
+    {
+     "text": "ein Herz und eine Seele sein",
+     "register": "neutral"
+    },
+    {
+     "text": "die Chemie stimmt",
+     "register": "informal"
+    },
+    {
+     "text": "auf einer Wellenlänge sein",
+     "register": "informal"
+    },
+    {
+     "text": "sich in die Haare kriegen",
+     "register": "informal"
+    },
+    {
+     "text": "jemanden sitzen lassen",
+     "register": "informal"
+    },
+    {
+     "text": "jemanden versetzen",
+     "register": "informal"
+    },
+    {
+     "text": "fremdgehen",
+     "register": "informal"
+    },
+    {
+     "text": "jemanden um den Finger wickeln",
+     "register": "informal"
+    },
+    {
+     "text": "den Kontakt abbrechen",
+     "register": "neutral"
+    },
+    {
+     "text": "das Eis brechen",
+     "register": "neutral"
+    },
+    {
+     "text": "Gleich und gleich gesellt sich gern.",
+     "register": "neutral"
+    }
+   ]
+  },
+  {
+   "slug": "talk-understanding-basic",
+   "topic": "talk-understanding",
+   "level": "basic",
+   "kind": "expressions",
+   "title_fa": "فهمیدن و نفهمیدن — پایه",
+   "description_fa": "وقتی چیزی را می‌فهمی، نمی‌فهمی یا گیج شده‌ای.",
+   "emoji": "🤔",
+   "items": [
+    {
+     "text": "Ich verstehe.",
+     "register": "neutral"
+    },
+    {
+     "text": "Alles klar.",
+     "register": "informal"
+    },
+    {
+     "text": "Verstehe!",
+     "register": "informal"
+    },
+    {
+     "text": "Ich hab's kapiert.",
+     "register": "informal"
+    },
+    {
+     "text": "Ich versteh nicht.",
+     "register": "neutral"
+    },
+    {
+     "text": "Wie meinst du das?",
+     "register": "neutral"
+    },
+    {
+     "text": "Kannst du das wiederholen?",
+     "register": "neutral"
+    },
+    {
+     "text": "Noch mal, bitte.",
+     "register": "neutral"
+    },
+    {
+     "text": "Langsamer, bitte.",
+     "register": "neutral"
+    },
+    {
+     "text": "Keine Ahnung.",
+     "register": "informal"
+    },
+    {
+     "text": "Ich hab keinen Plan.",
+     "register": "slang"
+    },
+    {
+     "text": "Weiß ich nicht.",
+     "register": "informal"
+    },
+    {
+     "text": "Das ergibt keinen Sinn.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich bin verwirrt.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ach, so ist das!",
+     "register": "informal"
+    }
+   ]
+  },
+  {
+   "slug": "talk-understanding-advanced",
+   "topic": "talk-understanding",
+   "level": "advanced",
+   "kind": "expressions",
+   "title_fa": "فهمیدن و نفهمیدن — پیشرفته",
+   "description_fa": "وقتی چیزی را می‌فهمی، نمی‌فهمی یا گیج شده‌ای. سطح بالاتر: اصطلاح‌های تصویری و ضرب‌المثل‌ها.",
+   "emoji": "🤔",
+   "items": [
+    {
+     "text": "Ich verstehe nur Bahnhof.",
+     "register": "informal"
+    },
+    {
+     "text": "Bei mir ist der Groschen gefallen.",
+     "register": "informal"
+    },
+    {
+     "text": "auf dem Schlauch stehen",
+     "register": "informal"
+    },
+    {
+     "text": "ein Brett vor dem Kopf haben",
+     "register": "informal"
+    },
+    {
+     "text": "Das ist mir zu hoch.",
+     "register": "informal"
+    },
+    {
+     "text": "Das sind für mich böhmische Dörfer.",
+     "register": "informal"
+    },
+    {
+     "text": "Mir geht ein Licht auf.",
+     "register": "neutral"
+    },
+    {
+     "text": "den Faden verlieren",
+     "register": "neutral"
+    },
+    {
+     "text": "auf dem Holzweg sein",
+     "register": "neutral"
+    },
+    {
+     "text": "etwas in den falschen Hals bekommen",
+     "register": "informal"
+    },
+    {
+     "text": "Das ist doch klar wie Kloßbrühe.",
+     "register": "informal"
+    },
+    {
+     "text": "zwischen den Zeilen lesen",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich kann mir keinen Reim darauf machen.",
+     "register": "neutral"
+    },
+    {
+     "text": "Da komm ich nicht mit.",
+     "register": "informal"
+    }
+   ]
+  },
+  {
+   "slug": "talk-luck-basic",
+   "topic": "talk-luck",
+   "level": "basic",
+   "kind": "expressions",
+   "title_fa": "شانس و بدشانسی — پایه",
+   "description_fa": "برای وقتی که شانس آوردی یا همه‌چیز خراب شد.",
+   "emoji": "🍀",
+   "items": [
+    {
+     "text": "Glück gehabt!",
+     "register": "informal"
+    },
+    {
+     "text": "Was für ein Glück!",
+     "register": "neutral"
+    },
+    {
+     "text": "So ein Pech!",
+     "register": "informal"
+    },
+    {
+     "text": "Pech gehabt.",
+     "register": "informal"
+    },
+    {
+     "text": "Schade!",
+     "register": "neutral"
+    },
+    {
+     "text": "Das ist ja blöd.",
+     "register": "informal"
+    },
+    {
+     "text": "Mist!",
+     "register": "informal"
+    },
+    {
+     "text": "Zum Glück!",
+     "register": "neutral"
+    },
+    {
+     "text": "Gott sei Dank!",
+     "register": "neutral"
+    },
+    {
+     "text": "Das war knapp!",
+     "register": "informal"
+    },
+    {
+     "text": "Du hast Glück.",
+     "register": "neutral"
+    },
+    {
+     "text": "Viel Erfolg!",
+     "register": "neutral"
+    }
+   ]
+  },
+  {
+   "slug": "talk-luck-advanced",
+   "topic": "talk-luck",
+   "level": "advanced",
+   "kind": "expressions",
+   "title_fa": "شانس و بدشانسی — پیشرفته",
+   "description_fa": "برای وقتی که شانس آوردی یا همه‌چیز خراب شد. سطح بالاتر: اصطلاح‌های تصویری و ضرب‌المثل‌ها.",
+   "emoji": "🍀",
+   "items": [
+    {
+     "text": "Schwein haben",
+     "register": "informal"
+    },
+    {
+     "text": "Glück im Unglück haben",
+     "register": "neutral"
+    },
+    {
+     "text": "Pech auf der ganzen Linie",
+     "register": "neutral"
+    },
+    {
+     "text": "vom Pech verfolgt sein",
+     "register": "neutral"
+    },
+    {
+     "text": "Es kommt noch dicker.",
+     "register": "informal"
+    },
+    {
+     "text": "mit einem blauen Auge davonkommen",
+     "register": "neutral"
+    },
+    {
+     "text": "das große Los ziehen",
+     "register": "neutral"
+    },
+    {
+     "text": "Den Letzten beißen die Hunde.",
+     "register": "informal"
+    },
+    {
+     "text": "Das war ein Schuss in den Ofen.",
+     "register": "informal"
+    },
+    {
+     "text": "Das ist nach hinten losgegangen.",
+     "register": "informal"
+    },
+    {
+     "text": "in die Hose gehen",
+     "register": "slang"
+    },
+    {
+     "text": "Ein Unglück kommt selten allein.",
+     "register": "neutral"
+    },
+    {
+     "text": "Scherben bringen Glück.",
+     "register": "neutral"
+    }
+   ]
+  },
+  {
+   "slug": "talk-effort-basic",
+   "topic": "talk-effort",
+   "level": "basic",
+   "kind": "expressions",
+   "title_fa": "تلاش، موفقیت و شکست — پایه",
+   "description_fa": "دربارهٔ تلاش کردن، موفق شدن، شکست خوردن و ادامه دادن.",
+   "emoji": "💪",
+   "items": [
+    {
+     "text": "Du schaffst das!",
+     "register": "informal"
+    },
+    {
+     "text": "Ich hab's geschafft!",
+     "register": "informal"
+    },
+    {
+     "text": "Gib nicht auf!",
+     "register": "neutral"
+    },
+    {
+     "text": "Weiter so!",
+     "register": "neutral"
+    },
+    {
+     "text": "Gut gemacht!",
+     "register": "neutral"
+    },
+    {
+     "text": "Super gemacht!",
+     "register": "informal"
+    },
+    {
+     "text": "Probier's mal.",
+     "register": "informal"
+    },
+    {
+     "text": "Versuch es noch mal.",
+     "register": "neutral"
+    },
+    {
+     "text": "Das war nichts.",
+     "register": "informal"
+    },
+    {
+     "text": "Das klappt nicht.",
+     "register": "informal"
+    },
+    {
+     "text": "Es hat geklappt!",
+     "register": "informal"
+    },
+    {
+     "text": "Ich geb mein Bestes.",
+     "register": "neutral"
+    },
+    {
+     "text": "Übung macht den Meister.",
+     "register": "neutral"
+    }
+   ]
+  },
+  {
+   "slug": "talk-effort-advanced",
+   "topic": "talk-effort",
+   "level": "advanced",
+   "kind": "expressions",
+   "title_fa": "تلاش، موفقیت و شکست — پیشرفته",
+   "description_fa": "دربارهٔ تلاش کردن، موفق شدن، شکست خوردن و ادامه دادن. سطح بالاتر: اصطلاح‌های تصویری و ضرب‌المثل‌ها.",
+   "emoji": "💪",
+   "items": [
+    {
+     "text": "am Ball bleiben",
+     "register": "informal"
+    },
+    {
+     "text": "die Flinte ins Korn werfen",
+     "register": "informal"
+    },
+    {
+     "text": "das Handtuch werfen",
+     "register": "informal"
+    },
+    {
+     "text": "sich durchbeißen",
+     "register": "informal"
+    },
+    {
+     "text": "den Nagel auf den Kopf treffen",
+     "register": "neutral"
+    },
+    {
+     "text": "ins Schwarze treffen",
+     "register": "neutral"
+    },
+    {
+     "text": "alle Register ziehen",
+     "register": "neutral"
+    },
+    {
+     "text": "aufs Ganze gehen",
+     "register": "neutral"
+    },
+    {
+     "text": "eine harte Nuss",
+     "register": "neutral"
+    },
+    {
+     "text": "Das ist kein Zuckerschlecken.",
+     "register": "informal"
+    },
+    {
+     "text": "Das ist ein Kinderspiel.",
+     "register": "informal"
+    },
+    {
+     "text": "Das ist kein Hexenwerk.",
+     "register": "informal"
+    },
+    {
+     "text": "etwas aus dem Ärmel schütteln",
+     "register": "informal"
+    },
+    {
+     "text": "auf die Nase fallen",
+     "register": "informal"
+    },
+    {
+     "text": "baden gehen",
+     "register": "informal"
+    },
+    {
+     "text": "Aller Anfang ist schwer.",
+     "register": "neutral"
+    }
+   ]
+  },
+  {
+   "slug": "talk-tired-basic",
+   "topic": "talk-tired",
+   "level": "basic",
+   "kind": "expressions",
+   "title_fa": "خستگی، سلامتی و حال جسمی — پایه",
+   "description_fa": "برای خسته بودن، مریضی و حال جسمی.",
+   "emoji": "😴",
+   "items": [
+    {
+     "text": "Ich bin müde.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich bin todmüde.",
+     "register": "informal"
+    },
+    {
+     "text": "Ich bin fix und fertig.",
+     "register": "informal"
+    },
+    {
+     "text": "Ich bin kaputt.",
+     "register": "informal"
+    },
+    {
+     "text": "Ich bin erkältet.",
+     "register": "neutral"
+    },
+    {
+     "text": "Mir ist schlecht.",
+     "register": "neutral"
+    },
+    {
+     "text": "Mir ist kalt.",
+     "register": "neutral"
+    },
+    {
+     "text": "Mir ist warm.",
+     "register": "neutral"
+    },
+    {
+     "text": "Mir tut alles weh.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich hab Kopfschmerzen.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich fühl mich nicht gut.",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich geh ins Bett.",
+     "register": "neutral"
+    },
+    {
+     "text": "Schlaf gut!",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich bin wieder fit.",
+     "register": "informal"
+    }
+   ]
+  },
+  {
+   "slug": "talk-tired-advanced",
+   "topic": "talk-tired",
+   "level": "advanced",
+   "kind": "expressions",
+   "title_fa": "خستگی، سلامتی و حال جسمی — پیشرفته",
+   "description_fa": "برای خسته بودن، مریضی و حال جسمی. سطح بالاتر: اصطلاح‌های تصویری و ضرب‌المثل‌ها.",
+   "emoji": "😴",
+   "items": [
+    {
+     "text": "hundemüde sein",
+     "register": "informal"
+    },
+    {
+     "text": "völlig erledigt sein",
+     "register": "informal"
+    },
+    {
+     "text": "platt sein",
+     "register": "slang"
+    },
+    {
+     "text": "fix und alle sein",
+     "register": "slang"
+    },
+    {
+     "text": "wie ein Murmeltier schlafen",
+     "register": "informal"
+    },
+    {
+     "text": "kein Auge zutun",
+     "register": "neutral"
+    },
+    {
+     "text": "sich aufs Ohr hauen",
+     "register": "informal"
+    },
+    {
+     "text": "eine Mütze Schlaf",
+     "register": "informal"
+    },
+    {
+     "text": "einen Kater haben",
+     "register": "informal"
+    },
+    {
+     "text": "auf dem Zahnfleisch gehen",
+     "register": "informal"
+    },
+    {
+     "text": "sich nicht auf den Beinen halten können",
+     "register": "neutral"
+    },
+    {
+     "text": "sich hundeelend fühlen",
+     "register": "informal"
+    },
+    {
+     "text": "wieder auf dem Damm sein",
+     "register": "informal"
+    },
+    {
+     "text": "fit wie ein Turnschuh sein",
+     "register": "informal"
+    }
+   ]
+  },
+  {
+   "slug": "talk-talking-basic",
+   "topic": "talk-talking",
+   "level": "basic",
+   "kind": "expressions",
+   "title_fa": "حرف زدن و شایعه — پایه",
+   "description_fa": "دربارهٔ حرف زدن، رک گفتن، دروغ و شایعه.",
+   "emoji": "🗣️",
+   "items": [
+    {
+     "text": "Sag mal …",
+     "register": "informal"
+    },
+    {
+     "text": "Weißt du was?",
+     "register": "informal"
+    },
+    {
+     "text": "Hast du gehört?",
+     "register": "informal"
+    },
+    {
+     "text": "Unter uns …",
+     "register": "informal"
+    },
+    {
+     "text": "Ehrlich gesagt …",
+     "register": "neutral"
+    },
+    {
+     "text": "Ich mein ja nur.",
+     "register": "informal"
+    },
+    {
+     "text": "Das war nur Spaß.",
+     "register": "informal"
+    },
+    {
+     "text": "Ich hab nur Spaß gemacht.",
+     "register": "informal"
+    },
+    {
+     "text": "Lügner!",
+     "register": "informal"
+    },
+    {
+     "text": "Du lügst!",
+     "register": "informal"
+    },
+    {
+     "text": "Erzähl!",
+     "register": "informal"
+    },
+    {
+     "text": "Erzähl keinen Quatsch!",
+     "register": "informal"
+    },
+    {
+     "text": "Red keinen Unsinn!",
+     "register": "informal"
+    },
+    {
+     "text": "Schweig!",
+     "register": "neutral"
+    }
+   ]
+  },
+  {
+   "slug": "talk-talking-advanced",
+   "topic": "talk-talking",
+   "level": "advanced",
+   "kind": "expressions",
+   "title_fa": "حرف زدن و شایعه — پیشرفته",
+   "description_fa": "دربارهٔ حرف زدن، رک گفتن، دروغ و شایعه. سطح بالاتر: اصطلاح‌های تصویری و ضرب‌المثل‌ها.",
+   "emoji": "🗣️",
+   "items": [
+    {
+     "text": "kein Blatt vor den Mund nehmen",
+     "register": "neutral"
+    },
+    {
+     "text": "Klartext reden",
+     "register": "informal"
+    },
+    {
+     "text": "jemandem ein Ohr abkauen",
+     "register": "informal"
+    },
+    {
+     "text": "Das ist doch Schnee von gestern.",
+     "register": "informal"
+    },
+    {
+     "text": "etwas an die große Glocke hängen",
+     "register": "neutral"
+    },
+    {
+     "text": "aus dem Nähkästchen plaudern",
+     "register": "informal"
+    },
+    {
+     "text": "jemandem einen Bären aufbinden",
+     "register": "informal"
+    },
+    {
+     "text": "das Blaue vom Himmel lügen",
+     "register": "informal"
+    },
+    {
+     "text": "Lügen haben kurze Beine.",
+     "register": "neutral"
+    },
+    {
+     "text": "etwas durch die Blume sagen",
+     "register": "neutral"
+    },
+    {
+     "text": "jemanden auf den Arm nehmen",
+     "register": "informal"
+    },
+    {
+     "text": "Das bleibt unter uns.",
+     "register": "neutral"
+    },
+    {
+     "text": "die Katze aus dem Sack lassen",
+     "register": "informal"
+    }
+   ]
+  },
+  {
+   "slug": "talk-people-basic",
+   "topic": "talk-people",
+   "level": "basic",
+   "kind": "expressions",
+   "title_fa": "توصیف آدم‌ها — پایه",
+   "description_fa": "اصطلاح‌هایی برای توصیف شخصیت و رفتار آدم‌ها.",
+   "emoji": "🧑",
+   "items": [
+    {
+     "text": "Er ist nett.",
+     "register": "neutral"
+    },
+    {
+     "text": "Sie ist sympathisch.",
+     "register": "neutral"
+    },
+    {
+     "text": "Er ist komisch.",
+     "register": "informal"
+    },
+    {
+     "text": "Sie ist cool.",
+     "register": "informal"
+    },
+    {
+     "text": "Er ist ein netter Kerl.",
+     "register": "informal"
+    },
+    {
+     "text": "Sie ist voll lieb.",
+     "register": "slang"
+    },
+    {
+     "text": "Er ist faul.",
+     "register": "neutral"
+    },
+    {
+     "text": "Sie ist fleißig.",
+     "register": "neutral"
+    },
+    {
+     "text": "Er ist ein Angeber.",
+     "register": "informal"
+    },
+    {
+     "text": "Sie ist zickig.",
+     "register": "informal"
+    },
+    {
+     "text": "Er ist geizig.",
+     "register": "neutral"
+    },
+    {
+     "text": "Sie ist großzügig.",
+     "register": "neutral"
+    }
+   ]
+  },
+  {
+   "slug": "talk-people-advanced",
+   "topic": "talk-people",
+   "level": "advanced",
+   "kind": "expressions",
+   "title_fa": "توصیف آدم‌ها — پیشرفته",
+   "description_fa": "اصطلاح‌هایی برای توصیف شخصیت و رفتار آدم‌ها. سطح بالاتر: اصطلاح‌های تصویری و ضرب‌المثل‌ها.",
+   "emoji": "🧑",
+   "items": [
+    {
+     "text": "ein Herz aus Gold haben",
+     "register": "neutral"
+    },
+    {
+     "text": "eine Nervensäge sein",
+     "register": "informal"
+    },
+    {
+     "text": "ein Pechvogel sein",
+     "register": "informal"
+    },
+    {
+     "text": "ein Glückspilz sein",
+     "register": "informal"
+    },
+    {
+     "text": "ein Morgenmuffel sein",
+     "register": "informal"
+    },
+    {
+     "text": "eine Leseratte sein",
+     "register": "informal"
+    },
+    {
+     "text": "ein Sturkopf sein",
+     "register": "informal"
+    },
+    {
+     "text": "ein Dickkopf sein",
+     "register": "informal"
+    },
+    {
+     "text": "eine Schlafmütze sein",
+     "register": "informal"
+    },
+    {
+     "text": "ein Spießer sein",
+     "register": "informal"
+    },
+    {
+     "text": "ein Tollpatsch sein",
+     "register": "informal"
+    },
+    {
+     "text": "ein Besserwisser sein",
+     "register": "informal"
+    },
+    {
+     "text": "ein Frühaufsteher sein",
+     "register": "neutral"
+    },
+    {
+     "text": "ein Couch-Potato sein",
+     "register": "slang"
+    },
+    {
+     "text": "das schwarze Schaf sein",
+     "register": "neutral"
+    }
+   ]
+  }
+ ]
+}
