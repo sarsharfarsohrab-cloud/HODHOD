@@ -29,6 +29,7 @@ import { settingsScreen } from './ui/screens/settings.ts'
 import { statsScreen } from './ui/screens/stats.ts'
 import { packScreen, storeScreen } from './ui/screens/store.ts'
 import { storiesScreen, storyScreen } from './ui/screens/stories.ts'
+import { learnScreen, lessonScreen, podcastScreen, verbFamilyScreen } from './ui/screens/learn.ts'
 import { studyScreen } from './ui/screens/study.ts'
 import { wordDetailScreen, wordEditScreen } from './ui/screens/wordDetail.ts'
 import { welcomeScreen } from './ui/screens/welcome.ts'
@@ -131,6 +132,10 @@ const ROUTES: { pattern: RegExp; keys: string[]; screen: ScreenFactory; tab: str
   { pattern: /^\/friends$/, keys: [], screen: friendsScreen, tab: 'home' },
   { pattern: /^\/stories\/([^/]+)$/, keys: ['id'], screen: storyScreen, tab: 'home' },
   { pattern: /^\/store\/([^/]+)$/, keys: ['id'], screen: packScreen, tab: 'home' },
+  { pattern: /^\/learn$/, keys: [], screen: learnScreen, tab: 'home' },
+  { pattern: /^\/learn\/podcast\/([^/]+)$/, keys: ['id'], screen: podcastScreen, tab: 'home' },
+  { pattern: /^\/learn\/lesson\/([^/]+)$/, keys: ['id'], screen: lessonScreen, tab: 'home' },
+  { pattern: /^\/learn\/verbs\/([^/]+)$/, keys: ['id'], screen: verbFamilyScreen, tab: 'home' },
   { pattern: /^\/admin$/, keys: [], screen: adminScreen, tab: null },
   { pattern: /^\/admin\/(overview|money|growth|users|inbox|news|packs)$/, keys: ['tab'], screen: adminScreen, tab: null },
   { pattern: /^\/admin\/users\/([^/]+)$/, keys: ['id'], screen: adminUserScreen, tab: null },

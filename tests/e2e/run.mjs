@@ -1290,6 +1290,31 @@ await test('a short story is written around the words being learned', async () =
   return page
 })
 
+await test('the learn corner: a podcast read sentence by sentence, a word turned into a card, a lesson and a verb family', async () => {
+  const page = await newPage()
+  await signUp(page)
+  await page.getByRole('link', { name: 'یادگیری' }).click()
+  await page.getByRole('heading', { name: 'گوشه یادگیری' }).waitFor()
+  await noHorizontalScroll(page, 'learn hub')
+  await snap(page, 'learn-hub')
+  await page.getByRole('link', { name: /Beim Bäcker/ }).click()
+  await page.locator('.story-de', { hasText: 'zwei Brötchen' }).click()
+  await page.getByText('لطفاً دو تا نان کوچک می‌خواهم.').waitFor()
+  await noHorizontalScroll(page, 'podcast')
+  await snap(page, 'learn-podcast')
+  await page.locator('.learn-word', { hasText: 'Brötchen' }).click()
+  await page.waitForURL(/#\/create\?word=/)
+  assert((await page.locator('[aria-describedby="create-help"]').inputValue()) === 'Brötchen', 'the tapped word fills the new-word field')
+  await page.goto(`${BASE}/#/learn/lesson/de-articles`)
+  await page.getByRole('heading', { name: 'جمع: همیشه die' }).waitFor()
+  await page.goto(`${BASE}/#/learn/verbs/de-geben`)
+  await page.getByText('Gib nicht auf!').waitFor()
+  await noHorizontalScroll(page, 'verb family')
+  await page.goto(`${BASE}/#/learn/podcast/nope`)
+  await page.getByText('پیدا نشد.').waitFor()
+  return page
+})
+
 await test('friends add each other by code and share a weekly board', async () => {
   const sohrab = await newPage()
   await signUp(sohrab)
