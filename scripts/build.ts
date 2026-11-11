@@ -20,6 +20,7 @@ const app = await Bun.build({
   outdir: join(dist, 'assets'),
   target: 'browser',
   format: 'esm',
+  splitting: true, // the test mode (src/demo/) is its own file, loaded only on test.apphodhod.com
   minify: !dev,
   sourcemap: dev ? 'linked' : 'none',
   naming: { entry: '[name].[hash].[ext]', asset: '[name].[hash].[ext]', chunk: '[name].[hash].[ext]' },

@@ -4641,3 +4641,32 @@ html[dir='ltr'] .deck-row .icon {
   color: var(--ink-2);
   font-size: 0.8rem;
 }
+
+/* test mode (test.apphodhod.com) */
+.demo-bar {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #5546d6;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.demo-bar span {
+  margin-inline-end: auto;
+}
+
+.demo-bar button {
+  padding: 4px 12px;
+  border: 1px solid rgb(255 255 255 / 50%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 12%);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}

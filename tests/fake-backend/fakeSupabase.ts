@@ -6,7 +6,8 @@
  * unique words, idempotent reviews). The analyze-word and delete-account functions are
  * the real handlers; only OpenAI is replaced by `aiReply`.
  *
- * Nothing in /src imports this file, and it is not part of the build.
+ * Besides the tests, only the test mode (src/demo/demo.ts, test.apphodhod.com) uses it, as a
+ * separate chunk that the normal app never loads.
  */
 import { handleAnalyzeWord } from '../../supabase/functions/_shared/analyzeWord.ts'
 import { handleAdminActions } from '../../supabase/functions/_shared/adminActions.ts'
@@ -178,6 +179,33 @@ export class FakeSupabase {
       ...(this.options.welcome ? { onboarded_at: null, time_zone: null } : {}),
     })
     return user
+  }
+
+  /** Everything the fake knows, as plain JSON (the test mode keeps it between page loads). */
+  snapshot(): unknown {
+    return { users: this.users, tables: this.tables, tokens: [...this.tokens], refreshTokens: [...this.refreshTokens], seq: this.seq, clock: this.clock }
+  }
+
+  restore(raw: unknown): void {
+    const s = raw as { users: User[]; tables: Record<string, Row[]>; tokens: [string, { userId: string; expires: number }][]; refreshTokens: [string, string][]; seq: number; clock: number }
+    this.users = s.users
+    this.tables = { ...this.tables, ...s.tables }
+    this.tokens = new Map(s.tokens)
+    this.refreshTokens = new Map(s.refreshTokens)
+    this.seq = s.seq
+    this.clock = s.clock
+  }
+
+  /** Test helper: a saved word (with its card) for an account. */
+  seedWord(userId: string, content: Row & { lemma: string; pos: string; meanings: { translation: string }[]; cefr?: string | null }): void {
+    this.insertWord(userId, {
+      lemma: content.lemma,
+      normalized_lemma: content.lemma.toLowerCase(),
+      pos: content.pos,
+      primary_meaning: content.meanings[0]!.translation,
+      cefr: content.cefr ?? null,
+      content,
+    })
   }
 
   /** Test helper: an account that can sign in immediately. */

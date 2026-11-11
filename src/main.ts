@@ -101,6 +101,9 @@ function applyLanguage(code: string | null | undefined): void {
   storage.setItem(LANGUAGE_KEY, applied)
 }
 
+/** test.apphodhod.com: the test mode, against a stand-in server in the browser (src/demo/demo.ts). */
+const DEMO = location.hostname.startsWith('test.') || (location.hostname === 'localhost' && new URLSearchParams(location.search).has('demo'))
+
 function readConfig(): SupabaseConfig | null {
   const raw = window.HODHOD_CONFIG
   const url = raw?.supabaseUrl?.trim().replace(/\/+$/, '')
@@ -241,12 +244,12 @@ async function startApp(client: SupabaseClient, session: Session): Promise<Runni
   await adoptChosenLanguage()
   syncLanguages()
   // keep this device's reminder address fresh on the server (never asks for permission)
-  void refreshPush(client, data.settings.notifyDaily || data.settings.notifyStreak).catch(() => undefined)
+  if (!DEMO) void refreshPush(client, data.settings.notifyDaily || data.settings.notifyStreak).catch(() => undefined)
 
   // natural voice from the server first; the phone's own voice whenever that is not possible
   const cloudSpeech = new CloudSpeechProvider({
     fetchUrl: async (text, voice, language) => (await client.invoke<{ url: string }>('tts', { text, voice, language }, { timeoutMs: 15_000 })).url,
-    enabled: () => data.settings.aiVoice,
+    enabled: () => !DEMO && data.settings.aiVoice, // the test mode has no real voice server
     voice: () => data.settings.aiVoiceGender,
     online: () => navigator.onLine !== false,
     storage,
@@ -441,14 +444,26 @@ async function boot() {
   else setLanguage(null)
   if (STAGING) document.body.append(h('div', { class: 'staging-ribbon', 'aria-hidden': 'true' }, t.staging))
   applyTheme((storage.getItem(THEME_KEY) as Settings['theme'] | null) ?? 'system')
-  const config = readConfig()
+  const demo = DEMO ? await import('./demo/demo.ts') : null
+  const backend = demo?.startDemo()
+  const config = backend ? backend.config : readConfig()
   if (!config) {
     replace(root, h('main', { class: 'screen no-nav' }, emptyState({ art: mascot('confused', { size: 120 }), title: t.setup.title, body: t.setup.body })))
     return
   }
 
-  const client = new SupabaseClient(config, storage)
+  const client = backend ? new SupabaseClient(config, storage, backend.fetch) : new SupabaseClient(config, storage)
   window.addEventListener('storage', () => client.reloadFromStorage())
+  if (demo) {
+    document.body.prepend(
+      demo.demoBar(async () => {
+        await client.signOut()
+        await client.signIn(demo.SAMPLE_EMAIL, demo.SAMPLE_PASSWORD)
+        location.replace('/#/home')
+        location.reload()
+      }),
+    )
+  }
 
   // admin.apphodhod.com is the same app, opened straight on the admin panel
   if (location.hostname.startsWith('admin.') && ['', '#', '#/', '#/home'].includes(location.hash)) history.replaceState(null, '', `${location.pathname}${location.search}#/admin`)
