@@ -7,7 +7,6 @@ import { num, fmtDateTime, fmtPercent } from '../format.ts'
 import { appName, describeError, t } from '../strings.ts'
 import { learningInfo } from '../learning.ts'
 import { openSheet, saveFile, segmented } from '../widgets.ts'
-import { exportDeck } from '../../core/deckImport.ts'
 import { isAdmin } from '../../data/platform.ts'
 import { openFeedbackSheet } from '../reportSheet.ts'
 import { disablePush, enablePush, pushState, sendTestPush } from '../../data/push.ts'
@@ -164,21 +163,6 @@ export function settingsScreen(ctx: Ctx): Screen {
       h('button', { class: 'btn block', type: 'button', disabled: sync.syncing || !sync.online, onclick: () => void ctx.data.syncNow() }, icon('refresh', { size: 18 }), s.syncNow),
       h('button', { class: 'btn block', type: 'button', onclick: (e: Event) => void exportData(e.currentTarget as HTMLButtonElement) }, icon('download', { size: 18 }), s.export),
       h('p', { class: 'help' }, s.exportHelp),
-      h(
-        'button',
-        {
-          class: 'btn block',
-          type: 'button',
-          onclick: () => {
-            const words = [...ctx.data.words.values()].filter((w) => !w.deletedAt)
-            void saveFile(new File([exportDeck(words)], `hodhod-anki-${new Date().toISOString().slice(0, 10)}.txt`, { type: 'text/plain' }))
-          },
-        },
-        icon('download', { size: 18 }),
-        t.deck.export,
-      ),
-      h('a', { class: 'btn block', href: '#/import/deck' }, icon('download', { size: 18 }), t.deck.entry),
-      h('p', { class: 'help' }, t.deck.exportHelp),
     )
   }
 
