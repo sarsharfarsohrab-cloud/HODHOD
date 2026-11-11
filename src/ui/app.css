@@ -4670,3 +4670,59 @@ html[dir='ltr'] .deck-row .icon {
   font: inherit;
   cursor: pointer;
 }
+
+/* review on a computer: the card on one side, the bird and the answer buttons beside it, so
+   "show answer" and the four answers are always on screen without scrolling */
+@media (min-width: 900px) {
+  .study:has(> .flashcard) {
+    max-width: 1000px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-rows: auto auto 1fr;
+    column-gap: var(--s5);
+    align-items: start;
+  }
+
+  .study:has(> .flashcard) > .study-top {
+    grid-column: 1 / -1;
+  }
+
+  .study:has(> .flashcard) > .flashcard {
+    grid-column: 1;
+    grid-row: 2 / span 2;
+    margin: 0;
+  }
+
+  .study:has(> .flashcard) > .companion {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .study:has(> .flashcard) > .study-actions {
+    grid-column: 2;
+    grid-row: 3;
+    position: sticky;
+    top: var(--s4);
+  }
+
+  .study:has(> .flashcard) .ratings {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* with a keyboard: the number key of each answer, in the corner (1–4; space shows the answer) */
+@media (hover: hover) and (pointer: fine) {
+  .rating[data-key] {
+    position: relative;
+  }
+
+  .rating[data-key]::after {
+    content: attr(data-key);
+    position: absolute;
+    top: 4px;
+    inset-inline-end: 6px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    opacity: 0.45;
+  }
+}

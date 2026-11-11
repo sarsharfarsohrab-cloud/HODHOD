@@ -385,7 +385,7 @@ function nativeScript(native) {
 
 // supabase/functions/_shared/prompt.ts
 var TARGETS = ["de", "en", "fr", "it", "es", "nl"];
-var NATIVES = ["fa", "de", "en", "fr", "tr", "uk", "ru", "ar", "es", "nl"];
+var NATIVES = ["fa", "de", "en", "fr", "tr", "uk", "ru", "ar", "es", "nl", "it"];
 function isSupportedPair(pair) {
   return TARGETS.includes(pair.target) && NATIVES.includes(pair.native) && pair.target !== pair.native;
 }
@@ -440,6 +440,11 @@ var NATIVE = {
     name: "Dutch",
     rules: "standard Dutch (as in the Netherlands and Flanders), current official spelling.",
     literal: '"de neus vol hebben"'
+  },
+  it: {
+    name: "Italian",
+    rules: "standard Italian with correct accents (è, é, à, ò, ù) and apostrophes.",
+    literal: "«avere il naso pieno»"
   }
 };
 var PERSONS_RULE = (persons) => `Each tense lists every person in this order: ${persons}. "person" is that label exactly; "form" is the verb form WITHOUT the subject pronoun (reflexive verbs keep their reflexive pronoun).`;
