@@ -29,6 +29,25 @@ export const PLATFORM_TABLES = (): Record<string, Row[]> => ({
 
 const NAMES = new Set(Object.keys(PLATFORM_TABLES()))
 
+/** A pack with its finished cards, as scripts/curated-packs.ts writes them (content/packs/curated.json). */
+export interface ReadyPack {
+  slug: string
+  items: Row[]
+  [field: string]: unknown
+}
+
+/** Puts finished packs into the store, as the seed SQL does on the real server. Packs already there are left alone. */
+export function seedPacks(fake: FakeSupabase, packs: readonly ReadyPack[], published = true): void {
+  const t = fake.tables
+  const now = new Date(fake.now()).toISOString()
+  for (const { items, ...pack } of packs) {
+    if (t.packs!.some((p) => p.slug === pack.slug)) continue
+    const id = crypto.randomUUID()
+    t.packs!.push({ ...defaults('packs'), ...pack, id, published, created_at: now, updated_at: now })
+    for (const item of items) t.pack_items!.push({ ...defaults('pack_items'), ...item, id: crypto.randomUUID(), pack_id: id, status: 'ready', created_at: now, updated_at: now })
+  }
+}
+
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
 const denied = () => json({ code: '42501', message: 'new row violates row-level security policy' }, 403)
 
@@ -365,7 +384,7 @@ export async function handlePlatform(fake: FakeSupabase, userId: string, name: s
 function defaults(table: string): Row {
   switch (table) {
     case 'packs':
-      return { topic: 'general', kind: 'words', level: null, description: null, emoji: null, lesson_size: 12, published: false, sort_order: 0, target_language: 'de', native_language: 'fa' }
+      return { topic: 'general', kind: 'words', level: null, description: null, emoji: null, lesson_size: 12, lesson_titles: null, published: false, sort_order: 0, target_language: 'de', native_language: 'fa' }
     case 'pack_items':
       return { lesson: 1, hint: null, status: 'draft', lemma: null, normalized_lemma: null, pos: null, cefr: null, primary_meaning: null, content: null }
     case 'feedback':

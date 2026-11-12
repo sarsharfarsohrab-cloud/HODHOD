@@ -155,3 +155,19 @@ iPhone: open the address in **Safari** → Share → **Add to Home Screen**. And
 ## Licences
 
 Application code: © the project owner. `vendor/ts-fsrs`: MIT (see `vendor/ts-fsrs/LICENSE`). Vazirmatn font: SIL Open Font License 1.1 (see `src/ui/fonts/OFL.txt`).
+
+## Hand-written packs
+
+Besides the list packs (a list of words whose cards the AI writes once, from the admin panel),
+there are packs written out in full by hand, in named groups: `content/packs/curated/`.
+
+- `restaurant.ts` — the words and the conversations of one topic, in a compact form.
+- `bun run scripts/curated-packs.ts` builds the full cards, checks every one against the card
+  schema and writes `content/packs/curated.json` (read by the test mode and the tests) and
+  `supabase/seed/curated-packs.sql`.
+- Run that SQL file in the Supabase SQL editor to add or refresh the packs. They arrive
+  unpublished; publish them from the admin panel after reading them.
+
+In the app, a pack with group names opens each group on its own page: meet the words (each with
+one sentence to listen to and, where useful, a note), a short practice of words and meanings only,
+then the cards join the daily review. No group waits for another.

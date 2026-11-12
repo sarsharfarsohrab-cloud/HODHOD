@@ -90,6 +90,20 @@ export function packItems(client: SupabaseClient, packId: string, options: { ful
   })
 }
 
+/**
+ * The names of a pack's groups ("جاها و آدم‌ها", …), in lesson order; null for a pack whose
+ * lessons are only numbered — and on a server that does not know grouped packs yet.
+ */
+export async function packLessonTitles(client: SupabaseClient, packId: string): Promise<string[] | null> {
+  try {
+    const row = (await client.select<{ lesson_titles: unknown }>('packs', { select: 'lesson_titles', id: `eq.${packId}` }))[0]
+    const titles = row?.lesson_titles
+    return Array.isArray(titles) && titles.length > 0 && titles.every((t) => typeof t === 'string') ? (titles as string[]) : null
+  } catch {
+    return null
+  }
+}
+
 /** Puts one lesson's words into the learner's bank; returns how many were new to them. */
 export async function startPackLesson(client: SupabaseClient, packId: string, lesson: number): Promise<number> {
   return Number(await client.rpc<number>('start_pack_lesson', { p_pack: packId, p_lesson: lesson })) || 0

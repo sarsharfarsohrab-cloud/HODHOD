@@ -5,6 +5,8 @@
  *
  * Loaded only on the test address (a separate file; the normal app never downloads it).
  */
+import CURATED from '../../content/packs/curated.json'
+import { seedPacks, type ReadyPack } from '../../tests/fake-backend/fakePlatform.ts'
 import { aiResponse, FAKE_ANON_KEY, FakeSupabase } from '../../tests/fake-backend/fakeSupabase.ts'
 import { asAiOutput, AUFGEBEN, SCHNELL, TISCH } from '../../tests/fixtures/words.ts'
 import type { SupabaseConfig } from '../data/supabase.ts'
@@ -29,6 +31,7 @@ function makeBackend(): FakeSupabase {
     const saved = localStorage.getItem(STATE_KEY)
     if (saved) {
       fake.restore(JSON.parse(saved))
+      seedPacks(fake, CURATED as unknown as ReadyPack[]) // packs added since this visitor's last look
       return fake
     }
   } catch {
@@ -40,6 +43,8 @@ function makeBackend(): FakeSupabase {
   const settings = fake.tables.user_settings!.find((s) => s.user_id === learner.id)!
   settings.onboarded_at = new Date().toISOString()
   for (const word of [TISCH, AUFGEBEN, SCHNELL]) fake.seedWord(learner.id, word as never)
+  // the hand-written packs, so they can be looked at here before they are published for real
+  seedPacks(fake, CURATED as unknown as ReadyPack[])
   return fake
 }
 
