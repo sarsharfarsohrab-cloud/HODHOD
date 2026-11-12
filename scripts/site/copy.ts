@@ -52,7 +52,7 @@ const en: SiteCopy = {
   },
   stores: { title: 'On every device', ios: 'iPhone & iPad', android: 'Android', web: 'Any browser', soon: 'Coming soon', get: 'Download', open: 'Open now' },
   stats: { title: 'Hodhod in numbers', learners: 'learners', words: 'words saved', reviews: 'reviews done', languages: 'languages' },
-  langs: { title: 'Your language. Your next language.', sub: 'Hodhod explains everything in the language you already speak.', speak: 'You speak', learn: 'You learn' },
+  langs: { title: 'Which languages does Hodhod speak with you?', sub: 'Hodhod explains the words of your new language in your own mother tongue.', speak: 'For now, Hodhod knows these mother tongues', learn: 'For now, Hodhod teaches the words of these languages' },
   features: {
     title: 'Everything you need to really learn words',
     sub: 'Not another dictionary: a companion that reviews with you every day.',
@@ -124,7 +124,7 @@ const fa: SiteCopy = {
   },
   stores: { title: 'روی همهٔ دستگاه‌ها', ios: 'آیفون و آیپد', android: 'اندروید', web: 'هر مرورگری', soon: 'به‌زودی', get: 'دانلود', open: 'همین حالا باز کن' },
   stats: { title: 'هدهد به زبان عدد', learners: 'زبان‌آموز', words: 'واژهٔ ذخیره‌شده', reviews: 'مرور انجام‌شده', languages: 'زبان' },
-  langs: { title: 'زبان خودت. زبان بعدی‌ات.', sub: 'هدهد همه‌چیز را به زبانی که بلدی توضیح می‌دهد.', speak: 'زبان تو', learn: 'زبانی که یاد می‌گیری' },
+  langs: { title: 'هدهد با چه زبان‌هایی همراهت است؟', sub: 'هدهد واژه‌های زبان تازه را به زبان مادری خودت برایت توضیح می‌دهد.', speak: 'هدهد فعلاً این زبان‌های مادری را بلد است', learn: 'هدهد فعلاً واژه‌های این زبان‌ها را یاد می‌دهد' },
   features: {
     title: 'هر چیزی که برای یاد گرفتن واقعی واژه لازم داری',
     sub: 'نه یک دیکشنری دیگر؛ همراهی که هر روز با تو مرور می‌کند.',
@@ -196,7 +196,7 @@ const de: SiteCopy = {
   },
   stores: { title: 'Auf jedem Gerät', ios: 'iPhone & iPad', android: 'Android', web: 'Jeder Browser', soon: 'Demnächst', get: 'Laden', open: 'Jetzt öffnen' },
   stats: { title: 'Hodhod in Zahlen', learners: 'Lernende', words: 'gespeicherte Wörter', reviews: 'Wiederholungen', languages: 'Sprachen' },
-  langs: { title: 'Deine Sprache. Deine nächste Sprache.', sub: 'Hodhod erklärt alles in der Sprache, die du schon sprichst.', speak: 'Du sprichst', learn: 'Du lernst' },
+  langs: { title: 'In welchen Sprachen begleitet dich Hodhod?', sub: 'Hodhod erklärt dir die Wörter deiner neuen Sprache in deiner Muttersprache.', speak: 'Diese Muttersprachen kann Hodhod bisher', learn: 'Die Wörter dieser Sprachen bringt Hodhod dir bisher bei' },
   features: {
     title: 'Alles, um Wörter wirklich zu lernen',
     sub: 'Kein weiteres Wörterbuch, sondern ein Begleiter, der jeden Tag mit dir wiederholt.',
@@ -268,7 +268,7 @@ const fr: SiteCopy = {
   },
   stores: { title: 'Sur tous tes appareils', ios: 'iPhone et iPad', android: 'Android', web: 'Tout navigateur', soon: 'Bientôt', get: 'Télécharger', open: 'Ouvrir maintenant' },
   stats: { title: 'Hodhod en chiffres', learners: 'apprenants', words: 'mots enregistrés', reviews: 'révisions', languages: 'langues' },
-  langs: { title: 'Ta langue. Ta prochaine langue.', sub: 'Hodhod explique tout dans la langue que tu parles déjà.', speak: 'Tu parles', learn: 'Tu apprends' },
+  langs: { title: 'Dans quelles langues Hodhod t’accompagne-t-il ?', sub: 'Hodhod t’explique les mots de ta nouvelle langue dans ta langue maternelle.', speak: 'Pour l’instant, Hodhod connaît ces langues maternelles', learn: 'Pour l’instant, Hodhod enseigne les mots de ces langues' },
   features: {
     title: 'Tout pour vraiment apprendre des mots',
     sub: 'Pas un dictionnaire de plus : un compagnon qui révise avec toi chaque jour.',
@@ -340,7 +340,7 @@ const tr: SiteCopy = {
   },
   stores: { title: 'Her cihazda', ios: 'iPhone ve iPad', android: 'Android', web: 'Her tarayıcı', soon: 'Yakında', get: 'İndir', open: 'Şimdi aç' },
   stats: { title: 'Rakamlarla Hodhod', learners: 'öğrenci', words: 'kaydedilen kelime', reviews: 'tekrar', languages: 'dil' },
-  langs: { title: 'Senin dilin. Sıradaki dilin.', sub: 'Hodhod her şeyi zaten konuştuğun dilde anlatır.', speak: 'Konuştuğun dil', learn: 'Öğrendiğin dil' },
+  langs: { title: 'Hodhod hangi dillerde yanında?', sub: 'Hodhod, yeni dilinin kelimelerini sana kendi ana dilinde açıklar.', speak: 'Hodhod şimdilik bu ana dilleri biliyor', learn: 'Hodhod şimdilik bu dillerin kelimelerini öğretiyor' },
   features: {
     title: 'Kelimeleri gerçekten öğrenmek için gereken her şey',
     sub: 'Bir sözlük daha değil: her gün seninle tekrar yapan bir arkadaş.',
@@ -412,7 +412,7 @@ const uk: SiteCopy = {
   },
   stores: { title: 'На будь-якому пристрої', ios: 'iPhone та iPad', android: 'Android', web: 'Будь-який браузер', soon: 'Незабаром', get: 'Завантажити', open: 'Відкрити зараз' },
   stats: { title: 'Hodhod у цифрах', learners: 'учнів', words: 'збережених слів', reviews: 'повторень', languages: 'мов' },
-  langs: { title: 'Твоя мова. Твоя наступна мова.', sub: 'Hodhod пояснює все мовою, якою ти вже говориш.', speak: 'Ти говориш', learn: 'Ти вчиш' },
+  langs: { title: 'Якими мовами Hodhod поруч із тобою?', sub: 'Hodhod пояснює слова нової мови твоєю рідною мовою.', speak: 'Поки що Hodhod знає ці рідні мови', learn: 'Поки що Hodhod навчає слів цих мов' },
   features: {
     title: 'Усе, щоб справді вивчати слова',
     sub: 'Не ще один словник, а помічник, який щодня повторює з тобою.',
@@ -484,7 +484,7 @@ const ru: SiteCopy = {
   },
   stores: { title: 'На любом устройстве', ios: 'iPhone и iPad', android: 'Android', web: 'Любой браузер', soon: 'Скоро', get: 'Скачать', open: 'Открыть сейчас' },
   stats: { title: 'Hodhod в цифрах', learners: 'учеников', words: 'сохранённых слов', reviews: 'повторений', languages: 'языков' },
-  langs: { title: 'Твой язык. Твой следующий язык.', sub: 'Hodhod объясняет всё на языке, на котором ты уже говоришь.', speak: 'Ты говоришь', learn: 'Ты учишь' },
+  langs: { title: 'На каких языках Hodhod рядом с тобой?', sub: 'Hodhod объясняет слова нового языка на твоём родном языке.', speak: 'Пока Hodhod знает эти родные языки', learn: 'Пока Hodhod учит словам этих языков' },
   features: {
     title: 'Всё, чтобы по-настоящему учить слова',
     sub: 'Не ещё один словарь, а помощник, который каждый день повторяет с тобой.',
@@ -556,7 +556,7 @@ const ar: SiteCopy = {
   },
   stores: { title: 'على كل الأجهزة', ios: 'آيفون وآيباد', android: 'أندرويد', web: 'أي متصفح', soon: 'قريبًا', get: 'تنزيل', open: 'افتحه الآن' },
   stats: { title: 'هدهد بالأرقام', learners: 'متعلّم', words: 'كلمة محفوظة', reviews: 'مراجعة', languages: 'لغات' },
-  langs: { title: 'لغتك. لغتك التالية.', sub: 'يشرح هدهد كل شيء باللغة التي تتحدثها بالفعل.', speak: 'لغتك', learn: 'تتعلّم' },
+  langs: { title: 'بأي اللغات يرافقك هدهد؟', sub: 'هدهد يشرح لك كلمات لغتك الجديدة بلغتك الأم.', speak: 'هدهد يعرف حاليًا هذه اللغات الأم', learn: 'هدهد يعلّم حاليًا كلمات هذه اللغات' },
   features: {
     title: 'كل ما تحتاجه لتتعلّم الكلمات حقًا',
     sub: 'ليس قاموسًا آخر، بل رفيق يراجع معك كل يوم.',
@@ -628,7 +628,7 @@ const es: SiteCopy = {
   },
   stores: { title: 'En todos tus dispositivos', ios: 'iPhone y iPad', android: 'Android', web: 'Cualquier navegador', soon: 'Muy pronto', get: 'Descargar', open: 'Abrir ahora' },
   stats: { title: 'Hodhod en cifras', learners: 'estudiantes', words: 'palabras guardadas', reviews: 'repasos', languages: 'idiomas' },
-  langs: { title: 'Tu idioma. Tu próximo idioma.', sub: 'Hodhod lo explica todo en el idioma que ya hablas.', speak: 'Hablas', learn: 'Aprendes' },
+  langs: { title: '¿En qué idiomas te acompaña Hodhod?', sub: 'Hodhod te explica las palabras de tu nuevo idioma en tu lengua materna.', speak: 'Por ahora, Hodhod conoce estas lenguas maternas', learn: 'Por ahora, Hodhod enseña las palabras de estos idiomas' },
   features: {
     title: 'Todo lo que necesitas para aprender palabras de verdad',
     sub: 'No es otro diccionario: es un compañero que repasa contigo cada día.',
@@ -700,7 +700,7 @@ const nl: SiteCopy = {
   },
   stores: { title: 'Op elk apparaat', ios: 'iPhone en iPad', android: 'Android', web: 'Elke browser', soon: 'Binnenkort', get: 'Downloaden', open: 'Nu openen' },
   stats: { title: 'Hodhod in cijfers', learners: 'leerlingen', words: 'opgeslagen woorden', reviews: 'herhalingen', languages: 'talen' },
-  langs: { title: 'Jouw taal. Jouw volgende taal.', sub: 'Hodhod legt alles uit in de taal die je al spreekt.', speak: 'Je spreekt', learn: 'Je leert' },
+  langs: { title: 'In welke talen gaat Hodhod met je mee?', sub: 'Hodhod legt de woorden van je nieuwe taal uit in je eigen moedertaal.', speak: 'Voorlopig kent Hodhod deze moedertalen', learn: 'Voorlopig leert Hodhod je de woorden van deze talen' },
   features: {
     title: 'Alles om woorden echt te leren',
     sub: 'Geen zoveelste woordenboek, maar een maatje dat elke dag met je herhaalt.',
@@ -772,7 +772,7 @@ const it: SiteCopy = {
   },
   stores: { title: 'Su ogni dispositivo', ios: 'iPhone e iPad', android: 'Android', web: 'Qualsiasi browser', soon: 'In arrivo', get: 'Scarica', open: 'Apri ora' },
   stats: { title: 'Hodhod in numeri', learners: 'studenti', words: 'parole salvate', reviews: 'ripassi fatti', languages: 'lingue' },
-  langs: { title: 'La tua lingua. La tua prossima lingua.', sub: 'Hodhod spiega tutto nella lingua che parli già.', speak: 'Parli', learn: 'Impari' },
+  langs: { title: 'In quali lingue ti accompagna Hodhod?', sub: 'Hodhod ti spiega le parole della tua nuova lingua nella tua lingua madre.', speak: 'Per ora Hodhod conosce queste lingue madri', learn: 'Per ora Hodhod insegna le parole di queste lingue' },
   features: {
     title: 'Tutto quello che serve per imparare davvero le parole',
     sub: 'Non un altro dizionario: un compagno che ripassa con te ogni giorno.',
