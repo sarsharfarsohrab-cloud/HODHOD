@@ -4,6 +4,7 @@
  *   bun run tests/e2e/server.ts   (after `bun run scripts/build.ts --dev`)
  */
 import { join, normalize } from 'node:path'
+import { seedPacks, type ReadyPack } from '../fake-backend/fakePlatform.ts'
 import { aiResponse, FAKE_ANON_KEY, FakeSupabase } from '../fake-backend/fakeSupabase.ts'
 import { asAiOutput, AUFGEBEN, SCHNELL, TISCH } from '../fixtures/words.ts'
 
@@ -96,6 +97,9 @@ Bun.serve({
         }
         case '/__test/seed-user':
           backend.seedUser(String(body.email), String(body.password), String(body.name ?? ''), typeof body.language === 'string' ? body.language : undefined)
+          break
+        case '/__test/seed-curated':
+          seedPacks(backend, (await Bun.file(new URL('../../content/packs/curated.json', import.meta.url)).json()) as ReadyPack[])
           break
         case '/__test/platform':
           return Response.json({ ttsCalls: backend.requests.filter((r) => r === 'POST /functions/v1/tts').length, ...Object.fromEntries(['packs', 'pack_items', 'user_packs', 'feedback', 'card_reports', 'announcements', 'client_errors', 'user_limits', 'ai_credit_entries', 'ai_word_cache', 'tts_cache'].map((k) => [k, backend.tables[k]])) })

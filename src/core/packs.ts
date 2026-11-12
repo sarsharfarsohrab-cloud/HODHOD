@@ -41,6 +41,8 @@ export function packProgress(
   entries: readonly PackEntry[],
   wordOf: (entry: PackEntry) => Word | undefined,
   cardsOf: (wordId: string) => readonly Card[],
+  /** grouped packs: every group may be started at any time, none waits for the one before */
+  free = false,
 ): PackProgress {
   const byLesson = new Map<number, PackEntry[]>()
   for (const e of entries) {
@@ -63,7 +65,7 @@ export function packProgress(
       if (isGreen(cardsOf(word.id))) lessonGreen++
     }
     const done = lessonGreen === list.length
-    const state: LessonState = done ? 'done' : inBank > 0 ? 'active' : previousDone ? 'open' : 'locked'
+    const state: LessonState = done ? 'done' : inBank > 0 ? 'active' : previousDone || free ? 'open' : 'locked'
     lessons.push({ lesson, entries: list, inBank, green: lessonGreen, state })
     previousDone = done
     total += list.length

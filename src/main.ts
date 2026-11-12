@@ -27,6 +27,7 @@ import { friendsScreen } from './ui/screens/friends.ts'
 import { quizScreen } from './ui/screens/quiz.ts'
 import { settingsScreen } from './ui/screens/settings.ts'
 import { statsScreen } from './ui/screens/stats.ts'
+import { packLessonScreen } from './ui/screens/packLesson.ts'
 import { packScreen, storeScreen } from './ui/screens/store.ts'
 import { storiesScreen, storyScreen } from './ui/screens/stories.ts'
 import { learnScreen, lessonScreen, podcastScreen, verbFamilyScreen } from './ui/screens/learn.ts'
@@ -132,6 +133,7 @@ const ROUTES: { pattern: RegExp; keys: string[]; screen: ScreenFactory; tab: str
   { pattern: /^\/friends$/, keys: [], screen: friendsScreen, tab: 'home' },
   { pattern: /^\/stories\/([^/]+)$/, keys: ['id'], screen: storyScreen, tab: 'home' },
   { pattern: /^\/store\/([^/]+)$/, keys: ['id'], screen: packScreen, tab: 'home' },
+  { pattern: /^\/store\/([^/]+)\/lesson\/(\d+)$/, keys: ['id', 'lesson'], screen: packLessonScreen, tab: 'home' },
   { pattern: /^\/learn$/, keys: [], screen: learnScreen, tab: 'home' },
   { pattern: /^\/learn\/podcast\/([^/]+)$/, keys: ['id'], screen: podcastScreen, tab: 'home' },
   { pattern: /^\/learn\/lesson\/([^/]+)$/, keys: ['id'], screen: lessonScreen, tab: 'home' },

@@ -32,17 +32,14 @@ begin
   exception when sqlstate 'P0004' then null;
   end;
 
-  -- a language cannot be learned through itself, and Italian is not an interface language
+  -- a language cannot be learned through itself
   begin
     update public.profiles set active_target_language = 'uk' where id = '00000000-0000-0000-0000-0000000000e1';
     assert false, 'Ukrainian is not a learned language';
   exception when sqlstate 'P0003' then null;
   end;
-  begin
-    update public.profiles set native_language = 'it' where id = '00000000-0000-0000-0000-0000000000e1';
-    assert false, 'Italian is not an interface language';
-  exception when sqlstate 'P0003' then null;
-  end;
+  -- since migration 0008 Italian is an interface language as well
+  assert (select can_be_native from public.languages where code = 'it'), 'Italian can be the learner''s own language';
   begin
     update public.profiles set native_language = 'en' where id = '00000000-0000-0000-0000-0000000000e1';
     assert false, 'own language and learned language differ';

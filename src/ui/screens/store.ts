@@ -2,7 +2,7 @@
 import { packProgress, type LessonProgress, type PackProgress } from '../../core/packs.ts'
 import type { Word } from '../../core/types.ts'
 import { toAppError } from '../../data/errors.ts'
-import { packItems, startPackLesson, storePacks, type PackItem, type StorePack } from '../../data/platform.ts'
+import { packItems, packLessonTitles, startPackLesson, storePacks, type PackItem, type StorePack } from '../../data/platform.ts'
 import type { Ctx, Screen } from '../context.ts'
 import { de, h, icon, replace } from '../dom.ts'
 import { num } from '../format.ts'
@@ -115,6 +115,10 @@ export function packScreen(ctx: Ctx, params: Record<string, string>): Screen {
   let loading = true
   let busy = false
   let openLesson: number | null = null
+  /** names of the groups, for a pack whose lessons are named groups; such a pack has no locked lessons */
+  let titles: string[] | null = null
+  const lines = () => pack?.kind === 'sentences'
+  const countLabel = (n: number) => (lines() ? s.lessonLines(n) : s.lessonWords(n))
 
   const wordOf = (entry: { id: string; lemma: string | null; pos: string | null }): Word | undefined => {
     for (const w of ctx.data.words.values()) if (w.packItemId === entry.id && !w.deletedAt) return w
@@ -128,7 +132,7 @@ export function packScreen(ctx: Ctx, params: Record<string, string>): Screen {
       list.push(c)
       byWord.set(c.wordId, list)
     }
-    return packProgress(items, wordOf, (wordId) => byWord.get(wordId) ?? [])
+    return packProgress(items, wordOf, (wordId) => byWord.get(wordId) ?? [], titles !== null)
   }
 
   async function start(lesson: number) {
@@ -167,7 +171,7 @@ export function packScreen(ctx: Ctx, params: Record<string, string>): Screen {
         h(
           'button',
           { class: 'lesson-head', type: 'button', 'aria-expanded': String(expanded), onclick: () => { openLesson = expanded ? null : l.lesson; render() } },
-          h('span', null, h('b', null, s.lesson(l.lesson)), h('span', { class: 'small muted' }, `${t.common.listSep}${s.lessonWords(l.entries.length)}`)),
+          h('span', null, h('b', null, titles?.[l.lesson - 1] ?? s.lesson(l.lesson)), h('span', { class: 'small muted' }, `${t.common.listSep}${countLabel(l.entries.length)}`)),
           h('span', { class: `lesson-state small` }, state === 'active' ? s.lessonProgress(l.green, l.entries.length) : label),
         ),
         state === 'active' || state === 'done' ? progressBar(l.green / l.entries.length, s.lessonProgress(l.green, l.entries.length)) : null,
@@ -188,11 +192,15 @@ export function packScreen(ctx: Ctx, params: Record<string, string>): Screen {
               }),
             )
           : null,
-        canStart
+        // a named group opens its own page first: meet the words, practise, then add them
+        titles && pack && pack.published !== false && state !== 'done'
+          ? h('a', { class: `btn ${suggested && missing ? 'primary' : ''} block`, href: `#/store/${pack.id}/lesson/${l.lesson}` }, icon('play', { size: 18 }), s.openGroup)
+          : null,
+        canStart && !titles
           ? h('button', { class: `btn ${suggested ? 'primary' : ''} block`, type: 'button', disabled: busy, onclick: () => void start(l.lesson) }, icon('play', { size: 18 }), busy ? s.starting : s.start(l.lesson))
           : null,
         // a lesson already in the bank goes on in the review of this pack
-        state === 'active' && !missing && pack
+        state === 'active' && !missing && pack && !titles
           ? [
               h('a', { class: `btn ${suggested ? 'primary' : ''} block`, href: `#/study?pack=${pack.id}` }, icon('cards', { size: 18 }), s.continueLesson(l.lesson)),
               suggested ? h('p', { class: 'help' }, s.continueHint) : null,
@@ -223,7 +231,9 @@ export function packScreen(ctx: Ctx, params: Record<string, string>): Screen {
           { class: 'chips' },
           h('span', { class: 'chip' }, s.kinds[pack.kind]),
           pack.level ? h('span', { class: `chip level-${pack.level}` }, s.levels[pack.level]) : null,
-          h('span', { class: 'chip' }, s.size(p.total, p.lessons.length)),
+          titles
+            ? [h('span', { class: 'chip' }, countLabel(p.total)), h('span', { class: 'chip' }, lines() ? s.sceneCount(p.lessons.length) : s.groupCount(p.lessons.length))]
+            : h('span', { class: 'chip' }, s.size(p.total, p.lessons.length)),
         ),
         pack.description ? h('p', { class: 'muted' }, pack.description) : null,
         inBank > 0
@@ -249,9 +259,10 @@ export function packScreen(ctx: Ctx, params: Record<string, string>): Screen {
     loading = true
     render()
     try {
-      const [all, list] = await Promise.all([storePacks(ctx.client), packItems(ctx.client, id)])
+      const [all, list, names] = await Promise.all([storePacks(ctx.client), packItems(ctx.client, id), packLessonTitles(ctx.client, id)])
       pack = all.find((x) => x.id === id) ?? null
       items = list
+      titles = names
     } catch (err) {
       failed = describeError(toAppError(err))
     }

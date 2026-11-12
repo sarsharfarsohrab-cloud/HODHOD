@@ -1090,6 +1090,72 @@ await test('admin builds a pack; a learner takes a lesson from the store', async
   return page
 })
 
+await test('a hand-written pack: named groups, meeting the words, word-only practice, a conversation', async () => {
+  await control('seed-curated')
+  const page = await newPage()
+  await signUp(page)
+  await page.goto(`${BASE}/#/store`)
+  await page.getByText('رستوران و کافه: واژه‌ها').click()
+  await page.getByText('۱۲ گروه').waitFor()
+  await page.getByText('روی میز', { exact: true }).waitFor()
+  assert((await page.getByText('این درس وقتی باز می‌شود').count()) === 0, 'no group waits for another')
+  await noHorizontalScroll(page, 'grouped pack')
+  await snap(page, 'curated-pack')
+
+  // one group: the words first
+  await page.locator('.lesson', { hasText: 'روی میز' }).getByRole('link', { name: 'شروع این گروه' }).click()
+  await page.getByRole('heading', { name: 'روی میز' }).waitFor()
+  await page.getByText('Ein Glas Wasser, bitte.').waitFor()
+  await page.getByText('فنجانِ دسته‌دار').waitFor() // the note on Glas / Tasse / Becher
+  assert((await page.locator('.pl-word').count()) === 13, 'thirteen words in the group')
+  assert((await state()).words.length === 0, 'looking at a group adds nothing yet')
+  await noHorizontalScroll(page, 'group page')
+  await snap(page, 'curated-group')
+
+  // then the practice: words and meanings only
+  await page.getByRole('button', { name: 'برویم تمرین' }).click()
+  for (let i = 0; i < 13; i++) {
+    await page.getByText(`${i + 1} / 13`.replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[d])).waitFor()
+    const asked = await page.locator('.pl-ask, .pl-option').allInnerTexts()
+    assert(!asked.some((x) => /bitte|Wasser für|liegt links/.test(x)), 'no example sentence is asked about')
+    if (i === 0) await snap(page, 'curated-practice')
+    await page.locator('.pl-option').first().click()
+    await page.locator('.pl-verdict').waitFor()
+    await page.getByRole('button', { name: 'بعدی' }).click()
+  }
+  await page.getByText(/از ۱۳ درست/).waitFor()
+  assert((await state()).reviews.length === 0, 'the practice is not a review')
+  await page.getByRole('button', { name: 'اضافه کردن ۱۳ کارت به مرور' }).click()
+  await page.waitForURL(/#\/study\?pack=/)
+  await page.getByRole('button', { name: 'نمایش جواب' }).waitFor()
+  let s = await state()
+  assert(s.words.length === 13 && s.words.every((w) => w.source === 'pack'), 'the group is in the bank')
+  assert(s.words.find((w) => w.lemma === 'Glas').content.notes.includes('Tasse'), 'the card carries its note')
+
+  // the group now says so, and its page offers the review instead of adding again
+  await page.goto(`${BASE}/#/store`)
+  await page.getByText('رستوران و کافه: واژه‌ها').click()
+  await page.locator('.lesson', { hasText: 'روی میز' }).getByRole('link', { name: 'شروع این گروه' }).click()
+  await page.getByText('کارت‌های این گروه در مرور توست.').waitFor()
+
+  // the sentence pack: a scene reads as a conversation, every line a card
+  await page.goto(`${BASE}/#/store`)
+  await page.getByText('رستوران و کافه: گفت‌وگوها').click()
+  await page.getByText('۹ صحنه').waitFor()
+  await page.locator('.lesson', { hasText: 'پرداخت و خداحافظی' }).getByRole('link', { name: 'شروع این گروه' }).click()
+  await page.getByText('Stimmt so.').waitFor()
+  await page.getByText('Zusammen oder getrennt?').waitFor()
+  assert((await page.locator('.pl-who').allInnerTexts()).includes('گارسون'), 'each line says who speaks')
+  assert((await page.getByRole('button', { name: 'برویم تمرین' }).count()) === 0, 'sentences are not practised')
+  await noHorizontalScroll(page, 'scene page')
+  await snap(page, 'curated-scene')
+  await page.getByRole('button', { name: 'اضافه کردن ۷ کارت به مرور' }).click()
+  await page.waitForURL(/#\/study\?pack=/)
+  s = await state()
+  assert(s.words.filter((w) => w.pos === 'sentence').length === 7, 'the seven lines are in the bank')
+  return page
+})
+
 await test('a wrong card is reported and fixed for everyone from the admin inbox', async () => {
   const page = await newPage()
   await signUp(page)
