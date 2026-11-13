@@ -3,7 +3,8 @@
  * for every site language, from the same words as the page itself, so it never says something the
  * site no longer says.
  *
- *   NODE_PATH=$(npm root -g) bun run scripts/og-images.ts   → site/img/og/<lang>.jpg (1200 × 630)
+ *   NODE_PATH=$(npm root -g) bun run scripts/og-images.ts         → site/img/og/en.jpg (1200 × 630)
+ *   … --all                                                       → every site language
  *
  * Run it again whenever hero.eyebrow or hero.h1 change in scripts/site/copy.ts.
  */
@@ -45,7 +46,8 @@ const { chromium } = createRequire(import.meta.url)('playwright')
 mkdirSync(`${root}site/img/og`, { recursive: true })
 const browser = await chromium.launch()
 const tab = await browser.newPage({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 1 })
-for (const lang of SITE_LANGUAGES) {
+// the site shows the English preview for every language (owner's choice); the others stay available
+for (const lang of process.argv.includes('--all') ? SITE_LANGUAGES : ['en']) {
   await tab.setContent(page(lang))
   await tab.evaluate(() => document.fonts.ready)
   await tab.screenshot({ path: `${root}site/img/og/${lang}.jpg`, type: 'jpeg', quality: 84 })

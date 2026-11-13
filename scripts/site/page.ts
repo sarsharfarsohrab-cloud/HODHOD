@@ -115,15 +115,16 @@ ${alternates}
 <link rel="preload" href="/media/hero.webp" as="image" media="(min-width: 761px)">
 <link rel="preload" href="/media/hero-square.webp" as="image" media="(max-width: 760px)">
 <link rel="stylesheet" href="/style.css">
+<!-- one link preview for every language: English reads everywhere -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Hodhod">
 <meta property="og:locale" content="${info.og}">
 <meta property="og:url" content="${ORIGIN}${pathOf(lang)}">
-<meta property="og:title" content="${esc(c.hero.h1)}">
-<meta property="og:description" content="${esc(c.hero.lead)}">
-<meta property="og:image" content="${ORIGIN}/img/og/${lang}.jpg">
+<meta property="og:title" content="${esc(SITE_COPY.en.hero.h1)}">
+<meta property="og:description" content="${esc(SITE_COPY.en.hero.lead)}">
+<meta property="og:image" content="${ORIGIN}/img/og/en.jpg">
 <meta property="og:image:type" content="image/jpeg">
-<meta property="og:image:alt" content="${esc(c.hero.h1)}">
+<meta property="og:image:alt" content="${esc(SITE_COPY.en.hero.h1)}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
