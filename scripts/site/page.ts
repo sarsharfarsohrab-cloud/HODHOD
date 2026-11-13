@@ -121,7 +121,9 @@ ${alternates}
 <meta property="og:url" content="${ORIGIN}${pathOf(lang)}">
 <meta property="og:title" content="${esc(c.hero.h1)}">
 <meta property="og:description" content="${esc(c.hero.lead)}">
-<meta property="og:image" content="${ORIGIN}/img/og.png">
+<meta property="og:image" content="${ORIGIN}/img/og/${lang}.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:alt" content="${esc(c.hero.h1)}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
