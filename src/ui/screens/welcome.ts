@@ -52,7 +52,8 @@ export function welcomeScreen(ctx: Ctx, params: Record<string, string> = {}): Sc
     try {
       const native = patch.native ?? ctx.data.profile.nativeLanguage
       let target = patch.target ?? ctx.data.profile.activeTargetLanguage
-      if (target === native) target = targetsFor(native)[0]!
+      // a new own language moves the default away from itself; a language picked on purpose is kept, even the own one
+      if (patch.target === undefined && target === native) target = targetsFor(native)[0]!
       await ctx.data.setLanguages({ native, target })
       step = nextStep
       ctx.go(`/welcome?step=${nextStep}`, { replace: true })

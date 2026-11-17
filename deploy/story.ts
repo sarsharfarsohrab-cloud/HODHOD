@@ -387,7 +387,7 @@ function nativeScript(native) {
 var TARGETS = ["de", "en", "fr", "it", "es", "nl"];
 var NATIVES = ["fa", "de", "en", "fr", "tr", "uk", "ru", "ar", "es", "nl", "it"];
 function isSupportedPair(pair) {
-  return TARGETS.includes(pair.target) && NATIVES.includes(pair.native) && pair.target !== pair.native;
+  return TARGETS.includes(pair.target) && NATIVES.includes(pair.native);
 }
 var AI_STATUS = ["ok", "not_a_word", "wrong_language", "misspelled"];
 var NATIVE = {
@@ -640,6 +640,10 @@ var STORY_SCHEMA = {
 };
 function storySystem(pair) {
   const n = pairNames(pair);
+  if (pair.target === pair.native) {
+    return `You write short, warm, everyday ${n.target} reading texts for learners of ${n.target}.
+Write ONE short story or dialogue (6 to 10 sentences) at the requested CEFR level, set in everyday life (family, work, shopping, friends, travel, appointments). Use as many of the given words as fit naturally — at least half of them — in any grammatical form; you may add other simple words of the level. Each sentence ("de"): natural standard ${n.target} with correct grammar and punctuation, at most 20 words. For every sentence give the same idea again in simpler, easier ${n.target} ("fa"), never a copy of the sentence. In a dialogue, start lines with the speaker's first name and a colon in both lines. "used_words": the given words you actually used, exactly as given. Titles: a short ${n.target} title ("title_de") and a simpler wording of it ("title_fa"). Nothing violent, sexual or political.`;
+  }
   return `You write short, warm, everyday ${n.target} reading texts for ${n.native}-speaking learners.
 Write ONE short story or dialogue (6 to 10 sentences) at the requested CEFR level, set in everyday life (family, work, shopping, friends, travel, appointments). Use as many of the given words as fit naturally — at least half of them — in any grammatical form; you may add other simple words of the level. Each sentence ("de"): natural standard ${n.target} with correct grammar and punctuation, at most 20 words. Give a faithful, natural ${n.native} translation of every sentence ("fa"), written in ${n.nativeRules} In a dialogue, start lines with the speaker's first name and a colon in both languages. "used_words": the given words you actually used, exactly as given. Titles: a short ${n.target} title ("title_de") and its ${n.native} translation ("title_fa"). Nothing violent, sexual or political.`;
 }

@@ -48,6 +48,11 @@ const STORY_SCHEMA = {
 /** The story prompt for a language pair. The JSON keys keep their historical names: "de" is the learned language, "fa" the learner's own. */
 export function storySystem(pair: LanguagePair): string {
   const n = pairNames(pair)
+  if (pair.target === pair.native) {
+    // learning a language through itself: the second line of each sentence says it again more simply
+    return `You write short, warm, everyday ${n.target} reading texts for learners of ${n.target}.
+Write ONE short story or dialogue (6 to 10 sentences) at the requested CEFR level, set in everyday life (family, work, shopping, friends, travel, appointments). Use as many of the given words as fit naturally — at least half of them — in any grammatical form; you may add other simple words of the level. Each sentence ("de"): natural standard ${n.target} with correct grammar and punctuation, at most 20 words. For every sentence give the same idea again in simpler, easier ${n.target} ("fa"), never a copy of the sentence. In a dialogue, start lines with the speaker's first name and a colon in both lines. "used_words": the given words you actually used, exactly as given. Titles: a short ${n.target} title ("title_de") and a simpler wording of it ("title_fa"). Nothing violent, sexual or political.`
+  }
   return `You write short, warm, everyday ${n.target} reading texts for ${n.native}-speaking learners.
 Write ONE short story or dialogue (6 to 10 sentences) at the requested CEFR level, set in everyday life (family, work, shopping, friends, travel, appointments). Use as many of the given words as fit naturally — at least half of them — in any grammatical form; you may add other simple words of the level. Each sentence ("de"): natural standard ${n.target} with correct grammar and punctuation, at most 20 words. Give a faithful, natural ${n.native} translation of every sentence ("fa"), written in ${n.nativeRules} In a dialogue, start lines with the speaker's first name and a colon in both languages. "used_words": the given words you actually used, exactly as given. Titles: a short ${n.target} title ("title_de") and its ${n.native} translation ("title_fa"). Nothing violent, sexual or political.`
 }

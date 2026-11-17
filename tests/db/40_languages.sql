@@ -1,4 +1,4 @@
--- Behavioural tests for migration 0004 (many languages, Plus for a second language).
+-- Behavioural tests for migrations 0004 and 0010 (many languages, Plus for a second language, a language learned through itself).
 \set ON_ERROR_STOP on
 
 reset role;
@@ -32,7 +32,7 @@ begin
   exception when sqlstate 'P0004' then null;
   end;
 
-  -- a language cannot be learned through itself
+  -- a language is not refused because it is also the learner's own (migration 0010); Ukrainian is simply not learnable
   begin
     update public.profiles set active_target_language = 'uk' where id = '00000000-0000-0000-0000-0000000000e1';
     assert false, 'Ukrainian is not a learned language';
@@ -40,10 +40,11 @@ begin
   end;
   -- since migration 0008 Italian is an interface language as well
   assert (select can_be_native from public.languages where code = 'it'), 'Italian can be the learner''s own language';
+  -- the own language may now equal the learned one (migration 0010); a language that is not offered is still refused
   begin
-    update public.profiles set native_language = 'en' where id = '00000000-0000-0000-0000-0000000000e1';
-    assert false, 'own language and learned language differ';
-  exception when sqlstate 'P0003' then null;
+    update public.profiles set native_language = 'xx' where id = '00000000-0000-0000-0000-0000000000e1';
+    assert false, 'an unknown own language is refused';
+  exception when sqlstate 'P0003' or sqlstate '23503' then null;
   end;
   assert not public.has_plus('00000000-0000-0000-0000-0000000000e1'), 'no Plus yet';
 end $$;
@@ -64,3 +65,19 @@ end $$;
 
 reset role;
 select 'languages: ok';
+
+-- an English speaker learning English: allowed, and the words carry the pair
+reset role;
+insert into auth.users (id, email, created_at) values ('00000000-0000-0000-0000-0000000000e3', 'monolingual@example.test', now());
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000e3';
+do $$
+begin
+  update public.profiles set native_language = 'en', active_target_language = 'en' where id = '00000000-0000-0000-0000-0000000000e3';
+  assert (select native_language = 'en' and active_target_language = 'en' from public.profiles where id = '00000000-0000-0000-0000-0000000000e3'), 'English through English';
+  insert into public.words (lemma, normalized_lemma, pos, primary_meaning, content, target_language, native_language)
+  values ('table', 'table', 'noun', 'a piece of furniture with a flat top', '{}', 'en', 'en');
+  update public.profiles set native_language = 'de' where id = '00000000-0000-0000-0000-0000000000e3';
+  update public.profiles set native_language = 'en' where id = '00000000-0000-0000-0000-0000000000e3';
+end $$;
+reset role;

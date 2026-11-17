@@ -61,9 +61,27 @@ describe('language pairs', () => {
     expect(isSupportedPair({ target: 'de', native: 'fa' })).toBe(true)
     expect(isSupportedPair({ target: 'fr', native: 'uk' })).toBe(true)
     expect(isSupportedPair({ target: 'nl', native: 'ar' })).toBe(true)
-    expect(isSupportedPair({ target: 'en', native: 'en' })).toBe(false)
+    // a language may be learned through itself (explanations in the same language)
+    expect(isSupportedPair({ target: 'en', native: 'en' })).toBe(true)
     expect(isSupportedPair({ target: 'tr', native: 'de' })).toBe(false)
   })
+  test('a language learned through itself gets a learner\'s-dictionary card, not a translation', () => {
+    const mono = buildMessages({ target: 'en', native: 'en' }, 'table').system
+    expect(mono).toContain("learner's dictionary")
+    expect(mono).toContain('simple English definition')
+    expect(mono).toContain('"literal": always null')
+    expect(mono).not.toContain('native English speakers who are learning English')
+    const normal = buildMessages({ target: 'en', native: 'fa' }, 'table').system
+    expect(normal).toContain('native Persian (Farsi) speakers who are learning English')
+    expect(normal).not.toContain("learner's dictionary")
+  })
+
+  test('the own language can be learned too, offered last', async () => {
+    const { targetsFor } = await import('../../src/ui/i18n/languages.ts')
+    expect(targetsFor('en')).toEqual(['de', 'fr', 'it', 'es', 'nl', 'en'])
+    expect(targetsFor('fa')).toEqual(['en', 'de', 'fr', 'it', 'es', 'nl'])
+  })
+
 
   test('the prompt names both languages and the learned language’s own grammar', () => {
     const { system, user } = buildMessages({ target: 'it', native: 'tr' }, 'libro')

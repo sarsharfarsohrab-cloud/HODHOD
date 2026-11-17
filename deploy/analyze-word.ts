@@ -798,7 +798,7 @@ var COMPATIBLE_PROMPT_VERSIONS = ["word_analysis_v3", "word_analysis_v2"];
 var TARGETS = ["de", "en", "fr", "it", "es", "nl"];
 var NATIVES = ["fa", "de", "en", "fr", "tr", "uk", "ru", "ar", "es", "nl", "it"];
 function isSupportedPair(pair) {
-  return TARGETS.includes(pair.target) && NATIVES.includes(pair.native) && pair.target !== pair.native;
+  return TARGETS.includes(pair.target) && NATIVES.includes(pair.native);
 }
 var AI_STATUS = ["ok", "not_a_word", "wrong_language", "misspelled"];
 var NATIVE = {
@@ -954,7 +954,14 @@ function systemPrompt(pair) {
   const N = NATIVE[pair.native];
   const tl = T.name;
   const nl = N.name;
-  return `You are a careful ${tl} lexicographer and teacher writing vocabulary cards for native ${nl} speakers who are learning ${tl}.
+  const mono = pair.target === pair.native;
+  const sentenceMeaning = mono ? `a short, simple ${tl} explanation of what the sentence means and does` : `a natural, idiomatic ${nl} rendering of the whole sentence (what a ${nl} speaker would really say in that situation, not word for word)`;
+  const translation = mono ? `a short, simple ${tl} definition in learner's-dictionary style, using easier words than the entry itself (a few words; one or two simple synonyms allowed).` : `natural ${nl} equivalent(s), short (a few words, comma-separated synonyms allowed).`;
+  const exampleTranslation = mono ? `and has the same idea said again in simpler, easier ${tl} ("translation"; never a copy of "text").` : `and has a faithful natural ${nl} translation ("translation", not word-for-word).`;
+  const literal = mono ? `- "literal": always null.` : `- "literal": ONLY for idioms and expressions whose meaning is not the sum of their words: a word-for-word ${nl} rendering inside quotation marks (e.g. for German "die Nase voll haben" → ${N.literal}). null for everything else.`;
+  const audience = mono ? `learners of ${tl} who want every explanation in simple ${tl} (a learner's dictionary)` : `native ${nl} speakers who are learning ${tl}`;
+  const mistakes = mono ? `a typical learner mistake` : `a typical mistake of ${nl} speakers, a false friend`;
+  return `You are a careful ${tl} lexicographer and teacher writing vocabulary cards for ${audience}.
 
 You receive ONE entry typed by a learner: ${T.entries}. Return a single JSON object that follows the provided schema exactly.
 
@@ -969,28 +976,28 @@ STEP 2 — when status is "ok":
 - "lemma": the dictionary form. ${T.lemma}
 - If the learner typed an inflected form, analyse the lemma and explain the relation in one short ${nl} sentence in "input_note". Otherwise "input_note" is null.
 - "pos": the most common part of speech of this word. For every fixed expression of two or more words use "phrase" (exceptions: a single reflexive or phrasal verb is a "verb"). For a complete sentence or a set conversational formula that works as a whole utterance use "sentence". For "phrase" and "sentence": noun, verb, conjugation and adjective are null, "ipa" may be null, and "collocations" may be empty.
-- For "sentence": "lemma" is the corrected sentence with its final punctuation; exactly ONE meaning whose "translation" is a natural, idiomatic ${nl} rendering of the whole sentence (what a ${nl} speaker would really say in that situation, not word for word); "note" says in ${nl} when and to whom it is said, if useful; "examples": 0 to 2 short related lines (e.g. a typical previous or next line in the same conversation) with levels "easy"/"medium", or an empty list; "synonyms"/"antonyms" are empty.
+- For "sentence": "lemma" is the corrected sentence with its final punctuation; exactly ONE meaning whose "translation" is ${sentenceMeaning}; "note" says in ${nl} when and to whom it is said, if useful; "examples": 0 to 2 short related lines (e.g. a typical previous or next line in the same conversation) with levels "easy"/"medium", or an empty list; "synonyms"/"antonyms" are empty.
 - "register": who says it — "neutral", "informal" (friends, family), "formal" (offices, strangers), "slang" (youth/very casual) or "vulgar" (rude, offensive). Give it for phrases and sentences, and for single words whose register is not neutral; otherwise "neutral".
 - "frequency": how common this is in everyday spoken ${tl} today: 3 = very common, 2 = common, 1 = rare or old-fashioned.
-- "literal": ONLY for idioms and expressions whose meaning is not the sum of their words: a word-for-word ${nl} rendering inside quotation marks (e.g. for German "die Nase voll haben" → ${N.literal}). null for everything else.
+${literal}
 - "alternatives": 0 to 3 other common ${tl} ways to say the same thing (phrases and sentences only; for single words use synonyms instead), else empty.
 - "reply": when the entry is a question, greeting, thanks or apology that typically gets an answer, one natural typical answer {"text" in ${tl}, "translation" in ${nl}}; else null.
 - "cefr": the level at which a learner typically meets this word (your best estimate).
 - "ipa": ${T.ipa}, without slashes or brackets.
 - "meanings": the 1 to 3 most common, practically useful meanings, most important first. Add a second or third meaning ONLY when it is genuinely common in everyday ${tl}. This is not a dictionary dump.
-  - "translation": natural ${nl} equivalent(s), short (a few words, comma-separated synonyms allowed).
+  - "translation": ${translation}
   - "note": optional short ${nl} hint that tells this meaning apart (register, context). null if not needed.
   - "examples": for words and phrases EXACTLY three, one of each level (for sentences see above):
       "easy"   — A1/A2, short main clause, present tense.
       "medium" — B1, a longer sentence, e.g. a past tense or a subordinate clause.
       "hard"   — B2+, natural idiomatic usage.
-    Each example uses the word in THIS meaning, is natural, correct ${tl} a native speaker would say ("text"), and has a faithful natural ${nl} translation ("translation", not word-for-word).
+    Each example uses the word in THIS meaning, is natural, correct ${tl} a native speaker would say ("text"), ${exampleTranslation}
 - ${T.noun}
 ${T.verb}
 - "adjective": only for adjectives, else null. "comparative"/"superlative" in their usual ${tl} form; null for adjectives that cannot be compared.
 - "synonyms" / "antonyms": 0 to 4 common ${tl} words each${pair.target === "en" ? "" : ", nouns with their article"}. Empty list when there is none that a learner should know.
 - "collocations": 2 to 4 very common word combinations ("text") with ${nl} translation ("translation").
-- "learner_note": at most two short ${nl} sentences with the single most useful tip (a typical mistake of ${nl} speakers, a false friend, a confusable word). null if there is nothing worth saying.
+- "learner_note": at most two short ${nl} sentences with the single most useful tip (${mistakes}, a confusable word). null if there is nothing worth saying.
 
 LANGUAGE RULES:
 - All ${nl} text (translations, notes, input_note, learner_note, literal) is ${N.rules}
