@@ -69,4 +69,12 @@ export const isTargetLanguage = (code: string | null | undefined): code is Targe
   !!code && (TARGET_LANGUAGES as readonly string[]).includes(code)
 
 /** A learner cannot learn their own language; every other pair is offered. */
-export const targetsFor = (native: string): TargetLanguage[] => TARGET_LANGUAGES.filter((code) => code !== native)
+/**
+ * The languages that can be learned by someone whose own language is `native`: all of them.
+ * The own language comes last — learning it through itself (cards explained in the same
+ * language, like a learner's dictionary) is the less common choice.
+ */
+export const targetsFor = (native: string): TargetLanguage[] => [
+  ...TARGET_LANGUAGES.filter((code) => code !== native),
+  ...TARGET_LANGUAGES.filter((code) => code === native),
+]

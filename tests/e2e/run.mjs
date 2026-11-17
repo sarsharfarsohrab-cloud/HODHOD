@@ -843,9 +843,9 @@ await test('a first visit opens in English and asks for the language first', asy
   await page.getByLabel('Email').fill('mary@example.test')
   await page.getByLabel('Password').fill('correct horse battery')
   await page.getByRole('button', { name: 'Create account' }).last().click()
-  // next: the language to learn, never English itself
+  // next: the language to learn; English itself is offered too, last
   await page.getByRole('heading', { name: "Which language's words do you want to learn?" }).waitFor()
-  assert(!(await page.getByRole('radio', { name: /^English/ }).count()), 'English is not offered to an English speaker')
+  assert(/English/.test(await page.getByRole('radio').last().innerText()), 'English is offered to an English speaker, as the last choice')
   await snap(page, 'welcome-learn-english-ui')
   await page.getByRole('radio', { name: /French/ }).click()
   await page.getByRole('heading', { name: 'Hi Mary, welcome!' }).waitFor()
@@ -862,6 +862,28 @@ await test('a first visit opens in English and asks for the language first', asy
   await page.getByText('Wie das Gerät').waitFor()
   assert((await state()).profiles[0].native_language === 'de', 'the new own language is saved')
   await snap(page, 'settings-german')
+  return page
+})
+
+await test('an English speaker can learn English words, explained in English', async () => {
+  await control('reset', { welcome: true })
+  const page = await newPage({ language: null })
+  await page.goto(BASE)
+  await page.getByRole('button', { name: 'English' }).click()
+  await page.getByRole('button', { name: 'Create account', exact: true }).click()
+  await page.getByLabel('Name').fill('Tom')
+  await page.getByLabel('Email').fill('tom@example.test')
+  await page.getByLabel('Password').fill('correct horse battery')
+  await page.getByRole('button', { name: 'Create account' }).last().click()
+  await page.getByRole('heading', { name: "Which language's words do you want to learn?" }).waitFor()
+  await page.getByRole('radio', { name: /English/ }).click()
+  await page.getByRole('heading', { name: 'Hi Tom, welcome!' }).waitFor()
+  let s = await state()
+  assert(s.profiles[0].native_language === 'en' && s.profiles[0].active_target_language === 'en', `English through English is saved (${JSON.stringify(s.profiles[0])})`)
+  assert((await page.evaluate(() => document.documentElement.dataset.deck)) === 'en', 'the English deck is on')
+  await page.reload()
+  await page.getByRole('heading', { name: 'Hi Tom, welcome!' }).waitFor()
+  assert((await state()).profiles[0].active_target_language === 'en', 'the choice survives a reload')
   return page
 })
 

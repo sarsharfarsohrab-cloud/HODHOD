@@ -192,7 +192,7 @@ describe('analyze-word: input', () => {
   })
   test('rejects language pairs that are not offered', async () => {
     expect(await errorCode(await call({ word: 'masa', targetLanguage: 'tr' }))).toBe('unsupported_language')
-    expect(await errorCode(await call({ word: 'Tisch', targetLanguage: 'de', nativeLanguage: 'de' }))).toBe('unsupported_language')
+    expect(await errorCode(await call({ word: 'Tisch', targetLanguage: 'de', nativeLanguage: 'xx' }))).toBe('unsupported_language')
   })
 })
 
